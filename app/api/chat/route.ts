@@ -1,3 +1,6 @@
+import { LUMIVEY_BEHAVIOR } from "@/lib/lumivey/behavior";
+import { LUMIVEY_PRODUCT } from "@/lib/lumivey/product";
+import { extractUnderstanding } from "@/lib/lumivey/extract-understanding";
 import OpenAI from "openai";
 import { NextResponse } from "next/server";
 
@@ -5,47 +8,52 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const message = body.message;
+    const messages = body.messages as ChatMessage[];
 
-    if (!message || typeof message !== "string") {
+    if (!Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json(
-        { error: "Geen geldig bericht ontvangen." },
+        { error: "Geen geldig gesprek ontvangen." },
         { status: 400 }
       );
     }
 
+    const transcript = messages
+      .map((message) => {
+        const speaker =
+          message.role === "user" ? "Ondernemer" : "Lumivey";
+
+        return `${speaker}: ${message.content}`;
+      })
+      .join("\n\n");
+
     const response = await openai.responses.create({
-      model: "gpt-5.6-terra",
-      instructions: `
-Je bent Lumivey.
+  model: "gpt-5.6-terra",
+  instructions: `${LUMIVEY_BEHAVIOR}
 
-Je spreekt met een ondernemer die probeert te vertellen wie hij is,
-wat hij doet en wat zijn bedrijf bijzonder maakt.
+${LUMIVEY_PRODUCT}`,
+  input: `
+Dit is het gesprek tot nu toe:
 
-Dit is geen intakeformulier.
-Voer een rustig, menselijk gesprek.
+${transcript}
 
-Vraag alleen iets als de vraag werkelijk helpt om de ondernemer beter te begrijpen.
-Reageer eerst op wat iemand werkelijk zegt voordat je een nieuwe vraag stelt.
-Zoek naar vakmanschap, trots, motivatie, identiteit, geschiedenis en betekenis.
-
-Gebruik eenvoudige natuurlijke Nederlandse taal.
-Geen marketingtaal.
-Geen lijstjes.
-Geen analyse aan de ondernemer uitleggen.
-Niet praten over AI, websitesystemen of formulieren.
-
-Keep it simple. Keep it human.
+Reageer nu als Lumivey op het laatste bericht van de ondernemer.
       `,
-      input: message,
-    });
+});
 
-    return NextResponse.json({
-      reply: response.output_text,
-    });
+const understanding = await extractUnderstanding(messages);
+
+return NextResponse.json({
+  reply: response.output_text,
+  understanding,
+});
   } catch (error) {
     console.error(error);
 
