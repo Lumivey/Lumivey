@@ -23,16 +23,41 @@ type SiteDescription = {
   };
 };
 
+type ArtDirection = {
+  personality: string[];
+  visualMood: string;
+  layoutStyle: string;
+  heroStyle: string;
+  imageStyle: string;
+  colorDirection: string;
+  typographyDirection: string;
+  sectionRhythm: string;
+  emphasis: string[];
+  avoid: string[];
+};
+
 export default function Home() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
-  const [understanding, setUnderstanding] = useState<object | null>(null);
-  const [previewLoading, setPreviewLoading] = useState(false);
-  const [site, setSite] = useState<SiteDescription | null>(null);
-  const [approvedSite, setApprovedSite] = useState<SiteDescription | null>(null);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  const [understanding, setUnderstanding] =
+    useState<object | null>(null);
+
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  const [site, setSite] =
+    useState<SiteDescription | null>(null);
+
+  const [artDirection, setArtDirection] =
+    useState<ArtDirection | null>(null);
+
+  const [approvedSite, setApprovedSite] =
+    useState<SiteDescription | null>(null);
+
+  async function handleSubmit(
+    event: FormEvent<HTMLFormElement>
+  ) {
     event.preventDefault();
 
     const trimmed = input.trim();
@@ -67,7 +92,9 @@ export default function Home() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Er ging iets mis.");
+        throw new Error(
+          data.error || "Er ging iets mis."
+        );
       }
 
       setMessages([
@@ -86,7 +113,8 @@ export default function Home() {
         ...nextMessages,
         {
           role: "assistant",
-          content: "Er ging iets mis. Probeer het nog eens.",
+          content:
+            "Er ging iets mis. Probeer het nog eens.",
         },
       ]);
     } finally {
@@ -115,10 +143,13 @@ export default function Home() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Preview kon niet worden gemaakt.");
+        throw new Error(
+          data.error || "Preview kon niet worden gemaakt."
+        );
       }
 
       setSite(data.site);
+      setArtDirection(data.artDirection);
     } catch (error) {
       console.error(error);
     } finally {
@@ -131,22 +162,27 @@ export default function Home() {
     setInput("");
   }
 
-function handleApprove() {
-  if (!site) {
-    return;
+  function handleApprove() {
+    if (!site) {
+      return;
+    }
+
+    localStorage.setItem(
+      "lumivey-approved-site",
+      JSON.stringify(site)
+    );
+
+    setApprovedSite(site);
+    setSite(null);
   }
-
-  localStorage.setItem("lumivey-approved-site", JSON.stringify(site));
-
-  setApprovedSite(site);
-  setSite(null);
-}
 
   if (approvedSite) {
     return (
       <main className="preview-page">
         <section className="preview-hero">
-          <p className="eyebrow">Goedgekeurde versie</p>
+          <p className="eyebrow">
+            Goedgekeurde versie
+          </p>
 
           <h1>{approvedSite.title}</h1>
 
@@ -182,9 +218,13 @@ function handleApprove() {
             )}
 
             <ul>
-              {approvedSite.services.map((service, index) => (
-                <li key={index}>{service}</li>
-              ))}
+              {approvedSite.services.map(
+                (service, index) => (
+                  <li key={index}>
+                    {service}
+                  </li>
+                )
+              )}
             </ul>
           </section>
         )}
@@ -193,17 +233,23 @@ function handleApprove() {
           approvedSite.contactText) && (
           <section className="preview-section">
             {approvedSite.contactTitle && (
-              <h2>{approvedSite.contactTitle}</h2>
+              <h2>
+                {approvedSite.contactTitle}
+              </h2>
             )}
 
             {approvedSite.contactText && (
-              <p>{approvedSite.contactText}</p>
+              <p>
+                {approvedSite.contactText}
+              </p>
             )}
           </section>
         )}
 
         <section className="preview-section preview-meta">
-          <p>Deze versie is goedgekeurd voor publicatie.</p>
+          <p>
+            Deze versie is goedgekeurd voor publicatie.
+          </p>
 
           <button
             onClick={() => {
@@ -235,48 +281,78 @@ function handleApprove() {
 
         {site.intro && (
           <section className="preview-section">
-            <p className="preview-intro">{site.intro}</p>
+            <p className="preview-intro">
+              {site.intro}
+            </p>
           </section>
         )}
 
         {site.story && (
           <section className="preview-section">
-            {site.storyTitle && <h2>{site.storyTitle}</h2>}
+            {site.storyTitle && (
+              <h2>{site.storyTitle}</h2>
+            )}
+
             <p>{site.story}</p>
           </section>
         )}
 
         {site.services.length > 0 && (
           <section className="preview-section">
-            {site.servicesTitle && <h2>{site.servicesTitle}</h2>}
+            {site.servicesTitle && (
+              <h2>{site.servicesTitle}</h2>
+            )}
 
             <ul>
-              {site.services.map((service, index) => (
-                <li key={index}>{service}</li>
-              ))}
+              {site.services.map(
+                (service, index) => (
+                  <li key={index}>
+                    {service}
+                  </li>
+                )
+              )}
             </ul>
           </section>
         )}
 
-        {(site.contactTitle || site.contactText) && (
+        {(site.contactTitle ||
+          site.contactText) && (
           <section className="preview-section">
-            {site.contactTitle && <h2>{site.contactTitle}</h2>}
-            {site.contactText && <p>{site.contactText}</p>}
+            {site.contactTitle && (
+              <h2>{site.contactTitle}</h2>
+            )}
+
+            {site.contactText && (
+              <p>{site.contactText}</p>
+            )}
           </section>
         )}
 
         <section className="preview-section preview-meta">
-          <p>
-            Richting: {site.visualDirection.mood} /{" "}
-            {site.visualDirection.tone}
-          </p>
+          {artDirection && (
+            <details className="understanding">
+              <summary>
+                Art direction
+              </summary>
+
+              <pre>
+                {JSON.stringify(
+                  artDirection,
+                  null,
+                  2
+                )}
+              </pre>
+            </details>
+          )}
 
           <div className="preview-buttons">
             <button onClick={handleApprove}>
               Deze klopt
             </button>
 
-            <button onClick={handleBackToConversation}>
+            <button
+              onClick={handleBackToConversation}
+            >
               Dit wil ik aanpassen
             </button>
           </div>
@@ -295,24 +371,26 @@ function handleApprove() {
             <h1>Vertel eens.</h1>
 
             <p className="lead">
-              Je hoeft nog niet te weten hoe je website eruit moet zien.
-              Begin gewoon bij je bedrijf.
+              Je hoeft nog niet te weten hoe je website
+              eruit moet zien. Begin gewoon bij je bedrijf.
             </p>
           </>
         ) : (
           <div className="conversation">
-            {messages.map((message, index) => (
-              <div
-                key={index}
-                className={
-                  message.role === "user"
-                    ? "message user-message"
-                    : "message assistant-message"
-                }
-              >
-                {message.content}
-              </div>
-            ))}
+            {messages.map(
+              (message, index) => (
+                <div
+                  key={index}
+                  className={
+                    message.role === "user"
+                      ? "message user-message"
+                      : "message assistant-message"
+                  }
+                >
+                  {message.content}
+                </div>
+              )
+            )}
 
             {loading && (
               <div className="message assistant-message">
@@ -322,7 +400,10 @@ function handleApprove() {
           </div>
         )}
 
-        <form className="start" onSubmit={handleSubmit}>
+        <form
+          className="start"
+          onSubmit={handleSubmit}
+        >
           <textarea
             name="message"
             aria-label="Vertel verder"
@@ -333,28 +414,51 @@ function handleApprove() {
             }
             rows={4}
             value={input}
-            onChange={(event) => setInput(event.target.value)}
+            onChange={(event) =>
+              setInput(event.target.value)
+            }
           />
 
-          <button type="submit" disabled={loading}>
-            {loading ? "Even denken..." : "Verder"}
+          <button
+            type="submit"
+            disabled={loading}
+          >
+            {loading
+              ? "Even denken..."
+              : "Verder"}
           </button>
         </form>
 
         {understanding && (
           <div className="preview-actions">
-            <button onClick={handlePreview} disabled={previewLoading}>
-              {previewLoading ? "Even maken..." : "Laat iets zien"}
+            <button
+              onClick={handlePreview}
+              disabled={previewLoading}
+            >
+              {previewLoading
+                ? "Even maken..."
+                : "Laat iets zien"}
             </button>
 
             <details className="understanding">
-              <summary>Intern begrip</summary>
-              <pre>{JSON.stringify(understanding, null, 2)}</pre>
+              <summary>
+                Intern begrip
+              </summary>
+
+              <pre>
+                {JSON.stringify(
+                  understanding,
+                  null,
+                  2
+                )}
+              </pre>
             </details>
           </div>
         )}
 
-        <p className="quiet">Keep it simple. Keep it human.</p>
+        <p className="quiet">
+          Keep it simple. Keep it human.
+        </p>
       </section>
     </main>
   );

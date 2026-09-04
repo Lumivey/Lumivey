@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSiteDescription } from "@/lib/lumivey/site-description";
+import { createArtDirection } from "@/lib/lumivey/art-direction";
 import { LumiveyUnderstanding } from "@/lib/lumivey/understanding";
 
 export async function POST(request: Request) {
@@ -14,10 +15,14 @@ export async function POST(request: Request) {
       );
     }
 
-    const site = await createSiteDescription(understanding);
+    const [site, artDirection] = await Promise.all([
+      createSiteDescription(understanding),
+      createArtDirection(understanding),
+    ]);
 
     return NextResponse.json({
       site,
+      artDirection,
     });
   } catch (error) {
     console.error(error);
