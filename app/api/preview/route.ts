@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createSiteDescription } from "@/lib/lumivey/site-description";
 import { createArtDirection } from "@/lib/lumivey/art-direction";
+import { chooseLayoutVariant } from "@/lib/lumivey/layout-variant";
+import { createImageBrief } from "@/lib/lumivey/image-brief";
 import { LumiveyUnderstanding } from "@/lib/lumivey/understanding";
 
 export async function POST(request: Request) {
@@ -20,9 +22,18 @@ export async function POST(request: Request) {
       createArtDirection(understanding),
     ]);
 
+    const layoutVariant = chooseLayoutVariant(understanding);
+
+    const imageBrief = await createImageBrief(
+      understanding,
+      artDirection
+    );
+
     return NextResponse.json({
       site,
       artDirection,
+      layoutVariant,
+      imageBrief,
     });
   } catch (error) {
     console.error(error);

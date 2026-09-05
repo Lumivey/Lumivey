@@ -1,6 +1,8 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import CleanProfessionalPreview from "@/app/components/CleanProfessionalPreview";
+import WarmCraftPreview from "@/app/components/WarmCraftPreview";
 
 type ChatMessage = {
   role: "user" | "assistant";
@@ -36,6 +38,26 @@ type ArtDirection = {
   avoid: string[];
 };
 
+type LayoutVariant =
+  | "quiet-editorial"
+  | "warm-craft"
+  | "clean-professional";
+
+type ImageBriefItem = {
+  purpose: string;
+  subject: string;
+  setting: string;
+  composition: string;
+  atmosphere: string;
+  avoid: string[];
+};
+
+type ImageBrief = {
+  hero: ImageBriefItem;
+  story: ImageBriefItem;
+  detail: ImageBriefItem;
+};
+
 export default function Home() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -44,13 +66,20 @@ export default function Home() {
   const [understanding, setUnderstanding] =
     useState<object | null>(null);
 
-  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewLoading, setPreviewLoading] =
+    useState(false);
 
   const [site, setSite] =
     useState<SiteDescription | null>(null);
 
   const [artDirection, setArtDirection] =
     useState<ArtDirection | null>(null);
+
+  const [layoutVariant, setLayoutVariant] =
+    useState<LayoutVariant | null>(null);
+
+  const [imageBrief, setImageBrief] =
+    useState<ImageBrief | null>(null);
 
   const [approvedSite, setApprovedSite] =
     useState<SiteDescription | null>(null);
@@ -144,12 +173,15 @@ export default function Home() {
 
       if (!response.ok) {
         throw new Error(
-          data.error || "Preview kon niet worden gemaakt."
+          data.error ||
+            "Preview kon niet worden gemaakt."
         );
       }
 
       setSite(data.site);
       setArtDirection(data.artDirection);
+      setLayoutVariant(data.layoutVariant);
+      setImageBrief(data.imageBrief);
     } catch (error) {
       console.error(error);
     } finally {
@@ -174,6 +206,57 @@ export default function Home() {
 
     setApprovedSite(site);
     setSite(null);
+  }
+
+  function renderPreviewMeta() {
+    return (
+      <section className="preview-section preview-meta">
+        {layoutVariant && (
+          <p>
+            Gekozen layout:{" "}
+            <strong>{layoutVariant}</strong>
+          </p>
+        )}
+
+        {artDirection && (
+          <details className="understanding">
+            <summary>Art direction</summary>
+
+            <pre>
+              {JSON.stringify(
+                artDirection,
+                null,
+                2
+              )}
+            </pre>
+          </details>
+        )}
+
+        {imageBrief && (
+          <details className="understanding">
+            <summary>Image brief</summary>
+
+            <pre>
+              {JSON.stringify(
+                imageBrief,
+                null,
+                2
+              )}
+            </pre>
+          </details>
+        )}
+
+        <div className="preview-buttons">
+          <button onClick={handleApprove}>
+            Deze klopt
+          </button>
+
+          <button onClick={handleBackToConversation}>
+            Dit wil ik aanpassen
+          </button>
+        </div>
+      </section>
+    );
   }
 
   if (approvedSite) {
@@ -214,7 +297,9 @@ export default function Home() {
         {approvedSite.services.length > 0 && (
           <section className="preview-section">
             {approvedSite.servicesTitle && (
-              <h2>{approvedSite.servicesTitle}</h2>
+              <h2>
+                {approvedSite.servicesTitle}
+              </h2>
             )}
 
             <ul>
@@ -265,10 +350,44 @@ export default function Home() {
   }
 
   if (site) {
+    if (layoutVariant === "warm-craft") {
+      return (
+        <main className="preview-page layout-warm-craft">
+          <WarmCraftPreview
+            site={site}
+            imageBrief={imageBrief}
+          />
+
+          {renderPreviewMeta()}
+        </main>
+      );
+    }
+
+    if (layoutVariant === "clean-professional") {
+      return (
+        <main className="preview-page layout-clean-professional">
+          <CleanProfessionalPreview
+            site={site}
+            imageBrief={imageBrief}
+          />
+
+          {renderPreviewMeta()}
+        </main>
+      );
+    }
+
+    const layoutClass = layoutVariant
+      ? `layout-${layoutVariant}`
+      : "";
+
     return (
-      <main className="preview-page">
+      <main
+        className={`preview-page ${layoutClass}`}
+      >
         <section className="preview-hero">
-          <p className="eyebrow">Preview</p>
+          <p className="eyebrow">
+            Preview
+          </p>
 
           <h1>{site.title}</h1>
 
@@ -300,7 +419,9 @@ export default function Home() {
         {site.services.length > 0 && (
           <section className="preview-section">
             {site.servicesTitle && (
-              <h2>{site.servicesTitle}</h2>
+              <h2>
+                {site.servicesTitle}
+              </h2>
             )}
 
             <ul>
@@ -319,7 +440,9 @@ export default function Home() {
           site.contactText) && (
           <section className="preview-section">
             {site.contactTitle && (
-              <h2>{site.contactTitle}</h2>
+              <h2>
+                {site.contactTitle}
+              </h2>
             )}
 
             {site.contactText && (
@@ -328,35 +451,7 @@ export default function Home() {
           </section>
         )}
 
-        <section className="preview-section preview-meta">
-          {artDirection && (
-            <details className="understanding">
-              <summary>
-                Art direction
-              </summary>
-
-              <pre>
-                {JSON.stringify(
-                  artDirection,
-                  null,
-                  2
-                )}
-              </pre>
-            </details>
-          )}
-
-          <div className="preview-buttons">
-            <button onClick={handleApprove}>
-              Deze klopt
-            </button>
-
-            <button
-              onClick={handleBackToConversation}
-            >
-              Dit wil ik aanpassen
-            </button>
-          </div>
-        </section>
+        {renderPreviewMeta()}
       </main>
     );
   }
@@ -364,15 +459,18 @@ export default function Home() {
   return (
     <main className="home">
       <section className="intro">
-        <p className="eyebrow">Lumivey</p>
+        <p className="eyebrow">
+          Lumivey
+        </p>
 
         {messages.length === 0 ? (
           <>
             <h1>Vertel eens.</h1>
 
             <p className="lead">
-              Je hoeft nog niet te weten hoe je website
-              eruit moet zien. Begin gewoon bij je bedrijf.
+              Je hoeft nog niet te weten hoe je
+              website eruit moet zien. Begin gewoon
+              bij je bedrijf.
             </p>
           </>
         ) : (
