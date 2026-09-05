@@ -64,7 +64,7 @@ BELANGRIJK:
       quality: "medium",
     });
 
-    const imageBase64 = result.data[0]?.b64_json;
+    const imageBase64 = result.data?.[0]?.b64_json;
 
     if (!imageBase64) {
       throw new Error("Geen afbeelding ontvangen.");
