@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type SiteDescription = {
   title: string;
@@ -29,18 +29,44 @@ type ImageBrief = {
   detail: ImageBriefItem;
 };
 
+export type GeneratedImages = {
+  heroImage: string | null;
+  storyImage: string | null;
+  detailImage: string | null;
+};
+
 type Props = {
   site: SiteDescription;
   imageBrief?: ImageBrief | null;
+  onImagesChange?: (images: GeneratedImages) => void;
+  initialImages?: GeneratedImages;
+  allowGeneration?: boolean;
+};
+
+const emptyImages: GeneratedImages = {
+  heroImage: null,
+  storyImage: null,
+  detailImage: null,
 };
 
 export default function WarmCraftPreview({
   site,
   imageBrief,
+  onImagesChange,
+  initialImages = emptyImages,
+  allowGeneration = true,
 }: Props) {
-  const [heroImage, setHeroImage] = useState<string | null>(null);
-  const [storyImage, setStoryImage] = useState<string | null>(null);
-  const [detailImage, setDetailImage] = useState<string | null>(null);
+  const [heroImage, setHeroImage] = useState<string | null>(
+    initialImages.heroImage
+  );
+
+  const [storyImage, setStoryImage] = useState<string | null>(
+    initialImages.storyImage
+  );
+
+  const [detailImage, setDetailImage] = useState<string | null>(
+    initialImages.detailImage
+  );
 
   const [heroLoading, setHeroLoading] = useState(false);
   const [storyLoading, setStoryLoading] = useState(false);
@@ -50,13 +76,26 @@ export default function WarmCraftPreview({
   const [storyError, setStoryError] = useState("");
   const [detailError, setDetailError] = useState("");
 
+  useEffect(() => {
+    onImagesChange?.({
+      heroImage,
+      storyImage,
+      detailImage,
+    });
+  }, [
+    heroImage,
+    storyImage,
+    detailImage,
+    onImagesChange,
+  ]);
+
   async function generateImage(
     brief: ImageBriefItem | undefined,
     setImage: (value: string) => void,
     setLoading: (value: boolean) => void,
     setError: (value: string) => void
   ) {
-    if (!brief) {
+    if (!brief || !allowGeneration) {
       return;
     }
 
@@ -85,17 +124,71 @@ export default function WarmCraftPreview({
       setImage(data.image);
     } catch (error) {
       console.error(error);
-      setError("Het tijdelijke beeld kon niet worden gemaakt.");
+
+      setError(
+        "Het tijdelijke beeld kon niet worden gemaakt."
+      );
     } finally {
       setLoading(false);
     }
+  }
+
+  function renderPlaceholder(
+    label: string,
+    brief: ImageBriefItem | undefined,
+    loading: boolean,
+    error: string,
+    onGenerate: () => void,
+    extraClass = ""
+  ) {
+    return (
+      <div
+        className={`wc-image-placeholder ${extraClass}`}
+      >
+        <span>{label}</span>
+
+        {brief ? (
+          <>
+            <p>{brief.subject}</p>
+
+            {allowGeneration && (
+              <button
+                type="button"
+                className="wc-generate-image"
+                onClick={onGenerate}
+                disabled={loading}
+              >
+                {loading
+                  ? "Beeld wordt gemaakt..."
+                  : "Maak tijdelijk beeld"}
+              </button>
+            )}
+
+            {error && (
+              <p className="wc-image-error">
+                {error}
+              </p>
+            )}
+          </>
+        ) : (
+          <p>
+            Authentieke fotografie van werk,
+            materiaal en afwerking.
+          </p>
+        )}
+      </div>
+    );
   }
 
   return (
     <div className="wc-page">
       <section className="wc-hero">
         <div className="wc-hero-copy">
-          <p className="wc-kicker">Preview</p>
+          {allowGeneration && (
+            <p className="wc-kicker">
+              Preview
+            </p>
+          )}
 
           <h1>{site.title}</h1>
 
@@ -114,44 +207,19 @@ export default function WarmCraftPreview({
               className="wc-generated-image"
             />
           ) : (
-            <div className="wc-image-placeholder">
-              <span>Beeldrichting</span>
-
-              {imageBrief?.hero ? (
-                <>
-                  <p>{imageBrief.hero.subject}</p>
-
-                  <button
-                    type="button"
-                    className="wc-generate-image"
-                    onClick={() =>
-                      generateImage(
-                        imageBrief.hero,
-                        setHeroImage,
-                        setHeroLoading,
-                        setHeroError
-                      )
-                    }
-                    disabled={heroLoading}
-                  >
-                    {heroLoading
-                      ? "Beeld wordt gemaakt..."
-                      : "Maak tijdelijk beeld"}
-                  </button>
-
-                  {heroError && (
-                    <p className="wc-image-error">
-                      {heroError}
-                    </p>
-                  )}
-                </>
-              ) : (
-                <p>
-                  Authentieke fotografie van werk,
-                  materiaal en afwerking.
-                </p>
-              )}
-            </div>
+            renderPlaceholder(
+              "Beeldrichting",
+              imageBrief?.hero,
+              heroLoading,
+              heroError,
+              () =>
+                generateImage(
+                  imageBrief?.hero,
+                  setHeroImage,
+                  setHeroLoading,
+                  setHeroError
+                )
+            )
           )}
         </div>
       </section>
@@ -184,44 +252,20 @@ export default function WarmCraftPreview({
                 className="wc-generated-image"
               />
             ) : (
-              <div className="wc-image-placeholder small">
-                <span>Werkbeeld</span>
-
-                {imageBrief?.story ? (
-                  <>
-                    <p>{imageBrief.story.subject}</p>
-
-                    <button
-                      type="button"
-                      className="wc-generate-image"
-                      onClick={() =>
-                        generateImage(
-                          imageBrief.story,
-                          setStoryImage,
-                          setStoryLoading,
-                          setStoryError
-                        )
-                      }
-                      disabled={storyLoading}
-                    >
-                      {storyLoading
-                        ? "Beeld wordt gemaakt..."
-                        : "Maak tijdelijk beeld"}
-                    </button>
-
-                    {storyError && (
-                      <p className="wc-image-error">
-                        {storyError}
-                      </p>
-                    )}
-                  </>
-                ) : (
-                  <p>
-                    Voorbereiding, handen aan het werk
-                    en zorgvuldig vakmanschap.
-                  </p>
-                )}
-              </div>
+              renderPlaceholder(
+                "Werkbeeld",
+                imageBrief?.story,
+                storyLoading,
+                storyError,
+                () =>
+                  generateImage(
+                    imageBrief?.story,
+                    setStoryImage,
+                    setStoryLoading,
+                    setStoryError
+                  ),
+                "small"
+              )
             )}
           </div>
         </section>
@@ -258,7 +302,8 @@ export default function WarmCraftPreview({
           </p>
 
           <h2>
-            Goed werk begint voordat het eindresultaat zichtbaar is.
+            Goed werk begint voordat het eindresultaat
+            zichtbaar is.
           </h2>
         </div>
 
@@ -266,6 +311,7 @@ export default function WarmCraftPreview({
           <article>
             <span>01</span>
             <h3>Voorbereiden</h3>
+
             <p>
               Afplakken, schoonmaken, schuren en gronden.
             </p>
@@ -274,6 +320,7 @@ export default function WarmCraftPreview({
           <article>
             <span>02</span>
             <h3>Uitvoeren</h3>
+
             <p>
               Rustig werken, laag voor laag, met aandacht
               voor materiaal en omgeving.
@@ -283,6 +330,7 @@ export default function WarmCraftPreview({
           <article>
             <span>03</span>
             <h3>Afwerken</h3>
+
             <p>
               Netjes opleveren en zorgen dat het resultaat
               ook echt klopt.
@@ -301,34 +349,20 @@ export default function WarmCraftPreview({
                 className="wc-generated-image"
               />
             ) : (
-              <div className="wc-image-placeholder detail">
-                <span>Detailbeeld</span>
-                <p>{imageBrief.detail.subject}</p>
-
-                <button
-                  type="button"
-                  className="wc-generate-image"
-                  onClick={() =>
-                    generateImage(
-                      imageBrief.detail,
-                      setDetailImage,
-                      setDetailLoading,
-                      setDetailError
-                    )
-                  }
-                  disabled={detailLoading}
-                >
-                  {detailLoading
-                    ? "Beeld wordt gemaakt..."
-                    : "Maak tijdelijk beeld"}
-                </button>
-
-                {detailError && (
-                  <p className="wc-image-error">
-                    {detailError}
-                  </p>
-                )}
-              </div>
+              renderPlaceholder(
+                "Detailbeeld",
+                imageBrief.detail,
+                detailLoading,
+                detailError,
+                () =>
+                  generateImage(
+                    imageBrief.detail,
+                    setDetailImage,
+                    setDetailLoading,
+                    setDetailError
+                  ),
+                "detail"
+              )
             )}
           </div>
 
@@ -338,7 +372,8 @@ export default function WarmCraftPreview({
             </p>
 
             <h2>
-              Het verschil zit vaak in wat je pas later ziet.
+              Het verschil zit vaak in wat je pas later
+              ziet.
             </h2>
 
             <p>

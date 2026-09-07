@@ -1,8 +1,17 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import {
+  FormEvent,
+  useCallback,
+  useState,
+} from "react";
+
 import CleanProfessionalPreview from "@/app/components/CleanProfessionalPreview";
-import WarmCraftPreview from "@/app/components/WarmCraftPreview";
+import WarmCraftPreview, {
+  GeneratedImages,
+} from "@/app/components/WarmCraftPreview";
+
+import { storeImage } from "@/lib/lumivey/image-store";
 
 type ChatMessage = {
   role: "user" | "assistant";
@@ -58,6 +67,24 @@ type ImageBrief = {
   detail: ImageBriefItem;
 };
 
+type ApprovedSitePackage = {
+  site: SiteDescription;
+  layoutVariant: LayoutVariant | null;
+  artDirection: ArtDirection | null;
+  imageBrief: ImageBrief | null;
+  images: {
+    heroKey: string | null;
+    storyKey: string | null;
+    detailKey: string | null;
+  };
+};
+
+const emptyGeneratedImages: GeneratedImages = {
+  heroImage: null,
+  storyImage: null,
+  detailImage: null,
+};
+
 export default function Home() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -81,8 +108,18 @@ export default function Home() {
   const [imageBrief, setImageBrief] =
     useState<ImageBrief | null>(null);
 
-  const [approvedSite, setApprovedSite] =
-    useState<SiteDescription | null>(null);
+  const [generatedImages, setGeneratedImages] =
+    useState<GeneratedImages>(emptyGeneratedImages);
+
+  const [approveLoading, setApproveLoading] =
+    useState(false);
+
+  const handleImagesChange = useCallback(
+    (images: GeneratedImages) => {
+      setGeneratedImages(images);
+    },
+    []
+  );
 
   async function handleSubmit(
     event: FormEvent<HTMLFormElement>
@@ -157,6 +194,7 @@ export default function Home() {
     }
 
     setPreviewLoading(true);
+    setGeneratedImages(emptyGeneratedImages);
 
     try {
       const response = await fetch("/api/preview", {
@@ -194,18 +232,85 @@ export default function Home() {
     setInput("");
   }
 
-  function handleApprove() {
-    if (!site) {
+  async function handleApprove() {
+    if (!site || approveLoading) {
       return;
     }
 
-    localStorage.setItem(
-      "lumivey-approved-site",
-      JSON.stringify(site)
-    );
+    setApproveLoading(true);
 
-    setApprovedSite(site);
-    setSite(null);
+    try {
+      const heroKey = generatedImages.heroImage
+        ? "lumivey-approved-hero"
+        : null;
+
+      const storyKey = generatedImages.storyImage
+        ? "lumivey-approved-story"
+        : null;
+
+      const detailKey = generatedImages.detailImage
+        ? "lumivey-approved-detail"
+        : null;
+
+      if (heroKey && generatedImages.heroImage) {
+        await storeImage(
+          heroKey,
+          generatedImages.heroImage
+        );
+      }
+
+      if (storyKey && generatedImages.storyImage) {
+        await storeImage(
+          storyKey,
+          generatedImages.storyImage
+        );
+      }
+
+      if (detailKey && generatedImages.detailImage) {
+        await storeImage(
+          detailKey,
+          generatedImages.detailImage
+        );
+      }
+
+      const approvedPackage: ApprovedSitePackage = {
+        site,
+        layoutVariant,
+        artDirection,
+        imageBrief,
+        images: {
+          heroKey,
+          storyKey,
+          detailKey,
+        },
+      };
+
+      localStorage.setItem(
+        "lumivey-approved-package",
+        JSON.stringify(approvedPackage)
+      );
+
+      window.location.href = "/site";
+    } catch (error) {
+      console.error(
+        "Goedkeuren mislukt:",
+        error
+      );
+
+      alert(
+        "De goedgekeurde versie kon niet worden opgeslagen."
+      );
+    } finally {
+      setApproveLoading(false);
+    }
+  }
+
+  function countGeneratedImages() {
+    return [
+      generatedImages.heroImage,
+      generatedImages.storyImage,
+      generatedImages.detailImage,
+    ].filter(Boolean).length;
   }
 
   function renderPreviewMeta() {
@@ -215,6 +320,15 @@ export default function Home() {
           <p>
             Gekozen layout:{" "}
             <strong>{layoutVariant}</strong>
+          </p>
+        )}
+
+        {layoutVariant === "warm-craft" && (
+          <p>
+            Gegenereerde beelden:{" "}
+            <strong>
+              {countGeneratedImages()} / 3
+            </strong>
           </p>
         )}
 
@@ -247,105 +361,23 @@ export default function Home() {
         )}
 
         <div className="preview-buttons">
-          <button onClick={handleApprove}>
-            Deze klopt
+          <button
+            onClick={handleApprove}
+            disabled={approveLoading}
+          >
+            {approveLoading
+              ? "Even opslaan..."
+              : "Deze klopt"}
           </button>
 
-          <button onClick={handleBackToConversation}>
+          <button
+            onClick={handleBackToConversation}
+            disabled={approveLoading}
+          >
             Dit wil ik aanpassen
           </button>
         </div>
       </section>
-    );
-  }
-
-  if (approvedSite) {
-    return (
-      <main className="preview-page">
-        <section className="preview-hero">
-          <p className="eyebrow">
-            Goedgekeurde versie
-          </p>
-
-          <h1>{approvedSite.title}</h1>
-
-          {approvedSite.subtitle && (
-            <p className="preview-subtitle">
-              {approvedSite.subtitle}
-            </p>
-          )}
-        </section>
-
-        {approvedSite.intro && (
-          <section className="preview-section">
-            <p className="preview-intro">
-              {approvedSite.intro}
-            </p>
-          </section>
-        )}
-
-        {approvedSite.story && (
-          <section className="preview-section">
-            {approvedSite.storyTitle && (
-              <h2>{approvedSite.storyTitle}</h2>
-            )}
-
-            <p>{approvedSite.story}</p>
-          </section>
-        )}
-
-        {approvedSite.services.length > 0 && (
-          <section className="preview-section">
-            {approvedSite.servicesTitle && (
-              <h2>
-                {approvedSite.servicesTitle}
-              </h2>
-            )}
-
-            <ul>
-              {approvedSite.services.map(
-                (service, index) => (
-                  <li key={index}>
-                    {service}
-                  </li>
-                )
-              )}
-            </ul>
-          </section>
-        )}
-
-        {(approvedSite.contactTitle ||
-          approvedSite.contactText) && (
-          <section className="preview-section">
-            {approvedSite.contactTitle && (
-              <h2>
-                {approvedSite.contactTitle}
-              </h2>
-            )}
-
-            {approvedSite.contactText && (
-              <p>
-                {approvedSite.contactText}
-              </p>
-            )}
-          </section>
-        )}
-
-        <section className="preview-section preview-meta">
-          <p>
-            Deze versie is goedgekeurd voor publicatie.
-          </p>
-
-          <button
-            onClick={() => {
-              setApprovedSite(null);
-              setSite(null);
-            }}
-          >
-            Terug naar gesprek
-          </button>
-        </section>
-      </main>
     );
   }
 
@@ -356,6 +388,7 @@ export default function Home() {
           <WarmCraftPreview
             site={site}
             imageBrief={imageBrief}
+            onImagesChange={handleImagesChange}
           />
 
           {renderPreviewMeta()}
