@@ -214,6 +214,8 @@ export default function SitePage() {
         <CleanProfessionalPreview
           site={site}
           imageBrief={imageBrief}
+          initialImages={images}
+          allowGeneration={false}
         />
       </main>
     );
