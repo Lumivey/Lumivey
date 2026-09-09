@@ -18,6 +18,11 @@ type ChatMessage = {
   content: string;
 };
 
+type UnderstandingState = {
+  sources?: unknown[];
+  [key: string]: unknown;
+};
+
 type SiteDescription = {
   title: string;
   subtitle: string;
@@ -91,7 +96,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
 
   const [understanding, setUnderstanding] =
-    useState<object | null>(null);
+    useState<UnderstandingState | null>(null);
 
   const [previewLoading, setPreviewLoading] =
     useState(false);
@@ -152,6 +157,7 @@ export default function Home() {
         },
         body: JSON.stringify({
           messages: nextMessages,
+          sourceContexts: understanding?.sources ?? [],
         }),
       });
 
