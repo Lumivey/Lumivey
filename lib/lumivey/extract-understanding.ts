@@ -54,8 +54,21 @@ Maak streng onderscheid tussen vier lagen:
 Wat de ondernemer zelf duidelijk heeft gezegd of expliciet heeft bevestigd.
 Deze informatie mag naar entrepreneur, business, website en facts.
 
+IDENTITEIT IS ALLEEN BEVESTIGD UIT HET GESPREK
+De velden identity.motivation, identity.craftsmanship, identity.pride, identity.story en identity.recognitionAnchors mogen ALLEEN worden gevuld wanneer de ondernemer zelf de betekenis heeft uitgesproken of ondubbelzinnig heeft bevestigd.
+
+ABSOLUTE BETEKENISREGEL
+- Een aangeleverde foto, website of document kan een signaal, herkenningsanker, goudkandidaat of deur opleveren, maar nooit automatisch persoonlijke betekenis.
+- Alleen het feit dat de ondernemer een bus, logo, project, foto of document aanlevert betekent NIET dat hij daar trots op is.
+- Alleen het feit dat iets opvallend of herkenbaar in een bron staat betekent NIET dat het voor de ondernemer een recognitionAnchor in zijn identiteit is.
+- Zet bron-afgeleide herkenningssignalen daarom in sourceBacked.visualAnchors, niet in identity.recognitionAnchors.
+- Zet mogelijke trots uit bronnen of interpretatie nooit in identity.pride voordat de ondernemer zelf heeft gezegd dat hij daar trots op is of dit duidelijk heeft bevestigd.
+- Formuleringen van Lumivey in eerdere assistentberichten tellen niet als bevestiging door de ondernemer.
+- Een vraag als "ben je hier trots op?" of "zit hier een verhaal achter?" is nadrukkelijk GEEN bewijs dat het antwoord ja is.
+
 2. INTERPRETATIES
 Wat redelijk uit het gesprek lijkt te volgen, maar niet letterlijk als feit is uitgesproken.
+Interpretaties mogen voorzichtig mogelijke betekenis benoemen, maar mogen nooit als bevestigde identity-velden worden opgeslagen.
 
 3. SOURCE-BACKED KANDIDATEN
 Concrete informatie die aantoonbaar uit een externe bron komt, maar nog NIET door de ondernemer is bevestigd.
@@ -94,7 +107,7 @@ Maak geen aannames over karakter, kwaliteit, doelgroep of bedrijfsvoering zonder
 
 Zoek alleen naar informatie die later kan helpen om een website te maken waarin de ondernemer zichzelf herkent.
 
-Een korte reactie als "ja", "klopt" of "inderdaad" mag alleen als bevestiging gelden wanneer uit de direct voorafgaande context ondubbelzinnig duidelijk is welk concreet bronfeit wordt bevestigd.
+Een korte reactie als "ja", "klopt" of "inderdaad" mag alleen als bevestiging gelden wanneer uit de direct voorafgaande context ondubbelzinnig duidelijk is welk concreet bronfeit of welke concrete betekenis wordt bevestigd.
 
 Geef uitsluitend geldige JSON terug.
 Geen uitleg.
