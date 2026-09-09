@@ -8,6 +8,21 @@ const openai = new OpenAI({
 
 const MAX_SOURCE_CHARS = 24000;
 
+type ParsedFact = {
+  statement: string;
+  evidence?: string;
+};
+
+type ParsedGoldCandidate = {
+  signal: string;
+  reason: string;
+};
+
+type ParsedDoor = {
+  signal: string;
+  whyWorthExploring: string;
+};
+
 export async function analyzeWebsiteSource(
   research: WebsiteResearchResult
 ): Promise<SourceContext> {
@@ -45,7 +60,7 @@ Concrete zaken die werkelijk in de bron staan, bijvoorbeeld:
 - slogans;
 - logo-, kleur- of beeldsignalen wanneer de brondata die daadwerkelijk bevat.
 
-2. MOGELIJKE GOUDKLompjes
+2. MOGELIJKE GOUDKLOMPJES
 Bestaande signalen die onderscheidend, persoonlijk, betekenisvol of herkenbaar kunnen zijn.
 Noem alleen waarom het mogelijk interessant is; verzin het verhaal erachter niet.
 
@@ -104,64 +119,70 @@ Houd het compact en relevant voor Discovery en preview.
     `,
   });
 
-  const parsed = JSON.parse(response.output_text);
+  const parsed: unknown = JSON.parse(response.output_text);
+  const parsedObject =
+    typeof parsed === "object" && parsed !== null
+      ? (parsed as Record<string, unknown>)
+      : {};
 
-  const facts = Array.isArray(parsed?.facts)
-    ? parsed.facts
-        .filter(
-          (item: unknown): item is {
-            statement: string;
-            evidence?: string;
-          } =>
-            typeof item === "object" &&
-            item !== null &&
-            typeof (item as { statement?: unknown }).statement ===
-              "string"
-        )
-        .map((item) => ({
-          statement: item.statement,
-          evidence:
-            typeof item.evidence === "string"
-              ? item.evidence
-              : undefined,
-          status: "source-only" as const,
-        }))
+  const rawFacts = Array.isArray(parsedObject.facts)
+    ? parsedObject.facts
     : [];
 
-  const goldCandidates = Array.isArray(parsed?.goldCandidates)
-    ? parsed.goldCandidates.filter(
-        (item: unknown): item is {
-          signal: string;
-          reason: string;
-        } =>
-          typeof item === "object" &&
-          item !== null &&
-          typeof (item as { signal?: unknown }).signal === "string" &&
-          typeof (item as { reason?: unknown }).reason === "string"
-      )
+  const facts = rawFacts
+    .filter((item: unknown): item is ParsedFact => {
+      return (
+        typeof item === "object" &&
+        item !== null &&
+        typeof (item as { statement?: unknown }).statement === "string"
+      );
+    })
+    .map((item: ParsedFact) => ({
+      statement: item.statement,
+      evidence:
+        typeof item.evidence === "string"
+          ? item.evidence
+          : undefined,
+      status: "source-only" as const,
+    }));
+
+  const rawGoldCandidates = Array.isArray(
+    parsedObject.goldCandidates
+  )
+    ? parsedObject.goldCandidates
     : [];
 
-  const doors = Array.isArray(parsed?.doors)
-    ? parsed.doors.filter(
-        (item: unknown): item is {
-          signal: string;
-          whyWorthExploring: string;
-        } =>
-          typeof item === "object" &&
-          item !== null &&
-          typeof (item as { signal?: unknown }).signal === "string" &&
-          typeof (
-            item as { whyWorthExploring?: unknown }
-          ).whyWorthExploring === "string"
-      )
+  const goldCandidates = rawGoldCandidates.filter(
+    (item: unknown): item is ParsedGoldCandidate =>
+      typeof item === "object" &&
+      item !== null &&
+      typeof (item as { signal?: unknown }).signal === "string" &&
+      typeof (item as { reason?: unknown }).reason === "string"
+  );
+
+  const rawDoors = Array.isArray(parsedObject.doors)
+    ? parsedObject.doors
     : [];
 
-  const uncertainties = Array.isArray(parsed?.uncertainties)
-    ? parsed.uncertainties.filter(
-        (item: unknown): item is string =>
-          typeof item === "string"
-      )
+  const doors = rawDoors.filter(
+    (item: unknown): item is ParsedDoor =>
+      typeof item === "object" &&
+      item !== null &&
+      typeof (item as { signal?: unknown }).signal === "string" &&
+      typeof (
+        item as { whyWorthExploring?: unknown }
+      ).whyWorthExploring === "string"
+  );
+
+  const rawUncertainties = Array.isArray(
+    parsedObject.uncertainties
+  )
+    ? parsedObject.uncertainties
     : [];
+
+  const uncertainties = rawUncertainties.filter(
+    (item: unknown): item is string => typeof item === "string"
+  );
 
   return {
     type: "website",
