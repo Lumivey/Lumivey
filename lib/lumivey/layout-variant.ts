@@ -1,4 +1,5 @@
 import { LumiveyUnderstanding } from "@/lib/lumivey/understanding";
+import { createPreviewContext } from "@/lib/lumivey/preview-context";
 
 export type LayoutVariant =
   | "quiet-editorial"
@@ -8,7 +9,11 @@ export type LayoutVariant =
 export function chooseLayoutVariant(
   understanding: LumiveyUnderstanding
 ): LayoutVariant {
-  const text = JSON.stringify(understanding).toLowerCase();
+  const context = createPreviewContext(understanding);
+  const text = JSON.stringify({
+    confirmed: context.confirmed,
+    sourceBacked: context.sourceBacked,
+  }).toLowerCase();
 
   let quietEditorial = 0;
   let warmCraft = 0;
