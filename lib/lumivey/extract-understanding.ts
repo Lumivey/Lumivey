@@ -43,39 +43,52 @@ export async function extractUnderstanding(
   const response = await openai.responses.create({
     model: "gpt-5.6-terra",
     instructions: `
-Je helpt Lumivey om intern bij te houden wat werkelijk uit een gesprek bekend is.
+Je helpt Lumivey om intern bij te houden wat werkelijk bekend is.
 
 Dit is geen gesprek met de ondernemer.
 Dit is interne interpretatie.
 
-Maak streng onderscheid tussen:
+Maak streng onderscheid tussen vier lagen:
 
-1. FEITEN
+1. BEVESTIGDE FEITEN
 Wat de ondernemer zelf duidelijk heeft gezegd of expliciet heeft bevestigd.
+Deze informatie mag naar entrepreneur, business, website en facts.
 
 2. INTERPRETATIES
-Wat redelijk uit het gesprek lijkt te volgen,
-maar niet letterlijk als feit is uitgesproken.
+Wat redelijk uit het gesprek lijkt te volgen, maar niet letterlijk als feit is uitgesproken.
 
-3. BRONINFORMATIE
-Informatie uit een website of andere externe bron is GEEN bevestigd ondernemersfeit.
-Neem broninformatie daarom niet automatisch op in facts.
-Gebruik broninformatie alleen als context om een bevestiging in het gesprek beter te begrijpen.
+3. SOURCE-BACKED KANDIDATEN
+Concrete informatie die aantoonbaar uit een externe bron komt, maar nog NIET door de ondernemer is bevestigd.
+Zet zulke informatie NIET in facts en vul er de bevestigde hoofdvelden niet mee.
+Zet deze informatie in sourceBacked met exact bewijs.
 
-4. ONBEKEND
-Wat belangrijk kan zijn maar nog niet bekend is.
+Gebruik sourceBacked voor concrete preview-relevante kandidaten zoals:
+- bedrijfsnaam;
+- beroep of bedrijfssoort;
+- plaatsnaam;
+- diensten;
+- contactgegevens;
+- visuele herkenningsankers zoals logo, woordmerk, opvallende kleuren of herkenbare bedrijfsbelettering.
+
+Voor ieder sourceBacked-item geldt:
+- value moet letterlijk of ondubbelzinnig uit de bron volgen;
+- evidence moet het concrete bewijs noemen;
+- status is altijd "source-backed-unconfirmed";
+- sourceLabel noemt waar mogelijk de website of bestandsnaam.
+
+4. ONBEKEND / NOG TE BEVESTIGEN
+Maak onderscheid tussen echt onbekend en informatie waarvoor al een bronkandidaat bestaat.
+Noem een veld NIET simpelweg "onbekend" als sourceBacked al een concrete kandidaat bevat.
+Formuleer dan bijvoorbeeld: "Nog te bevestigen: bedrijfsnaam uit de bron" of "Nog te bevestigen: Leeuwarden als vestigingsplaats of werkgebied".
 
 Verzin niets.
 Vul geen gaten op.
 Maak geen marketingverhaal.
-Maak geen aannames over karakter, kwaliteit, doelgroep of bedrijfsvoering
-zonder voldoende grond in het gesprek.
+Maak geen aannames over karakter, kwaliteit, doelgroep of bedrijfsvoering zonder voldoende grond.
 
-Zoek alleen naar informatie die later kan helpen
-om een website te maken waarin de ondernemer zichzelf herkent.
+Zoek alleen naar informatie die later kan helpen om een website te maken waarin de ondernemer zichzelf herkent.
 
-Een korte reactie als "ja", "klopt" of "inderdaad" mag alleen als bevestiging gelden
-wanneer uit de direct voorafgaande context ondubbelzinnig duidelijk is welk concreet bronfeit wordt bevestigd.
+Een korte reactie als "ja", "klopt" of "inderdaad" mag alleen als bevestiging gelden wanneer uit de direct voorafgaande context ondubbelzinnig duidelijk is welk concreet bronfeit wordt bevestigd.
 
 Geef uitsluitend geldige JSON terug.
 Geen uitleg.
@@ -116,12 +129,28 @@ Geef exact dit JSON-formaat terug:
     "desiredFeeling": [],
     "usefulContent": []
   },
+  "sourceBacked": {
+    "businessNames": [
+      {
+        "value": "",
+        "evidence": "",
+        "sourceLabel": "",
+        "status": "source-backed-unconfirmed"
+      }
+    ],
+    "professions": [],
+    "locations": [],
+    "services": [],
+    "contactDetails": [],
+    "visualAnchors": []
+  },
   "facts": [],
   "interpretations": [],
   "unknowns": []
 }
 
 Gebruik lege strings of lege arrays wanneer iets niet bekend is.
+Verwijder het voorbeelditem uit businessNames wanneer er geen concrete kandidaat is.
     `,
   });
 
@@ -131,6 +160,7 @@ Gebruik lege strings of lege arrays wanneer iets niet bekend is.
 
   return {
     ...parsed,
+    sourceBacked: parsed.sourceBacked ?? EMPTY_UNDERSTANDING.sourceBacked,
     sources: sourceContexts,
   };
 }
