@@ -11,6 +11,8 @@ export type SourceGoldCandidate = {
 
 export type SourceDoor = {
   signal: string;
+  supportingFact: string;
+  evidence: string;
   whyWorthExploring: string;
 };
 
@@ -44,7 +46,13 @@ export function formatSourceContextsForPrompt(
   return sourceContexts
     .map((source, index) => {
       const facts = source.facts
-        .map((fact) => `- ${fact.statement}`)
+        .map((fact) => {
+          const evidence = fact.evidence
+            ? ` | bewijs: ${fact.evidence}`
+            : "";
+
+          return `- ${fact.statement}${evidence}`;
+        })
         .join("\n");
 
       const gold = source.goldCandidates
@@ -52,7 +60,10 @@ export function formatSourceContextsForPrompt(
         .join("\n");
 
       const doors = source.doors
-        .map((door) => `- ${door.signal} — ${door.whyWorthExploring}`)
+        .map(
+          (door) =>
+            `- ${door.signal}\n  steunfeit: ${door.supportingFact}\n  bewijs: ${door.evidence}\n  waarom interessant: ${door.whyWorthExploring}`
+        )
         .join("\n");
 
       const uncertainties = source.uncertainties
@@ -68,10 +79,10 @@ Titel: ${source.title || "onbekend"}
 BRONFEITEN — nog niet bevestigd door de ondernemer
 ${facts || "- geen"}
 
-MOGELIJKE GOUDKLompjes
+MOGELIJKE GOUDKLOMPJES
 ${gold || "- geen"}
 
-MOGELIJKE DEUREN
+MOGELIJKE DEUREN — alleen gebruiken als steunfeit en bewijs letterlijk uit de bron komen
 ${doors || "- geen"}
 
 ONZEKERHEDEN
