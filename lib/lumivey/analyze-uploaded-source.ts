@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import {
+  normalizeDiscoveredUrl,
   SourceContext,
   UploadedSourceInput,
 } from "@/lib/lumivey/source-context";
@@ -25,11 +26,18 @@ type ParsedDoor = {
   whyWorthExploring: string;
 };
 
+type ParsedDiscoveredUrl = {
+  url: string;
+  evidence: string;
+  confidence: "high";
+};
+
 type ParsedAnalysis = {
   facts?: unknown;
   goldCandidates?: unknown;
   doors?: unknown;
   uncertainties?: unknown;
+  discoveredUrls?: unknown;
 };
 
 function buildInstructions(sourceType: "image" | "document") {
@@ -49,12 +57,19 @@ ABSOLUTE BRONREGEL
 
 VISUELE TEKSTBETROUWBAARHEID
 - Behandel gestileerde, kleine, schuine, onscherpe, gedeeltelijk afgedekte of anderszins moeilijk leesbare tekst NIET als exacte transcriptie.
-- Alleen wanneer een naam, slogan, telefoonnummer of andere tekst zonder redelijke twijfel leesbaar is, mag je die exact citeren.
+- Alleen wanneer een naam, slogan, telefoonnummer, website-URL of andere tekst zonder redelijke twijfel leesbaar is, mag je die exact citeren.
 - Bij twijfel: noteer alleen het betrouwbaar leesbare deel en zet de rest expliciet bij uncertainties.
-- Gebruik formuleringen als: "Op de bus staat een bedrijfsnaam met 'Schildersbedrijf' en een naam die niet volledig zeker leesbaar is."
-- Verzin nooit ontbrekende letters om van een gedeeltelijk leesbare naam een plausibele volledige naam te maken.
+- Verzin nooit ontbrekende letters om van gedeeltelijk leesbare tekst een plausibele volledige tekst te maken.
 - Een vermoedelijke lezing mag NIET als source-backed kandidaat worden aangeboden alsof die exact is.
 - Als zichtbare tekst mogelijk botst met iets dat de ondernemer zelf heeft gezegd, markeer dit als onzekerheid; corrigeer geen van beide automatisch.
+
+WEBSITE-URLS IN DE BRON
+- Kijk expliciet of er een websiteadres of domeinnaam zichtbaar of leesbaar is.
+- Voeg een URL alleen toe aan discoveredUrls als de domeinnaam volledig en zonder redelijke twijfel leesbaar is.
+- Een zichtbaar adres als "www.voorbeeld.nl" mag worden genormaliseerd naar "https://www.voorbeeld.nl".
+- Raad NOOIT een ontbrekend deel van een domeinnaam.
+- Als een domein deels onleesbaar is, zet dit alleen bij uncertainties en NIET in discoveredUrls.
+- discoveredUrls is uitsluitend bedoeld voor URLs die veilig automatisch als aanvullende bron onderzocht kunnen worden.
 
 ZOEK NAAR GOUD DAT VOOR EEN WEBSITE RELEVANT KAN ZIJN
 Bij afbeeldingen kan dat bijvoorbeeld zijn:
@@ -64,7 +79,8 @@ Bij afbeeldingen kan dat bijvoorbeeld zijn:
 - bedrijfsbus, werkplaats, salon, winkel, gereedschap of werkomgeving;
 - project, product, detail of vakmanschap;
 - een persoon in context, zonder identiteit te verzinnen;
-- zichtbare tekst of jaartallen.
+- zichtbare tekst of jaartallen;
+- een duidelijk leesbare website-URL die toegang geeft tot aanvullende bedrijfscontext.
 
 Bij documenten kan dat bijvoorbeeld zijn:
 - bedrijfsnaam;
@@ -76,7 +92,8 @@ Bij documenten kan dat bijvoorbeeld zijn:
 - jaartallen;
 - slogans;
 - waarden;
-- verhalen of opvallende formuleringen.
+- verhalen of opvallende formuleringen;
+- een duidelijk leesbare website-URL.
 
 PRIORITEIT VOOR GOUD EN DEUREN
 - Geef herkenningsankers voorrang wanneer ze duidelijk zichtbaar zijn: bedrijfsnaam, logo, woordmerk, kleurgebruik, bedrijfsbus, terugkerende vormtaal of een herkenbaar projectdetail.
@@ -125,9 +142,17 @@ Geef exact dit JSON-formaat terug:
       "whyWorthExploring": ""
     }
   ],
+  "discoveredUrls": [
+    {
+      "url": "https://www.voorbeeld.nl",
+      "evidence": "Waar het domein exact zichtbaar of leesbaar is",
+      "confidence": "high"
+    }
+  ],
   "uncertainties": []
 }
 
+Gebruik een lege discoveredUrls-array als er geen volledig en betrouwbaar leesbare website-URL is.
 Houd het compact. Selecteer alleen informatie die werkelijk waarde kan hebben voor Discovery of de preview.
   `;
 }
@@ -185,6 +210,43 @@ function parseAnalysis(
       (item as { evidence: string }).evidence.trim().length > 0
   );
 
+  const rawDiscoveredUrls = Array.isArray(object.discoveredUrls)
+    ? object.discoveredUrls
+    : [];
+
+  const discoveredUrls = rawDiscoveredUrls
+    .filter((item: unknown): item is ParsedDiscoveredUrl => {
+      return (
+        typeof item === "object" &&
+        item !== null &&
+        typeof (item as { url?: unknown }).url === "string" &&
+        typeof (item as { evidence?: unknown }).evidence === "string" &&
+        (item as { confidence?: unknown }).confidence === "high"
+      );
+    })
+    .map((item) => {
+      const normalized = normalizeDiscoveredUrl(item.url);
+
+      if (!normalized) {
+        return null;
+      }
+
+      return {
+        url: normalized,
+        evidence: item.evidence,
+        confidence: "high" as const,
+      };
+    })
+    .filter(
+      (
+        item
+      ): item is {
+        url: string;
+        evidence: string;
+        confidence: "high";
+      } => item !== null
+    );
+
   const rawUncertainties = Array.isArray(object.uncertainties)
     ? object.uncertainties
     : [];
@@ -202,6 +264,7 @@ function parseAnalysis(
     goldCandidates,
     doors,
     uncertainties,
+    discoveredUrls,
   };
 }
 
