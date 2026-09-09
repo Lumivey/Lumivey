@@ -17,13 +17,24 @@ export type SourceDoor = {
 };
 
 export type SourceContext = {
-  type: "website";
-  url: string;
+  type: "website" | "image" | "document";
+  sourceId?: string;
+  url?: string;
+  name?: string;
+  mimeType?: string;
   title?: string;
   facts: SourceFact[];
   goldCandidates: SourceGoldCandidate[];
   doors: SourceDoor[];
   uncertainties: string[];
+};
+
+export type UploadedSourceInput = {
+  id: string;
+  name: string;
+  mimeType: string;
+  dataUrl: string;
+  size: number;
 };
 
 const URL_PATTERN = /https?:\/\/[^\s)\]}>"']+/gi;
@@ -70,10 +81,15 @@ export function formatSourceContextsForPrompt(
         .map((item) => `- ${item}`)
         .join("\n");
 
+      const identity = source.url
+        ? `URL: ${source.url}`
+        : `Bestand: ${source.name || "onbekend"}`;
+
       return `
 BRON ${index + 1}
 Type: ${source.type}
-URL: ${source.url}
+${identity}
+${source.mimeType ? `Bestandstype: ${source.mimeType}` : ""}
 Titel: ${source.title || "onbekend"}
 
 BRONFEITEN — nog niet bevestigd door de ondernemer
@@ -82,7 +98,7 @@ ${facts || "- geen"}
 MOGELIJKE GOUDKLOMPJES
 ${gold || "- geen"}
 
-MOGELIJKE DEUREN — alleen gebruiken als steunfeit en bewijs letterlijk uit de bron komen
+MOGELIJKE DEUREN — alleen gebruiken als steunfeit en bewijs werkelijk uit de bron komen
 ${doors || "- geen"}
 
 ONZEKERHEDEN
