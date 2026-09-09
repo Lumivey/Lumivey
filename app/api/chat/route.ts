@@ -6,6 +6,7 @@ import {
   formatSourceContextsForPrompt,
   SourceContext,
   UploadedSourceInput,
+  websiteSourceKey,
 } from "@/lib/lumivey/source-context";
 import { researchWebsite } from "@/lib/lumivey/research-website";
 import { analyzeWebsiteSource } from "@/lib/lumivey/analyze-website-source";
@@ -86,10 +87,12 @@ export async function POST(request: Request) {
       ...existingSourceContexts,
     ];
 
-    const knownUrls = new Set(
+    const knownWebsiteKeys = new Set(
       sourceContexts
-        .map((source: SourceContext) => source.url)
-        .filter((url): url is string => typeof url === "string")
+        .map((source: SourceContext) =>
+          source.url ? websiteSourceKey(source.url) : null
+        )
+        .filter((key): key is string => typeof key === "string")
     );
 
     const knownSourceIds = new Set(
@@ -104,7 +107,9 @@ export async function POST(request: Request) {
       url: string,
       origin: "message" | "uploaded-source"
     ) {
-      if (knownUrls.has(url)) {
+      const key = websiteSourceKey(url);
+
+      if (!key || knownWebsiteKeys.has(key)) {
         return;
       }
 
@@ -112,7 +117,12 @@ export async function POST(request: Request) {
         const research = await researchWebsite(url);
         const sourceContext = await analyzeWebsiteSource(research);
         sourceContexts.push(sourceContext);
-        knownUrls.add(url);
+
+        const storedKey = sourceContext.url
+          ? websiteSourceKey(sourceContext.url)
+          : key;
+
+        knownWebsiteKeys.add(storedKey ?? key);
 
         if (origin === "uploaded-source") {
           sourceMoments.push(
@@ -133,7 +143,10 @@ export async function POST(request: Request) {
       }
     }
 
-    const explicitNewUrl = urls.find((url) => !knownUrls.has(url));
+    const explicitNewUrl = urls.find((url) => {
+      const key = websiteSourceKey(url);
+      return key ? !knownWebsiteKeys.has(key) : false;
+    });
 
     if (explicitNewUrl) {
       await addWebsiteSource(explicitNewUrl, "message");
@@ -149,7 +162,14 @@ export async function POST(request: Request) {
         );
 
         const discoveredUrl = (sourceContext.discoveredUrls ?? []).find(
-          (item) => item.confidence === "high" && !knownUrls.has(item.url)
+          (item) => {
+            if (item.confidence !== "high") {
+              return false;
+            }
+
+            const key = websiteSourceKey(item.url);
+            return key ? !knownWebsiteKeys.has(key) : false;
+          }
         );
 
         if (discoveredUrl) {
