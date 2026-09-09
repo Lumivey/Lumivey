@@ -78,6 +78,28 @@ export function normalizeDiscoveredUrl(value: string): string | null {
   }
 }
 
+export function websiteSourceKey(value: string): string | null {
+  const normalized = normalizeDiscoveredUrl(value);
+
+  if (!normalized) {
+    return null;
+  }
+
+  try {
+    const parsed = new URL(normalized);
+    const hostname = parsed.hostname.toLowerCase().replace(/^www\./, "");
+    let pathname = parsed.pathname.replace(/\/+$/, "");
+
+    if (pathname === "") {
+      pathname = "/";
+    }
+
+    return `${hostname}${pathname}`;
+  } catch {
+    return null;
+  }
+}
+
 export function formatSourceContextsForPrompt(
   sourceContexts: SourceContext[]
 ): string {
