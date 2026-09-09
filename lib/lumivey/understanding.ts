@@ -1,3 +1,5 @@
+import { SourceContext } from "@/lib/lumivey/source-context";
+
 export type LumiveyUnderstanding = {
   entrepreneur: {
     name?: string;
@@ -30,6 +32,7 @@ export type LumiveyUnderstanding = {
   facts: string[];
   interpretations: string[];
   unknowns: string[];
+  sources?: SourceContext[];
 };
 
 export const EMPTY_UNDERSTANDING: LumiveyUnderstanding = {
@@ -40,4 +43,5 @@ export const EMPTY_UNDERSTANDING: LumiveyUnderstanding = {
   facts: [],
   interpretations: [],
   unknowns: [],
+  sources: [],
 };
