@@ -20,6 +20,8 @@ type ParsedGoldCandidate = {
 
 type ParsedDoor = {
   signal: string;
+  supportingFact: string;
+  evidence: string;
   whyWorthExploring: string;
 };
 
@@ -37,13 +39,18 @@ export async function analyzeWebsiteSource(
     instructions: `
 Je analyseert een bestaande bedrijfswebsite als interne bron voor Lumivey Discovery.
 
-BELANGRIJK
+ABSOLUTE BRONREGEL
 - De website is een bron, geen waarheid.
 - Verzin niets.
-- Trek geen persoonlijke conclusies die niet letterlijk of duidelijk uit de bron volgen.
+- Generaliseer niet buiten wat letterlijk of ondubbelzinnig in de bron staat.
+- Leid GEEN sector, markt, specialisatie, doelgroep of persoonlijke betekenis af uit een algemeen begrip.
+- Voorbeeld: uit het woord "assets" mag je NIET vastgoed, industrie, infra of een andere sector afleiden tenzij die sector letterlijk of ondubbelzinnig in de bron staat.
 - Een feit uit de website blijft een BRONFEIT totdat de ondernemer het bevestigt.
-- Zoek niet naar administratieve volledigheid.
-- Zoek vooral naar informatie die kan helpen om een preview te maken waarin de ondernemer zichzelf herkent.
+- Iedere mogelijke deur moet terug te voeren zijn op een concreet steunfeit EN een letterlijk of vrijwel letterlijk bewijsfragment uit de bron.
+- Als je geen concreet bewijs kunt aanwijzen, maak die deur dan niet.
+
+Zoek niet naar administratieve volledigheid.
+Zoek vooral naar informatie die kan helpen om een preview te maken waarin de ondernemer zichzelf herkent.
 
 HERKEN VIER DINGEN
 
@@ -65,8 +72,12 @@ Bestaande signalen die onderscheidend, persoonlijk, betekenisvol of herkenbaar k
 Noem alleen waarom het mogelijk interessant is; verzin het verhaal erachter niet.
 
 3. MOGELIJKE DEUREN
-Feiten of signalen waar mogelijk een betekenisvol verhaal achter zit en waar Discovery één laag dieper op zou kunnen vragen.
-Beschrijf het signaal en waarom doorvragen waarde kan hebben.
+Alleen feiten of signalen waar mogelijk een betekenisvol verhaal achter zit en waar Discovery één laag dieper op zou kunnen vragen.
+Voor iedere deur moet je opnemen:
+- het signaal;
+- het concrete steunfeit;
+- een letterlijk of vrijwel letterlijk bewijsfragment uit de bron;
+- waarom doorvragen waarde kan hebben.
 
 4. ONZEKERHEDEN
 Dingen die verouderd, onduidelijk, dubbelzinnig of niet betrouwbaar genoeg lijken.
@@ -109,6 +120,8 @@ Geef exact dit JSON-formaat terug:
   "doors": [
     {
       "signal": "",
+      "supportingFact": "",
+      "evidence": "",
       "whyWorthExploring": ""
     }
   ],
@@ -169,9 +182,14 @@ Houd het compact en relevant voor Discovery en preview.
       typeof item === "object" &&
       item !== null &&
       typeof (item as { signal?: unknown }).signal === "string" &&
+      typeof (item as { supportingFact?: unknown }).supportingFact ===
+        "string" &&
+      typeof (item as { evidence?: unknown }).evidence === "string" &&
       typeof (
         item as { whyWorthExploring?: unknown }
-      ).whyWorthExploring === "string"
+      ).whyWorthExploring === "string" &&
+      (item as { supportingFact: string }).supportingFact.trim().length > 0 &&
+      (item as { evidence: string }).evidence.trim().length > 0
   );
 
   const rawUncertainties = Array.isArray(
