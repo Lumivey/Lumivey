@@ -1,6 +1,13 @@
 import { LUMIVEY_BEHAVIOR } from "@/lib/lumivey/behavior";
 import { LUMIVEY_PRODUCT } from "@/lib/lumivey/product";
 import { extractUnderstanding } from "@/lib/lumivey/extract-understanding";
+import {
+  extractUrlsFromText,
+  formatSourceContextsForPrompt,
+  SourceContext,
+} from "@/lib/lumivey/source-context";
+import { researchWebsite } from "@/lib/lumivey/research-website";
+import { analyzeWebsiteSource } from "@/lib/lumivey/analyze-website-source";
 import OpenAI from "openai";
 import { NextResponse } from "next/server";
 
@@ -12,6 +19,10 @@ type ChatMessage = {
   role: "user" | "assistant";
   content: string;
 };
+
+function isSourceContextArray(value: unknown): value is SourceContext[] {
+  return Array.isArray(value);
+}
 
 export async function POST(request: Request) {
   try {
@@ -25,6 +36,41 @@ export async function POST(request: Request) {
       );
     }
 
+    const existingSourceContexts = isSourceContextArray(
+      body.sourceContexts
+    )
+      ? body.sourceContexts
+      : [];
+
+    const latestUserMessage = [...messages]
+      .reverse()
+      .find((message) => message.role === "user");
+
+    const urls = latestUserMessage
+      ? extractUrlsFromText(latestUserMessage.content)
+      : [];
+
+    const knownUrls = new Set(
+      existingSourceContexts.map((source) => source.url)
+    );
+
+    const newUrl = urls.find((url) => !knownUrls.has(url));
+
+    const sourceContexts = [...existingSourceContexts];
+
+    if (newUrl) {
+      try {
+        const research = await researchWebsite(newUrl);
+        const sourceContext = await analyzeWebsiteSource(research);
+        sourceContexts.push(sourceContext);
+      } catch (sourceError) {
+        console.error(
+          "Websitebron kon niet worden onderzocht:",
+          sourceError
+        );
+      }
+    }
+
     const transcript = messages
       .map((message) => {
         const speaker =
@@ -34,26 +80,34 @@ export async function POST(request: Request) {
       })
       .join("\n\n");
 
-    const response = await openai.responses.create({
-  model: "gpt-5.6-terra",
-  instructions: `${LUMIVEY_BEHAVIOR}
+    const sourcePrompt =
+      formatSourceContextsForPrompt(sourceContexts);
 
-${LUMIVEY_PRODUCT}`,
-  input: `
+    const response = await openai.responses.create({
+      model: "gpt-5.6-terra",
+      instructions: `${LUMIVEY_BEHAVIOR}\n\n${LUMIVEY_PRODUCT}\n\nBRONNENREGEL\n\nExterne bronnen zijn context, geen waarheid.\nGebruik bronfeiten nooit alsof de ondernemer ze zelf heeft bevestigd.\nZie mogelijke goudklompjes en deuren als kansen om beter te begrijpen.\nAls een bron een betekenisvolle deur opent, stel hooguit één natuurlijke vraag die nu de meeste waarde toevoegt.\nGa niet alle bronfeiten controleren en verander het gesprek niet in een intake.`,
+      input: `
 Dit is het gesprek tot nu toe:
 
 ${transcript}
 
+Dit is interne broncontext. Laat de ondernemer deze analyse niet zien:
+
+${sourcePrompt}
+
 Reageer nu als Lumivey op het laatste bericht van de ondernemer.
       `,
-});
+    });
 
-const understanding = await extractUnderstanding(messages);
+    const understanding = await extractUnderstanding(
+      messages,
+      sourceContexts
+    );
 
-return NextResponse.json({
-  reply: response.output_text,
-  understanding,
-});
+    return NextResponse.json({
+      reply: response.output_text,
+      understanding,
+    });
   } catch (error) {
     console.error(error);
 
