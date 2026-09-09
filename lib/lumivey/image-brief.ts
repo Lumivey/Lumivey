@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import { LumiveyUnderstanding } from "@/lib/lumivey/understanding";
 import { ArtDirection } from "@/lib/lumivey/art-direction";
+import { formatPreviewContext } from "@/lib/lumivey/preview-context";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -46,19 +47,25 @@ export async function createImageBrief(
 Je bent de beeldredacteur van Lumivey.
 
 Je ontvangt:
-1. Lumiveys interne begrip van de ondernemer;
+1. Lumiveys interne begrip in gescheiden waarheidslagen;
 2. de gekozen art direction.
 
 Maak voor drie beeldplekken een concrete beeldbriefing:
-
 - hero
 - story
 - detail
 
+WAARHEIDSREGELS
+- Bevestigde informatie mag als inhoudelijke basis worden gebruikt.
+- Bron-gesteunde visuele ankers, werkzaamheden, materiaal, omgeving of bedrijfsdetails mogen als beeldrichting worden gebruikt wanneer ze concreet uit het bewijs volgen.
+- Bron-gesteunde informatie is geen toestemming om ontbrekende details te verzinnen.
+- Maak van een bronkandidaat nooit een fictief portret, fictieve locatie, fictief gebouw of verzonnen project.
+- Als een aangeleverde bron een echt herkenningsanker toont, mag de briefing dat anker benoemen als bruikbare richting voor een eigen afbeelding of een niet-identiteitsvervangend tijdelijk beeld.
+- Onzekerheden en interpretaties mogen niet als zichtbare feiten worden uitgebeeld.
+- Bij twijfel: kies een neutraler, eerlijker beeld of laat de briefing terughoudend zijn.
+
 De beelden moeten de ondernemer herkenbaar ondersteunen.
 Ze mogen niet alleen decoratief zijn.
-
-Gebruik uitsluitend informatie waarvoor voldoende grond bestaat.
 
 Belangrijk:
 - geen verzonnen personen, locaties, gebouwen of bedrijfsdetails;
@@ -89,9 +96,9 @@ Geen uitleg.
     `,
 
     input: `
-INTERNE BEGRIP:
+PREVIEW-CONTEXT:
 
-${JSON.stringify(understanding, null, 2)}
+${formatPreviewContext(understanding)}
 
 ART DIRECTION:
 
