@@ -323,7 +323,8 @@ export default function Home() {
           </p>
         )}
 
-        {layoutVariant === "warm-craft" && (
+        {(layoutVariant === "warm-craft" ||
+          layoutVariant === "clean-professional") && (
           <p>
             Gegenereerde beelden:{" "}
             <strong>
@@ -402,6 +403,7 @@ export default function Home() {
           <CleanProfessionalPreview
             site={site}
             imageBrief={imageBrief}
+            onImagesChange={handleImagesChange}
           />
 
           {renderPreviewMeta()}
