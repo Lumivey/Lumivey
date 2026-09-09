@@ -47,6 +47,15 @@ ABSOLUTE BRONREGEL
 - Iedere mogelijke deur moet terug te voeren zijn op een concreet steunfeit EN concreet bewijs uit de bron.
 - Als je geen concreet bewijs kunt aanwijzen, maak die deur niet.
 
+VISUELE TEKSTBETROUWBAARHEID
+- Behandel gestileerde, kleine, schuine, onscherpe, gedeeltelijk afgedekte of anderszins moeilijk leesbare tekst NIET als exacte transcriptie.
+- Alleen wanneer een naam, slogan, telefoonnummer of andere tekst zonder redelijke twijfel leesbaar is, mag je die exact citeren.
+- Bij twijfel: noteer alleen het betrouwbaar leesbare deel en zet de rest expliciet bij uncertainties.
+- Gebruik formuleringen als: "Op de bus staat een bedrijfsnaam met 'Schildersbedrijf' en een naam die niet volledig zeker leesbaar is."
+- Verzin nooit ontbrekende letters om van een gedeeltelijk leesbare naam een plausibele volledige naam te maken.
+- Een vermoedelijke lezing mag NIET als source-backed kandidaat worden aangeboden alsof die exact is.
+- Als zichtbare tekst mogelijk botst met iets dat de ondernemer zelf heeft gezegd, markeer dit als onzekerheid; corrigeer geen van beide automatisch.
+
 ZOEK NAAR GOUD DAT VOOR EEN WEBSITE RELEVANT KAN ZIJN
 Bij afbeeldingen kan dat bijvoorbeeld zijn:
 - bedrijfsnaam of zichtbaar woordmerk;
