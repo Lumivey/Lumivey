@@ -69,6 +69,14 @@ Bij documenten kan dat bijvoorbeeld zijn:
 - waarden;
 - verhalen of opvallende formuleringen.
 
+PRIORITEIT VOOR GOUD EN DEUREN
+- Geef herkenningsankers voorrang wanneer ze duidelijk zichtbaar zijn: bedrijfsnaam, logo, woordmerk, kleurgebruik, bedrijfsbus, terugkerende vormtaal of een herkenbaar projectdetail.
+- Een deur moet helpen ontdekken waarom iets herkenbaar, persoonlijk, betekenisvol, trotsmakend of kenmerkend is.
+- Maak van administratieve controle geen hoofddeur.
+- Vermijd deuren die alleen vragen of iets "officieel", "toegestaan", "beschikbaar" of "actueel" is, tenzij dat echt noodzakelijk is voor de preview.
+- Vermijd ook intake-achtige deuren als "welke diensten biedt u precies aan?" wanneer er een rijker herkenningssignaal aanwezig is.
+- Contactgegevens mogen als bronfeit worden vastgelegd, maar zijn zelden goud voor Discovery.
+
 MOGELIJKE DEUR
 Een deur is geen conclusie. Het is een concreet signaal waar mogelijk een verhaal achter zit.
 Voorbeeld: een oude bedrijfsbus met hetzelfde logo kan een deur zijn naar herkenbaarheid of geschiedenis, maar je mag niet aannemen dat de ondernemer er trots op is.
