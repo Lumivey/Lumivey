@@ -1,8 +1,10 @@
 "use client";
 
 import {
+  ChangeEvent,
   FormEvent,
   useCallback,
+  useRef,
   useState,
 } from "react";
 
@@ -21,6 +23,14 @@ type ChatMessage = {
 type UnderstandingState = {
   sources?: unknown[];
   [key: string]: unknown;
+};
+
+type SelectedAttachment = {
+  id: string;
+  name: string;
+  mimeType: string;
+  dataUrl: string;
+  size: number;
 };
 
 type SiteDescription = {
@@ -90,6 +100,106 @@ const emptyGeneratedImages: GeneratedImages = {
   detailImage: null,
 };
 
+const MAX_DIRECT_FILE_BYTES = 2_500_000;
+const MAX_IMAGE_EDGE = 1800;
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("Bestand kon niet worden gelezen."));
+    reader.readAsDataURL(blob);
+  });
+}
+
+function loadImage(file: File): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    const objectUrl = URL.createObjectURL(file);
+
+    image.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(image);
+    };
+
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("Afbeelding kon niet worden geopend."));
+    };
+
+    image.src = objectUrl;
+  });
+}
+
+async function compressImage(file: File): Promise<Blob> {
+  const image = await loadImage(file);
+  const scale = Math.min(
+    1,
+    MAX_IMAGE_EDGE / Math.max(image.naturalWidth, image.naturalHeight)
+  );
+
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+  canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+
+  const context = canvas.getContext("2d");
+
+  if (!context) {
+    throw new Error("Afbeelding kon niet worden voorbereid.");
+  }
+
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+  const toJpeg = (quality: number) =>
+    new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            resolve(blob);
+          } else {
+            reject(new Error("Afbeelding kon niet worden voorbereid."));
+          }
+        },
+        "image/jpeg",
+        quality
+      );
+    });
+
+  let blob = await toJpeg(0.84);
+
+  if (blob.size > MAX_DIRECT_FILE_BYTES) {
+    blob = await toJpeg(0.68);
+  }
+
+  return blob;
+}
+
+async function prepareAttachment(file: File): Promise<SelectedAttachment> {
+  const isImage = file.type.startsWith("image/");
+  let uploadBlob: Blob = file;
+  let mimeType = file.type || "application/octet-stream";
+
+  if (isImage && file.size > MAX_DIRECT_FILE_BYTES) {
+    uploadBlob = await compressImage(file);
+    mimeType = "image/jpeg";
+  }
+
+  if (uploadBlob.size > MAX_DIRECT_FILE_BYTES) {
+    throw new Error(
+      "Dit bestand is nog te groot voor deze bouwfase. Kies een bestand kleiner dan ongeveer 2,5 MB."
+    );
+  }
+
+  return {
+    id: `${Date.now()}-${file.name}-${file.size}`,
+    name: file.name,
+    mimeType,
+    dataUrl: await blobToDataUrl(uploadBlob),
+    size: uploadBlob.size,
+  };
+}
+
 export default function Home() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -97,6 +207,12 @@ export default function Home() {
 
   const [understanding, setUnderstanding] =
     useState<UnderstandingState | null>(null);
+
+  const [attachment, setAttachment] =
+    useState<SelectedAttachment | null>(null);
+
+  const [attachmentError, setAttachmentError] = useState("");
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [previewLoading, setPreviewLoading] =
     useState(false);
@@ -126,6 +242,39 @@ export default function Home() {
     []
   );
 
+  async function handleFileChange(
+    event: ChangeEvent<HTMLInputElement>
+  ) {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    setAttachmentError("");
+
+    try {
+      const prepared = await prepareAttachment(file);
+      setAttachment(prepared);
+    } catch (error) {
+      setAttachment(null);
+      setAttachmentError(
+        error instanceof Error
+          ? error.message
+          : "Bestand kon niet worden toegevoegd."
+      );
+    }
+  }
+
+  function clearAttachment() {
+    setAttachment(null);
+    setAttachmentError("");
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }
+
   async function handleSubmit(
     event: FormEvent<HTMLFormElement>
   ) {
@@ -133,15 +282,19 @@ export default function Home() {
 
     const trimmed = input.trim();
 
-    if (!trimmed || loading) {
+    if ((!trimmed && !attachment) || loading) {
       return;
     }
+
+    const userContent = attachment
+      ? `${trimmed || "Ik deel hierbij een bestand."}\n\nBijlage: ${attachment.name}`
+      : trimmed;
 
     const nextMessages: ChatMessage[] = [
       ...messages,
       {
         role: "user",
-        content: trimmed,
+        content: userContent,
       },
     ];
 
@@ -158,6 +311,7 @@ export default function Home() {
         body: JSON.stringify({
           messages: nextMessages,
           sourceContexts: understanding?.sources ?? [],
+          attachment,
         }),
       });
 
@@ -178,6 +332,7 @@ export default function Home() {
       ]);
 
       setUnderstanding(data.understanding);
+      clearAttachment();
     } catch (error) {
       console.error(error);
 
@@ -558,9 +713,76 @@ export default function Home() {
             }
           />
 
+          <input
+            ref={fileInputRef}
+            type="file"
+            hidden
+            accept="image/jpeg,image/png,image/webp,application/pdf,.doc,.docx,.txt,.md"
+            onChange={handleFileChange}
+          />
+
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              flexWrap: "wrap",
+            }}
+          >
+            <button
+              type="button"
+              aria-label="Bestand toevoegen"
+              title="Bestand toevoegen"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={loading}
+              style={{
+                width: "38px",
+                height: "38px",
+                padding: 0,
+                borderRadius: "999px",
+                fontSize: "24px",
+                lineHeight: 1,
+              }}
+            >
+              +
+            </button>
+
+            {attachment && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  fontSize: "14px",
+                }}
+              >
+                <span>{attachment.name}</span>
+                <button
+                  type="button"
+                  aria-label="Bestand verwijderen"
+                  onClick={clearAttachment}
+                  disabled={loading}
+                  style={{
+                    padding: 0,
+                    background: "transparent",
+                    color: "inherit",
+                    border: 0,
+                    fontSize: "18px",
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+            )}
+          </div>
+
+          {attachmentError && (
+            <p className="quiet">{attachmentError}</p>
+          )}
+
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || (!input.trim() && !attachment)}
           >
             {loading
               ? "Even denken..."

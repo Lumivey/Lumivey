@@ -1,5 +1,12 @@
 import { SourceContext } from "@/lib/lumivey/source-context";
 
+export type SourceBackedCandidate = {
+  value: string;
+  evidence: string;
+  sourceLabel?: string;
+  status: "source-backed-unconfirmed";
+};
+
 export type LumiveyUnderstanding = {
   entrepreneur: {
     name?: string;
@@ -29,6 +36,15 @@ export type LumiveyUnderstanding = {
     usefulContent?: string[];
   };
 
+  sourceBacked: {
+    businessNames: SourceBackedCandidate[];
+    professions: SourceBackedCandidate[];
+    locations: SourceBackedCandidate[];
+    services: SourceBackedCandidate[];
+    contactDetails: SourceBackedCandidate[];
+    visualAnchors: SourceBackedCandidate[];
+  };
+
   facts: string[];
   interpretations: string[];
   unknowns: string[];
@@ -40,6 +56,14 @@ export const EMPTY_UNDERSTANDING: LumiveyUnderstanding = {
   identity: {},
   business: {},
   website: {},
+  sourceBacked: {
+    businessNames: [],
+    professions: [],
+    locations: [],
+    services: [],
+    contactDetails: [],
+    visualAnchors: [],
+  },
   facts: [],
   interpretations: [],
   unknowns: [],

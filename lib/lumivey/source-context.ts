@@ -16,14 +16,32 @@ export type SourceDoor = {
   whyWorthExploring: string;
 };
 
-export type SourceContext = {
-  type: "website";
+export type DiscoveredUrl = {
   url: string;
+  evidence: string;
+  confidence: "high";
+};
+
+export type SourceContext = {
+  type: "website" | "image" | "document";
+  sourceId?: string;
+  url?: string;
+  name?: string;
+  mimeType?: string;
   title?: string;
   facts: SourceFact[];
   goldCandidates: SourceGoldCandidate[];
   doors: SourceDoor[];
   uncertainties: string[];
+  discoveredUrls?: DiscoveredUrl[];
+};
+
+export type UploadedSourceInput = {
+  id: string;
+  name: string;
+  mimeType: string;
+  dataUrl: string;
+  size: number;
 };
 
 const URL_PATTERN = /https?:\/\/[^\s)\]}>"']+/gi;
@@ -34,6 +52,52 @@ export function extractUrlsFromText(text: string): string[] {
   return Array.from(
     new Set(matches.map((url) => url.replace(/[.,;!?]+$/, "")))
   );
+}
+
+export function normalizeDiscoveredUrl(value: string): string | null {
+  const trimmed = value.trim().replace(/[.,;!?]+$/, "");
+
+  if (!trimmed) {
+    return null;
+  }
+
+  const withProtocol = /^https?:\/\//i.test(trimmed)
+    ? trimmed
+    : `https://${trimmed}`;
+
+  try {
+    const parsed = new URL(withProtocol);
+
+    if (!parsed.hostname.includes(".")) {
+      return null;
+    }
+
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+}
+
+export function websiteSourceKey(value: string): string | null {
+  const normalized = normalizeDiscoveredUrl(value);
+
+  if (!normalized) {
+    return null;
+  }
+
+  try {
+    const parsed = new URL(normalized);
+    const hostname = parsed.hostname.toLowerCase().replace(/^www\./, "");
+    let pathname = parsed.pathname.replace(/\/+$/, "");
+
+    if (pathname === "") {
+      pathname = "/";
+    }
+
+    return `${hostname}${pathname}`;
+  } catch {
+    return null;
+  }
 }
 
 export function formatSourceContextsForPrompt(
@@ -70,10 +134,22 @@ export function formatSourceContextsForPrompt(
         .map((item) => `- ${item}`)
         .join("\n");
 
+      const discoveredUrls = (source.discoveredUrls ?? [])
+        .map(
+          (item) =>
+            `- ${item.url} | bewijs: ${item.evidence} | betrouwbaarheid: ${item.confidence}`
+        )
+        .join("\n");
+
+      const identity = source.url
+        ? `URL: ${source.url}`
+        : `Bestand: ${source.name || "onbekend"}`;
+
       return `
 BRON ${index + 1}
 Type: ${source.type}
-URL: ${source.url}
+${identity}
+${source.mimeType ? `Bestandstype: ${source.mimeType}` : ""}
 Titel: ${source.title || "onbekend"}
 
 BRONFEITEN — nog niet bevestigd door de ondernemer
@@ -82,8 +158,11 @@ ${facts || "- geen"}
 MOGELIJKE GOUDKLOMPJES
 ${gold || "- geen"}
 
-MOGELIJKE DEUREN — alleen gebruiken als steunfeit en bewijs letterlijk uit de bron komen
+MOGELIJKE DEUREN — alleen gebruiken als steunfeit en bewijs werkelijk uit de bron komen
 ${doors || "- geen"}
+
+DUIDELIJK LEESBARE WEBSITE-URLS IN DEZE BRON
+${discoveredUrls || "- geen"}
 
 ONZEKERHEDEN
 ${uncertainties || "- geen"}
