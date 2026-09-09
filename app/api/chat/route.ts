@@ -36,7 +36,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const existingSourceContexts = isSourceContextArray(
+    const existingSourceContexts: SourceContext[] = isSourceContextArray(
       body.sourceContexts
     )
       ? body.sourceContexts
@@ -51,12 +51,16 @@ export async function POST(request: Request) {
       : [];
 
     const knownUrls = new Set(
-      existingSourceContexts.map((source) => source.url)
+      existingSourceContexts.map(
+        (source: SourceContext) => source.url
+      )
     );
 
     const newUrl = urls.find((url) => !knownUrls.has(url));
 
-    const sourceContexts = [...existingSourceContexts];
+    const sourceContexts: SourceContext[] = [
+      ...existingSourceContexts,
+    ];
 
     if (newUrl) {
       try {
