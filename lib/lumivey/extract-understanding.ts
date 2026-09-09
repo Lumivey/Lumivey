@@ -76,6 +76,12 @@ Voor ieder sourceBacked-item geldt:
 - status is altijd "source-backed-unconfirmed";
 - sourceLabel noemt waar mogelijk de website of bestandsnaam.
 
+BELANGRIJK BIJ TEKST UIT AFBEELDINGEN
+- Promote GEEN bedrijfsnaam, persoonsnaam, slogan, telefoonnummer of andere tekst naar sourceBacked wanneer de bronanalyse aangeeft dat de tekst onzeker, gedeeltelijk leesbaar, vermoedelijk of niet volledig zeker is.
+- Gebruik bij twijfel alleen het betrouwbaar leesbare deel als visueel anker of laat het item weg uit sourceBacked.
+- Zet de onzekerheid expliciet in unknowns.
+- Als de ondernemer zelf een naam noemt en een afbeelding lijkt een afwijkende naamvorm te tonen, kies niet automatisch één van beide. Houd de bronlezing onzeker totdat de ondernemer bevestigt wat correct is.
+
 4. ONBEKEND / NOG TE BEVESTIGEN
 Maak onderscheid tussen echt onbekend en informatie waarvoor al een bronkandidaat bestaat.
 Noem een veld NIET simpelweg "onbekend" als sourceBacked al een concrete kandidaat bevat.
