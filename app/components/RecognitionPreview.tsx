@@ -19,9 +19,16 @@ type ImageBrief = {
   detail: ImageBriefItem;
 };
 
+export type SourceImageAsset = {
+  sourceId: string;
+  name: string;
+  dataUrl: string;
+};
+
 type Props = {
   composition: PreviewComposition;
   imageBrief?: ImageBrief | null;
+  sourceAssets?: SourceImageAsset[];
   onImagesChange?: (images: GeneratedImages) => void;
   initialImages?: GeneratedImages;
   allowGeneration?: boolean;
@@ -49,6 +56,7 @@ function safeHex(value: string | undefined, fallback: string) {
 export default function RecognitionPreview({
   composition,
   imageBrief,
+  sourceAssets = [],
   onImagesChange,
   initialImages = emptyImages,
   allowGeneration = true,
@@ -62,9 +70,36 @@ export default function RecognitionPreview({
     setImages(initialImages);
   }, [initialImages.heroImage, initialImages.storyImage, initialImages.detailImage]);
 
+  const sourceAssetMap = useMemo(() => {
+    return new Map(sourceAssets.map((asset) => [asset.sourceId, asset]));
+  }, [sourceAssets]);
+
+  const sourceBySlot = useMemo(() => {
+    const mapping: Partial<Record<"hero" | "story" | "detail", SourceImageAsset>> = {};
+
+    if (composition.hero.imageSlot && composition.hero.sourceAssetId) {
+      const asset = sourceAssetMap.get(composition.hero.sourceAssetId);
+      if (asset) mapping[composition.hero.imageSlot] = asset;
+    }
+
+    composition.sections.forEach((section) => {
+      if (!section.imageSlot || !section.sourceAssetId || mapping[section.imageSlot]) return;
+      const asset = sourceAssetMap.get(section.sourceAssetId);
+      if (asset) mapping[section.imageSlot] = asset;
+    });
+
+    return mapping;
+  }, [composition, sourceAssetMap]);
+
+  const effectiveImages = useMemo<GeneratedImages>(() => ({
+    heroImage: sourceBySlot.hero?.dataUrl ?? images.heroImage,
+    storyImage: sourceBySlot.story?.dataUrl ?? images.storyImage,
+    detailImage: sourceBySlot.detail?.dataUrl ?? images.detailImage,
+  }), [images, sourceBySlot]);
+
   useEffect(() => {
-    onImagesChange?.(images);
-  }, [images, onImagesChange]);
+    onImagesChange?.(effectiveImages);
+  }, [effectiveImages, onImagesChange]);
 
   const usedSlots = useMemo(() => {
     const slots = new Set<"hero" | "story" | "detail">();
@@ -76,7 +111,7 @@ export default function RecognitionPreview({
   }, [composition]);
 
   async function generate(slot: "hero" | "story" | "detail") {
-    if (!allowGeneration || !imageBrief?.[slot]) return;
+    if (!allowGeneration || !imageBrief?.[slot] || sourceBySlot[slot]) return;
 
     setLoadingSlots((current) => current.includes(slot) ? current : [...current, slot]);
     setErrorSlots((current) => current.filter((item) => item !== slot));
@@ -109,6 +144,7 @@ export default function RecognitionPreview({
     autoGenerationStarted.current = true;
 
     const missingSlots = usedSlots.filter((slot) => {
+      if (sourceBySlot[slot]) return false;
       if (slot === "hero") return !images.heroImage;
       if (slot === "story") return !images.storyImage;
       return !images.detailImage;
@@ -117,9 +153,9 @@ export default function RecognitionPreview({
     void Promise.all(missingSlots.map((slot) => generate(slot)));
   // Alleen starten bij de eerste complete compositie. Daarna geen automatische retry-loop.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allowGeneration, imageBrief, usedSlots]);
+  }, [allowGeneration, imageBrief, usedSlots, sourceBySlot]);
 
-  function slotImage(slot?: "hero" | "story" | "detail" | null) {
+  function generatedSlotImage(slot?: "hero" | "story" | "detail" | null) {
     if (!slot) return null;
     return slot === "hero"
       ? images.heroImage
@@ -128,9 +164,24 @@ export default function RecognitionPreview({
         : images.detailImage;
   }
 
-  function renderImage(slot?: "hero" | "story" | "detail" | null, label = "Beeld") {
+  function renderImage(
+    slot?: "hero" | "story" | "detail" | null,
+    label = "Beeld",
+    sourceAssetId?: string | null
+  ) {
+    if (!slot && !sourceAssetId) return null;
+
+    const sourceAsset = sourceAssetId ? sourceAssetMap.get(sourceAssetId) : undefined;
+    if (sourceAsset) {
+      return (
+        <figure className="rp-source-figure">
+          <img className="rp-image rp-source-image" src={sourceAsset.dataUrl} alt="" />
+        </figure>
+      );
+    }
+
     if (!slot) return null;
-    const src = slotImage(slot);
+    const src = generatedSlotImage(slot);
     const brief = imageBrief?.[slot];
     const loading = loadingSlots.includes(slot);
     const hasError = errorSlots.includes(slot);
@@ -154,7 +205,7 @@ export default function RecognitionPreview({
   }
 
   function renderSection(section: PreviewSection, index: number) {
-    const hasImage = Boolean(section.imageSlot);
+    const hasImage = Boolean(section.imageSlot || section.sourceAssetId);
     const tone = section.tone || "base";
     return (
       <section
@@ -177,9 +228,13 @@ export default function RecognitionPreview({
               </div>
             )}
           </div>
-          {section.imageSlot && (
+          {(section.imageSlot || section.sourceAssetId) && (
             <div className="rp-section-image">
-              {renderImage(section.imageSlot, section.eyebrow || section.title || "Beeld")}
+              {renderImage(
+                section.imageSlot,
+                section.eyebrow || section.title || "Beeld",
+                section.sourceAssetId
+              )}
             </div>
           )}
         </div>
@@ -220,9 +275,13 @@ export default function RecognitionPreview({
           {composition.hero.subtitle && <p className="rp-hero-subtitle">{composition.hero.subtitle}</p>}
           {composition.hero.primaryAction && <button type="button">{composition.hero.primaryAction}</button>}
         </div>
-        {composition.hero.imageSlot && (
+        {(composition.hero.imageSlot || composition.hero.sourceAssetId) && (
           <div className="rp-hero-image">
-            {renderImage(composition.hero.imageSlot, "Hoofdbeeld")}
+            {renderImage(
+              composition.hero.imageSlot,
+              "Hoofdbeeld",
+              composition.hero.sourceAssetId
+            )}
           </div>
         )}
       </section>
