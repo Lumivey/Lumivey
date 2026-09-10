@@ -55,6 +55,20 @@ Maak voor drie beeldplekken een concrete beeldbriefing:
 - story
 - detail
 
+DOEL
+De beelden moeten helpen bewijzen dat Lumivey DEZE ondernemer heeft begrepen. Ze zijn geen opvulling en geen stockachtige illustratie van de branche.
+
+Kies daarom per slot een andere functie:
+- HERO: het sterkste visuele statement van de onderneming of het werk;
+- STORY: een beeld dat betekenis, oorsprong, mens, omgeving of verhaal ondersteunt;
+- DETAIL: een nabij beeld van iets dat kenmerkend is voor vakmanschap, materiaal, resultaat of werkwijze.
+
+HERKENNING
+- Zoek eerst naar bevestigde herkenningsankers, specifieke objecten, materialen, voertuigen, panden, werksoorten, omgevingen, historie of terugkerende visuele motieven.
+- Als het gesprek een betekenisvol verhaal bevat, laat minstens één briefing daar visueel op aansluiten als dat eerlijk kan zonder feiten te verzinnen.
+- Beelden moeten onderling verschillen in afstand, compositie en functie.
+- Vermijd drie veilige beelden die alleen algemeen laten zien wat de branche doet.
+
 WAARHEIDSREGELS
 - Bevestigde informatie mag als inhoudelijke basis worden gebruikt.
 - Bron-gesteunde visuele ankers, werkzaamheden, materiaal, omgeving of bedrijfsdetails mogen als beeldrichting worden gebruikt wanneer ze concreet uit het bewijs volgen.
@@ -64,31 +78,20 @@ WAARHEIDSREGELS
 - Onzekerheden en interpretaties mogen niet als zichtbare feiten worden uitgebeeld.
 - Bij twijfel: kies een neutraler, eerlijker beeld of laat de briefing terughoudend zijn.
 
-De beelden moeten de ondernemer herkenbaar ondersteunen.
-Ze mogen niet alleen decoratief zijn.
-
-Belangrijk:
+BELANGRIJK
 - geen verzonnen personen, locaties, gebouwen of bedrijfsdetails;
 - geen generieke stockfotografie;
 - geen clichématige vakbeelden;
 - geen onnatuurlijke poses;
 - geen overdreven reclame-esthetiek;
-- geen visuele elementen die niet bij de ondernemer passen.
+- geen visuele elementen die niet bij de ondernemer passen;
+- geen willekeurige luxeproducten alleen omdat de doelgroep premium is;
+- geen merklogo's of herkenbare merkidentiteit genereren als die niet als echt beeld is aangeleverd.
 
-Denk vooral aan:
-- wat het beeld moet vertellen;
-- wat er letterlijk te zien moet zijn;
-- in welke omgeving;
-- hoe dichtbij of ruim het beeld moet zijn;
-- welke sfeer het moet hebben;
-- wat absoluut vermeden moet worden.
+Als een echt portret van de ondernemer niet beschikbaar is, maak daar dan geen fictief portret van.
+Een hero hoeft dus niet altijd een persoon te tonen. Het kan werk, materiaal, omgeving of resultaat tonen als dat sterker en eerlijker is.
 
-Als een echt portret van de ondernemer niet beschikbaar is,
-maak daar dan geen fictief portret van.
-
-Een hero hoeft dus niet altijd een persoon te tonen.
-Het kan ook werk, materiaal, omgeving of resultaat tonen
-als dat sterker en eerlijker is.
+Denk expliciet aan camera-afstand, licht, uitsnede, textuur, achtergrond en wat visueel dominant moet zijn. Laat de art direction voelbaar terugkomen.
 
 Geef uitsluitend geldige JSON terug.
 Geen markdown.
