@@ -189,20 +189,57 @@ function normalizeComposition(value: unknown): PreviewComposition {
   const raw = value && typeof value === "object"
     ? (value as Partial<PreviewComposition>)
     : {};
-  const hero = raw.hero && typeof raw.hero === "object" ? raw.hero : {};
-  const design = raw.design && typeof raw.design === "object" ? raw.design : {};
+  const hero: Partial<PreviewComposition["hero"]> =
+    raw.hero && typeof raw.hero === "object" ? raw.hero : {};
+  const design: Partial<PreviewComposition["design"]> =
+    raw.design && typeof raw.design === "object" ? raw.design : {};
 
   const heroLayouts: PreviewComposition["hero"]["layout"][] = [
     "split", "full", "overlay", "minimal", "image-led", "cinematic", "poster", "editorial",
   ];
 
+  const densities: PreviewComposition["design"]["density"][] = ["airy", "balanced", "compact"];
+  const contrasts: PreviewComposition["design"]["contrast"][] = ["soft", "clear", "strong"];
+  const imagePresences: PreviewComposition["design"]["imagePresence"][] = ["restrained", "balanced", "dominant"];
+  const shapeLanguages: PreviewComposition["design"]["shapeLanguage"][] = ["square", "soft", "mixed"];
+  const themes: PreviewComposition["design"]["theme"][] = ["light", "dark", "mixed"];
+  const typeCharacters: PreviewComposition["design"]["typeCharacter"][] = ["neutral", "editorial", "technical", "expressive"];
+  const heroScales: PreviewComposition["design"]["heroScale"][] = ["restrained", "bold", "cinematic"];
+  const sectionTreatments: PreviewComposition["design"]["sectionTreatment"][] = ["open", "panels", "bands", "mixed"];
+  const imageTreatments: PreviewComposition["design"]["imageTreatment"][] = ["clean", "documentary", "cinematic", "detail-led"];
+
   const normalizedDesign: PreviewComposition["design"] = {
-    ...DEFAULT_DESIGN,
-    ...design,
-    palette: safePalette((design as Partial<PreviewComposition["design"]>).palette),
-    character: asString((design as Partial<PreviewComposition["design"]>).character, DEFAULT_DESIGN.character),
-    colorDirection: asString((design as Partial<PreviewComposition["design"]>).colorDirection),
-    typographyDirection: asString((design as Partial<PreviewComposition["design"]>).typographyDirection),
+    character: asString(design.character, DEFAULT_DESIGN.character),
+    density: densities.includes(design.density as PreviewComposition["design"]["density"])
+      ? (design.density as PreviewComposition["design"]["density"])
+      : DEFAULT_DESIGN.density,
+    contrast: contrasts.includes(design.contrast as PreviewComposition["design"]["contrast"])
+      ? (design.contrast as PreviewComposition["design"]["contrast"])
+      : DEFAULT_DESIGN.contrast,
+    imagePresence: imagePresences.includes(design.imagePresence as PreviewComposition["design"]["imagePresence"])
+      ? (design.imagePresence as PreviewComposition["design"]["imagePresence"])
+      : DEFAULT_DESIGN.imagePresence,
+    shapeLanguage: shapeLanguages.includes(design.shapeLanguage as PreviewComposition["design"]["shapeLanguage"])
+      ? (design.shapeLanguage as PreviewComposition["design"]["shapeLanguage"])
+      : DEFAULT_DESIGN.shapeLanguage,
+    theme: themes.includes(design.theme as PreviewComposition["design"]["theme"])
+      ? (design.theme as PreviewComposition["design"]["theme"])
+      : DEFAULT_DESIGN.theme,
+    typeCharacter: typeCharacters.includes(design.typeCharacter as PreviewComposition["design"]["typeCharacter"])
+      ? (design.typeCharacter as PreviewComposition["design"]["typeCharacter"])
+      : DEFAULT_DESIGN.typeCharacter,
+    heroScale: heroScales.includes(design.heroScale as PreviewComposition["design"]["heroScale"])
+      ? (design.heroScale as PreviewComposition["design"]["heroScale"])
+      : DEFAULT_DESIGN.heroScale,
+    sectionTreatment: sectionTreatments.includes(design.sectionTreatment as PreviewComposition["design"]["sectionTreatment"])
+      ? (design.sectionTreatment as PreviewComposition["design"]["sectionTreatment"])
+      : DEFAULT_DESIGN.sectionTreatment,
+    imageTreatment: imageTreatments.includes(design.imageTreatment as PreviewComposition["design"]["imageTreatment"])
+      ? (design.imageTreatment as PreviewComposition["design"]["imageTreatment"])
+      : DEFAULT_DESIGN.imageTreatment,
+    palette: safePalette(design.palette),
+    colorDirection: asString(design.colorDirection),
+    typographyDirection: asString(design.typographyDirection),
   };
 
   const sections = Array.isArray(raw.sections)
