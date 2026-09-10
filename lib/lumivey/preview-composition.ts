@@ -25,6 +25,7 @@ export type PreviewSection = {
   body?: string;
   items?: string[];
   imageSlot?: "hero" | "story" | "detail" | null;
+  sourceAssetId?: string | null;
   layout: "text" | "split" | "grid" | "feature" | "list";
   tone?: "base" | "surface" | "accent" | "dark";
 };
@@ -38,6 +39,7 @@ export type PreviewComposition = {
     subtitle?: string;
     layout: "split" | "full" | "overlay" | "minimal" | "image-led";
     imageSlot?: "hero" | null;
+    sourceAssetId?: string | null;
     primaryAction?: string;
   };
   sections: PreviewSection[];
@@ -97,6 +99,15 @@ HERKENNING EERST
 - behoud vóór vervangen;
 - echt bronmateriaal vóór verzonnen beeld;
 - gebruik AI-stijl alleen om het bestaande karakter beter te vertalen, niet om een nieuw karakter op te leggen.
+
+EIGEN BEELDASSETS ZIJN EERSTE KLAS
+In de preview-context staat een lijst BESCHIKBARE EIGEN BEELDASSETS met sourceId's.
+- Wanneer een aangeleverde foto inhoudelijk sterk past bij hero of sectie, gebruik die foto door exact die sourceId in sourceAssetId te zetten.
+- Verzin nooit een sourceAssetId.
+- Een eigen foto van de ondernemer tijdens zijn echte werk heeft in principe voorrang boven een fictief AI-beeld wanneer die foto betekenisvol bruikbaar is.
+- Een aangeleverde foto hoeft niet letterlijk of onbewerkt de hele hero te vullen; de renderer mag croppen en visueel behandelen. Maar de persoon of het echte werk mag niet stilletjes vervangen worden door een fictief equivalent.
+- Gebruik een AI imageSlot alleen voor plekken waar geen passend eigen beeldasset is of waar een aanvullend beeld werkelijk iets toevoegt.
+- sourceAssetId en imageSlot mogen samen bestaan: sourceAssetId bepaalt dan het primaire echte beeld voor die plek; imageSlot is alleen fallback/aanvulling wanneer het eigen beeld niet beschikbaar is.
 
 DISCOVERY EERST
 - een rijk gesprek kan voldoende zijn, ook zonder bestaande website;
@@ -167,6 +178,7 @@ Geef exact dit JSON-formaat terug:
     "subtitle": "",
     "layout": "split",
     "imageSlot": "hero",
+    "sourceAssetId": null,
     "primaryAction": ""
   },
   "sections": [
@@ -177,6 +189,7 @@ Geef exact dit JSON-formaat terug:
       "body": "",
       "items": [],
       "imageSlot": null,
+      "sourceAssetId": null,
       "layout": "text",
       "tone": "base"
     }
