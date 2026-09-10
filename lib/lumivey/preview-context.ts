@@ -1,5 +1,11 @@
 import { LumiveyUnderstanding } from "@/lib/lumivey/understanding";
 
+export type PreviewAsset = {
+  sourceId: string;
+  name: string;
+  kind: "uploaded-image";
+};
+
 export type PreviewContext = {
   confirmed: {
     entrepreneur: LumiveyUnderstanding["entrepreneur"];
@@ -9,6 +15,7 @@ export type PreviewContext = {
     facts: string[];
   };
   sourceBacked: LumiveyUnderstanding["sourceBacked"];
+  availableAssets: PreviewAsset[];
   interpretations: string[];
   unknowns: string[];
 };
@@ -16,6 +23,19 @@ export type PreviewContext = {
 export function createPreviewContext(
   understanding: LumiveyUnderstanding
 ): PreviewContext {
+  const availableAssets: PreviewAsset[] = (understanding.sources ?? [])
+    .filter(
+      (source) =>
+        source.type === "image" &&
+        typeof source.sourceId === "string" &&
+        source.sourceId.length > 0
+    )
+    .map((source) => ({
+      sourceId: source.sourceId as string,
+      name: source.name || source.title || "Aangeleverde afbeelding",
+      kind: "uploaded-image" as const,
+    }));
+
   return {
     confirmed: {
       entrepreneur: understanding.entrepreneur ?? {},
@@ -32,6 +52,7 @@ export function createPreviewContext(
       contactDetails: [],
       visualAnchors: [],
     },
+    availableAssets,
     interpretations: understanding.interpretations ?? [],
     unknowns: understanding.unknowns ?? [],
   };
@@ -48,6 +69,9 @@ ${JSON.stringify(context.confirmed, null, 2)}
 
 BRON-GESTEUND MAAR NOG NIET BEVESTIGD
 ${JSON.stringify(context.sourceBacked, null, 2)}
+
+BESCHIKBARE EIGEN BEELDASSETS
+${JSON.stringify(context.availableAssets, null, 2)}
 
 INTERPRETATIES — GEEN FEITEN
 ${JSON.stringify(context.interpretations, null, 2)}
