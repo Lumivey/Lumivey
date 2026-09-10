@@ -72,6 +72,176 @@ export type PreviewComposition = {
   doNotChange: string[];
 };
 
+const DEFAULT_DESIGN: PreviewComposition["design"] = {
+  character: "rustig en helder",
+  density: "balanced",
+  contrast: "clear",
+  imagePresence: "balanced",
+  shapeLanguage: "mixed",
+  theme: "light",
+  typeCharacter: "neutral",
+  heroScale: "bold",
+  sectionTreatment: "mixed",
+  imageTreatment: "clean",
+  palette: {
+    background: "#F6F5F1",
+    surface: "#FFFFFF",
+    text: "#1B1B19",
+    muted: "#6F6F69",
+    accent: "#B6914C",
+    dark: "#151515",
+  },
+  colorDirection: "",
+  typographyDirection: "",
+};
+
+function asString(value: unknown, fallback = ""): string {
+  return typeof value === "string" ? value : fallback;
+}
+
+function asStringArray(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : [];
+}
+
+function normalizeVisual(value: unknown, index: number): PreviewVisual | null {
+  if (!value || typeof value !== "object") return null;
+  const visual = value as Partial<PreviewVisual>;
+  const kind = visual.kind === "source" ? "source" : "generated";
+  const crop: PreviewVisual["crop"] = ["portrait", "landscape", "square", "wide", "detail"].includes(String(visual.crop))
+    ? (visual.crop as PreviewVisual["crop"])
+    : "landscape";
+
+  return {
+    id: asString(visual.id, `visual-${index + 1}`),
+    kind,
+    sourceAssetId: typeof visual.sourceAssetId === "string" ? visual.sourceAssetId : null,
+    purpose: asString(visual.purpose),
+    subject: asString(visual.subject),
+    setting: asString(visual.setting),
+    composition: asString(visual.composition),
+    atmosphere: asString(visual.atmosphere),
+    avoid: asStringArray(visual.avoid),
+    crop,
+  };
+}
+
+function normalizeVisuals(value: unknown): PreviewVisual[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item, index) => normalizeVisual(item, index))
+    .filter((item): item is PreviewVisual => item !== null);
+}
+
+function normalizeSection(value: unknown, index: number): PreviewSection | null {
+  if (!value || typeof value !== "object") return null;
+  const section = value as Partial<PreviewSection>;
+
+  const allowedTypes: PreviewSectionType[] = [
+    "intro", "story", "services", "projects", "approach", "proof", "content", "contact",
+  ];
+  const allowedLayouts: PreviewSection["layout"][] = [
+    "text", "split", "grid", "feature", "list", "split-reverse", "statement", "manifesto", "cards", "mosaic", "gallery",
+  ];
+  const allowedTones: NonNullable<PreviewSection["tone"]>[] = ["base", "surface", "accent", "dark"];
+  const allowedEmphasis: NonNullable<PreviewSection["emphasis"]>[] = ["quiet", "normal", "strong", "heroic"];
+
+  return {
+    type: allowedTypes.includes(section.type as PreviewSectionType) ? (section.type as PreviewSectionType) : "content",
+    eyebrow: asString(section.eyebrow),
+    title: asString(section.title, `Sectie ${index + 1}`),
+    body: asString(section.body),
+    items: asStringArray(section.items),
+    imageSlot: ["hero", "story", "detail"].includes(String(section.imageSlot))
+      ? (section.imageSlot as "hero" | "story" | "detail")
+      : null,
+    sourceAssetId: typeof section.sourceAssetId === "string" ? section.sourceAssetId : null,
+    visuals: normalizeVisuals(section.visuals),
+    layout: allowedLayouts.includes(section.layout as PreviewSection["layout"])
+      ? (section.layout as PreviewSection["layout"])
+      : "text",
+    tone: allowedTones.includes(section.tone as NonNullable<PreviewSection["tone"]>)
+      ? (section.tone as NonNullable<PreviewSection["tone"]>)
+      : "base",
+    emphasis: allowedEmphasis.includes(section.emphasis as NonNullable<PreviewSection["emphasis"]>)
+      ? (section.emphasis as NonNullable<PreviewSection["emphasis"]>)
+      : "normal",
+  };
+}
+
+function safePalette(value: unknown): PreviewComposition["design"]["palette"] {
+  const palette = value && typeof value === "object"
+    ? (value as Partial<PreviewComposition["design"]["palette"]>)
+    : {};
+
+  return {
+    background: asString(palette.background, DEFAULT_DESIGN.palette.background),
+    surface: asString(palette.surface, DEFAULT_DESIGN.palette.surface),
+    text: asString(palette.text, DEFAULT_DESIGN.palette.text),
+    muted: asString(palette.muted, DEFAULT_DESIGN.palette.muted),
+    accent: asString(palette.accent, DEFAULT_DESIGN.palette.accent),
+    dark: asString(palette.dark, DEFAULT_DESIGN.palette.dark),
+  };
+}
+
+function normalizeComposition(value: unknown): PreviewComposition {
+  const raw = value && typeof value === "object"
+    ? (value as Partial<PreviewComposition>)
+    : {};
+  const hero = raw.hero && typeof raw.hero === "object" ? raw.hero : {};
+  const design = raw.design && typeof raw.design === "object" ? raw.design : {};
+
+  const heroLayouts: PreviewComposition["hero"]["layout"][] = [
+    "split", "full", "overlay", "minimal", "image-led", "cinematic", "poster", "editorial",
+  ];
+
+  const normalizedDesign: PreviewComposition["design"] = {
+    ...DEFAULT_DESIGN,
+    ...design,
+    palette: safePalette((design as Partial<PreviewComposition["design"]>).palette),
+    character: asString((design as Partial<PreviewComposition["design"]>).character, DEFAULT_DESIGN.character),
+    colorDirection: asString((design as Partial<PreviewComposition["design"]>).colorDirection),
+    typographyDirection: asString((design as Partial<PreviewComposition["design"]>).typographyDirection),
+  };
+
+  const sections = Array.isArray(raw.sections)
+    ? raw.sections
+        .map((section, index) => normalizeSection(section, index))
+        .filter((section): section is PreviewSection => section !== null)
+    : [];
+
+  const pageHints = Array.isArray(raw.pageHints)
+    ? raw.pageHints
+        .filter((item): item is { label: string; purpose: string } =>
+          Boolean(item) && typeof item === "object" && typeof (item as { label?: unknown }).label === "string"
+        )
+        .map((item) => ({ label: item.label, purpose: asString(item.purpose) }))
+    : [];
+
+  return {
+    brandName: asString(raw.brandName),
+    navigation: asStringArray(raw.navigation),
+    hero: {
+      eyebrow: asString(hero.eyebrow),
+      title: asString(hero.title, "Welkom"),
+      subtitle: asString(hero.subtitle),
+      layout: heroLayouts.includes(hero.layout as PreviewComposition["hero"]["layout"])
+        ? (hero.layout as PreviewComposition["hero"]["layout"])
+        : "split",
+      imageSlot: hero.imageSlot === "hero" ? "hero" : null,
+      sourceAssetId: typeof hero.sourceAssetId === "string" ? hero.sourceAssetId : null,
+      visuals: normalizeVisuals(hero.visuals),
+      primaryAction: asString(hero.primaryAction),
+    },
+    sections,
+    design: normalizedDesign,
+    pageHints,
+    recognitionAnchors: asStringArray(raw.recognitionAnchors),
+    doNotChange: asStringArray(raw.doNotChange),
+  };
+}
+
 export async function createPreviewComposition(
   understanding: LumiveyUnderstanding,
   artDirection: ArtDirection,
@@ -221,5 +391,13 @@ Regels:
 `
   });
 
-  return JSON.parse(response.output_text) as PreviewComposition;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(response.output_text);
+  } catch (error) {
+    console.error("Preview composition JSON parse error:", error, response.output_text);
+    parsed = {};
+  }
+
+  return normalizeComposition(parsed);
 }
