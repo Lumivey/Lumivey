@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { CSSProperties, useEffect, useMemo, useRef, useState } from "react";
 import type { GeneratedImages } from "@/app/components/WarmCraftPreview";
 import type { PreviewComposition, PreviewSection } from "@/lib/lumivey/preview-composition";
 
@@ -33,6 +33,19 @@ const emptyImages: GeneratedImages = {
   detailImage: null,
 };
 
+const FALLBACK_PALETTE = {
+  background: "#F6F5F1",
+  surface: "#FFFFFF",
+  text: "#1B1B19",
+  muted: "#6F6F69",
+  accent: "#B6914C",
+  dark: "#151515",
+};
+
+function safeHex(value: string | undefined, fallback: string) {
+  return value && /^#[0-9A-Fa-f]{6}$/.test(value) ? value : fallback;
+}
+
 export default function RecognitionPreview({
   composition,
   imageBrief,
@@ -41,8 +54,9 @@ export default function RecognitionPreview({
   allowGeneration = true,
 }: Props) {
   const [images, setImages] = useState<GeneratedImages>(initialImages);
-  const [loadingSlot, setLoadingSlot] = useState<"hero" | "story" | "detail" | null>(null);
-  const [errorSlot, setErrorSlot] = useState<"hero" | "story" | "detail" | null>(null);
+  const [loadingSlots, setLoadingSlots] = useState<Array<"hero" | "story" | "detail">>([]);
+  const [errorSlots, setErrorSlots] = useState<Array<"hero" | "story" | "detail">>([]);
+  const autoGenerationStarted = useRef(false);
 
   useEffect(() => {
     setImages(initialImages);
@@ -52,11 +66,20 @@ export default function RecognitionPreview({
     onImagesChange?.(images);
   }, [images, onImagesChange]);
 
+  const usedSlots = useMemo(() => {
+    const slots = new Set<"hero" | "story" | "detail">();
+    if (composition.hero.imageSlot) slots.add(composition.hero.imageSlot);
+    composition.sections.forEach((section) => {
+      if (section.imageSlot) slots.add(section.imageSlot);
+    });
+    return Array.from(slots);
+  }, [composition]);
+
   async function generate(slot: "hero" | "story" | "detail") {
     if (!allowGeneration || !imageBrief?.[slot]) return;
 
-    setLoadingSlot(slot);
-    setErrorSlot(null);
+    setLoadingSlots((current) => current.includes(slot) ? current : [...current, slot]);
+    setErrorSlots((current) => current.filter((item) => item !== slot));
 
     try {
       const response = await fetch("/api/generate-image", {
@@ -75,11 +98,26 @@ export default function RecognitionPreview({
       }));
     } catch (error) {
       console.error(error);
-      setErrorSlot(slot);
+      setErrorSlots((current) => current.includes(slot) ? current : [...current, slot]);
     } finally {
-      setLoadingSlot(null);
+      setLoadingSlots((current) => current.filter((item) => item !== slot));
     }
   }
+
+  useEffect(() => {
+    if (!allowGeneration || !imageBrief || autoGenerationStarted.current) return;
+    autoGenerationStarted.current = true;
+
+    const missingSlots = usedSlots.filter((slot) => {
+      if (slot === "hero") return !images.heroImage;
+      if (slot === "story") return !images.storyImage;
+      return !images.detailImage;
+    });
+
+    void Promise.all(missingSlots.map((slot) => generate(slot)));
+  // Alleen starten bij de eerste complete compositie. Daarna geen automatische retry-loop.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allowGeneration, imageBrief, usedSlots]);
 
   function slotImage(slot?: "hero" | "story" | "detail" | null) {
     if (!slot) return null;
@@ -94,59 +132,75 @@ export default function RecognitionPreview({
     if (!slot) return null;
     const src = slotImage(slot);
     const brief = imageBrief?.[slot];
+    const loading = loadingSlots.includes(slot);
+    const hasError = errorSlots.includes(slot);
 
     if (src) {
       return <img className="rp-image" src={src} alt="" />;
     }
 
     return (
-      <div className="rp-image-placeholder">
-        <span>{label}</span>
+      <div className={`rp-image-placeholder ${loading ? "is-loading" : ""}`}>
+        <span>{loading ? "Tijdelijk beeld wordt gemaakt" : label}</span>
         {brief?.subject && <p>{brief.subject}</p>}
-        {allowGeneration && brief && (
-          <button type="button" onClick={() => generate(slot)} disabled={loadingSlot === slot}>
-            {loadingSlot === slot ? "Beeld wordt gemaakt..." : "Maak tijdelijk beeld"}
+        {allowGeneration && brief && !loading && (
+          <button type="button" onClick={() => generate(slot)}>
+            {hasError ? "Probeer beeld opnieuw" : "Maak tijdelijk beeld"}
           </button>
         )}
-        {errorSlot === slot && <p>Het tijdelijke beeld kon niet worden gemaakt.</p>}
+        {hasError && <p className="rp-image-error">Het tijdelijke beeld kon niet worden gemaakt.</p>}
       </div>
     );
   }
 
   function renderSection(section: PreviewSection, index: number) {
     const hasImage = Boolean(section.imageSlot);
+    const tone = section.tone || "base";
     return (
       <section
         key={`${section.type}-${index}`}
-        className={`rp-section rp-section-${section.layout} ${hasImage ? "rp-section-with-image" : ""}`}
+        className={`rp-section rp-section-${section.layout} rp-tone-${tone} ${hasImage ? "rp-section-with-image" : ""}`}
       >
-        <div className="rp-section-copy">
-          {section.eyebrow && <p className="rp-eyebrow">{section.eyebrow}</p>}
-          {section.title && <h2>{section.title}</h2>}
-          {section.body && <p className="rp-body">{section.body}</p>}
-          {section.items && section.items.length > 0 && (
-            <div className={`rp-items rp-items-${section.layout}`}>
-              {section.items.map((item, itemIndex) => (
-                <article key={itemIndex}>
-                  <span>{String(itemIndex + 1).padStart(2, "0")}</span>
-                  <h3>{item}</h3>
-                </article>
-              ))}
+        <div className="rp-section-inner">
+          <div className="rp-section-copy">
+            {section.eyebrow && <p className="rp-eyebrow">{section.eyebrow}</p>}
+            {section.title && <h2>{section.title}</h2>}
+            {section.body && <p className="rp-body">{section.body}</p>}
+            {section.items && section.items.length > 0 && (
+              <div className={`rp-items rp-items-${section.layout}`}>
+                {section.items.map((item, itemIndex) => (
+                  <article key={itemIndex}>
+                    <span>{String(itemIndex + 1).padStart(2, "0")}</span>
+                    <h3>{item}</h3>
+                  </article>
+                ))}
+              </div>
+            )}
+          </div>
+          {section.imageSlot && (
+            <div className="rp-section-image">
+              {renderImage(section.imageSlot, section.eyebrow || section.title || "Beeld")}
             </div>
           )}
         </div>
-        {section.imageSlot && (
-          <div className="rp-section-image">
-            {renderImage(section.imageSlot, section.eyebrow || section.title || "Beeld")}
-          </div>
-        )}
       </section>
     );
   }
 
+  const palette = composition.design.palette || FALLBACK_PALETTE;
+  const cssVariables = {
+    "--rp-bg": safeHex(palette.background, FALLBACK_PALETTE.background),
+    "--rp-surface": safeHex(palette.surface, FALLBACK_PALETTE.surface),
+    "--rp-text": safeHex(palette.text, FALLBACK_PALETTE.text),
+    "--rp-muted": safeHex(palette.muted, FALLBACK_PALETTE.muted),
+    "--rp-accent": safeHex(palette.accent, FALLBACK_PALETTE.accent),
+    "--rp-dark": safeHex(palette.dark, FALLBACK_PALETTE.dark),
+  } as CSSProperties;
+
   return (
     <div
-      className={`rp-page rp-density-${composition.design.density} rp-contrast-${composition.design.contrast} rp-images-${composition.design.imagePresence} rp-shapes-${composition.design.shapeLanguage}`}
+      style={cssVariables}
+      className={`rp-page rp-density-${composition.design.density} rp-contrast-${composition.design.contrast} rp-images-${composition.design.imagePresence} rp-shapes-${composition.design.shapeLanguage} rp-theme-${composition.design.theme} rp-type-${composition.design.typeCharacter} rp-hero-scale-${composition.design.heroScale} rp-sections-${composition.design.sectionTreatment} rp-image-style-${composition.design.imageTreatment}`}
     >
       <header className="rp-header">
         <strong className="rp-brand">{composition.brandName}</strong>
