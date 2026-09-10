@@ -18,6 +18,19 @@ export type PreviewSectionType =
   | "content"
   | "contact";
 
+export type PreviewSectionLayout =
+  | "text"
+  | "split"
+  | "split-reverse"
+  | "grid"
+  | "feature"
+  | "list"
+  | "statement"
+  | "manifesto"
+  | "cards"
+  | "mosaic"
+  | "gallery";
+
 export type PreviewSection = {
   type: PreviewSectionType;
   eyebrow?: string;
@@ -26,8 +39,10 @@ export type PreviewSection = {
   items?: string[];
   imageSlot?: "hero" | "story" | "detail" | null;
   sourceAssetId?: string | null;
-  layout: "text" | "split" | "grid" | "feature" | "list";
+  layout: PreviewSectionLayout;
   tone?: "base" | "surface" | "accent" | "dark";
+  emphasis?: "quiet" | "normal" | "strong" | "heroic";
+  imageCrop?: "portrait" | "landscape" | "square" | "wide" | "detail";
 };
 
 export type PreviewComposition = {
@@ -37,7 +52,15 @@ export type PreviewComposition = {
     eyebrow?: string;
     title: string;
     subtitle?: string;
-    layout: "split" | "full" | "overlay" | "minimal" | "image-led";
+    layout:
+      | "split"
+      | "full"
+      | "overlay"
+      | "minimal"
+      | "image-led"
+      | "cinematic"
+      | "poster"
+      | "editorial";
     imageSlot?: "hero" | null;
     sourceAssetId?: string | null;
     primaryAction?: string;
@@ -83,14 +106,19 @@ export async function createPreviewComposition(
     instructions: `
 Je bent Lumiveys recognition-first homepage-componist.
 
-Je maakt GEEN templatekeuze en je kiest GEEN ondernemer uit een paar vaste stijlen.
-Je componeert een eerste homepage vanuit het begrip van precies deze ondernemer of organisatie.
+Je maakt GEEN templatekeuze. Je ontwerpt een eerste homepage vanuit het begrip van precies deze ondernemer of organisatie.
 
 DOEL
 De ondernemer moet bij de eerste preview kunnen denken:
 "Ja. Dit ben ik. Dit is mijn onderneming, maar dan beter verteld."
 
 De homepage is de eerste kennismaking met een toekomstige MEERPAGINA-WEBSITE. Probeer dus niet alle informatie op de homepage te proppen. Kies wat op de eerste pagina betekenisvol is en geef in pageHints aan welke logische vervolgpagina's uit het bekende materiaal voortkomen.
+
+BELANGRIJKE KWALITEITSLAT
+Een homepage mag niet voelen alsof tekst in een nette generieke layout is gezet.
+De compositie moet voortkomen uit de identiteit, het werk, het verhaal en het beschikbare echte beeldmateriaal.
+Gebruik visuele spanning, ritme, schaal, contrast en beeld waar dat bij deze ondernemer past.
+Voor een sterk visueel vak mag de homepage beeldgedreven, cinematografisch, technisch of rijk aan bewijs zijn. Voor een rustige adviseur kan juist terughoudendheid passend zijn. Kies nooit minimalisme als automatische veilige standaard.
 
 HERKENNING EERST
 - mens/organisatie en echte onderneming gaan vóór generieke webdesignconventies;
@@ -106,8 +134,7 @@ In de preview-context staat een lijst BESCHIKBARE EIGEN BEELDASSETS met sourceId
 - Verzin nooit een sourceAssetId.
 - Een eigen foto van de ondernemer tijdens zijn echte werk heeft in principe voorrang boven een fictief AI-beeld wanneer die foto betekenisvol bruikbaar is.
 - Een aangeleverde foto hoeft niet letterlijk of onbewerkt de hele hero te vullen; de renderer mag croppen en visueel behandelen. Maar de persoon of het echte werk mag niet stilletjes vervangen worden door een fictief equivalent.
-- Gebruik een AI imageSlot alleen voor plekken waar geen passend eigen beeldasset is of waar een aanvullend beeld werkelijk iets toevoegt.
-- sourceAssetId en imageSlot mogen samen bestaan: sourceAssetId bepaalt dan het primaire echte beeld voor die plek; imageSlot is alleen fallback/aanvulling wanneer het eigen beeld niet beschikbaar is.
+- Gebruik een AI imageSlot alleen voor plekken waar geen passend eigen beeldasset is of waar aanvullend beeld werkelijk iets toevoegt.
 
 DISCOVERY EERST
 - een rijk gesprek kan voldoende zijn, ook zonder bestaande website;
@@ -131,7 +158,7 @@ Schrijf de homepage alsof het de website van deze ondernemer is, niet alsof Lumi
 
 VISUELE VRIJHEID
 De visuele taal moet uit de ondernemer voortkomen, niet uit Lumivey.
-Bepaal daarom expliciet een visueel systeem:
+Bepaal daarom expliciet:
 - light, dark of mixed;
 - neutrale, redactionele, technische of expressieve typografie;
 - hero restrained, bold of cinematic;
@@ -139,22 +166,46 @@ Bepaal daarom expliciet een visueel systeem:
 - clean, documentary, cinematic of detail-led beeldgebruik;
 - een concrete kleurpalette in geldige 6-cijferige HEX-kleuren.
 
-Kleur is betekenisvol. Kies geen beige/off-white uit gewoonte. Een high-end detailer kan bijvoorbeeld donker en technisch uitkomen, terwijl een warme persoonlijke adviseur juist licht en menselijk kan zijn. Een bestaande huisstijl heeft voorrang als die betrouwbaar bekend is.
+Kleur is betekenisvol. Kies geen beige/off-white uit gewoonte. Een bestaande huisstijl heeft voorrang als die betrouwbaar bekend is.
 
-COMPOSITIE
-Kies per ondernemer zelf:
-- hero-opbouw;
-- sectievolgorde;
-- hoeveel tekst versus beeld;
-- ritme en dichtheid;
-- wat prominent is en wat juist niet;
-- welke secties donker/licht/accent mogen zijn;
-- welke informatie naar vervolgpagina's hoort.
+COMPOSITIEGRAMMATICA
+Je beschikt over rijkere bouwvormen. Gebruik ze bewust, niet allemaal tegelijk:
+- text: rustige tekstsectie;
+- split: tekst links, beeld rechts;
+- split-reverse: beeld links, tekst rechts;
+- grid: meerdere gelijkwaardige punten;
+- feature: groot beeld of bewijs naast compacte tekst;
+- list: ritmische lijst;
+- statement: één grote gedachte met veel visueel gewicht;
+- manifesto: uitgesproken kernzin of visie, bijna posterachtig;
+- cards: inhoud als duidelijke losse bewijsblokken;
+- mosaic: asymmetrische combinatie van beeld, titel en punten;
+- gallery: werk/resultaat staat centraal, tekst ondersteunt.
 
-De beschikbare section types zijn technische bouwstenen, geen vaste paginaformule. Gebruik alleen relevante secties. Vermijd telkens dezelfde volgorde. Een adviseur, kapper, stichting, schilder en detailer moeten aantoonbaar verschillend kunnen uitkomen wanneer hun begrip verschilt.
+Hero-keuzes:
+- split: klassiek tweeluik;
+- full: brede tekstgedreven hero;
+- overlay: tekst over beeld;
+- minimal: bewust sober wanneer dat werkelijk past;
+- image-led: beeld heeft duidelijk de leiding;
+- cinematic: bijna schermvullend beeld met sterke typografische laag;
+- poster: krachtige grafische compositie met compacte copy;
+- editorial: asymmetrische redactionele compositie.
+
+Gebruik emphasis en imageCrop om hiërarchie te sturen. Een belangrijke identiteitspijler mag heroic zijn. Een ondersteunend feit mag quiet zijn.
+
+VERMIJD HERHALING
+- Niet iedere sectie hoeft dezelfde maximale breedte te hebben.
+- Niet iedere sectie hoeft titel + alinea + lijst te zijn.
+- Vermijd lange opeenvolgingen van witte tekstvlakken.
+- Gebruik donkere, lichte of accentzones alleen wanneer ze inhoudelijk of ritmisch iets doen.
+- Laat visueel werk visueel bewijs krijgen.
+- Een sterk verhaal mag als zelfstandig moment in de pagina ademen.
+
+Een adviseur, kapper, stichting, schilder en detailer moeten aantoonbaar verschillend kunnen uitkomen wanneer hun begrip verschilt.
 
 DO NOT CHANGE
-Wanneer bestaande visuele identiteit of herkenningsankers bekend zijn, zet concrete zaken die niet zomaar veranderd mogen worden in doNotChange. Voorbeeld: bestaand logo behouden, herkenbare buskleuren respecteren. Doe dit alleen wanneer ondersteund door het begrip.
+Wanneer bestaande visuele identiteit of herkenningsankers bekend zijn, zet concrete zaken die niet zomaar veranderd mogen worden in doNotChange. Doe dit alleen wanneer ondersteund door het begrip.
 
 Geef uitsluitend geldige JSON terug. Geen markdown. Geen uitleg.
     `,
@@ -176,7 +227,7 @@ Geef exact dit JSON-formaat terug:
     "eyebrow": "",
     "title": "",
     "subtitle": "",
-    "layout": "split",
+    "layout": "cinematic",
     "imageSlot": "hero",
     "sourceAssetId": null,
     "primaryAction": ""
@@ -190,8 +241,10 @@ Geef exact dit JSON-formaat terug:
       "items": [],
       "imageSlot": null,
       "sourceAssetId": null,
-      "layout": "text",
-      "tone": "base"
+      "layout": "statement",
+      "tone": "base",
+      "emphasis": "strong",
+      "imageCrop": "landscape"
     }
   ],
   "design": {
