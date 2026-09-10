@@ -5,6 +5,7 @@ import { chooseLayoutVariant } from "@/lib/lumivey/layout-variant";
 import { createImageBrief } from "@/lib/lumivey/image-brief";
 import { assessPreviewReadiness } from "@/lib/lumivey/preview-readiness";
 import { createPreviewComposition } from "@/lib/lumivey/preview-composition";
+import { refinePreviewQuality } from "@/lib/lumivey/preview-quality";
 import { LumiveyUnderstanding } from "@/lib/lumivey/understanding";
 
 export async function POST(request: Request) {
@@ -29,7 +30,7 @@ export async function POST(request: Request) {
       createArtDirection(understanding),
     ]);
 
-    const [composition, imageBrief] = await Promise.all([
+    const [rawComposition, imageBrief] = await Promise.all([
       createPreviewComposition(
         understanding,
         artDirection,
@@ -37,6 +38,10 @@ export async function POST(request: Request) {
       ),
       createImageBrief(understanding, artDirection),
     ]);
+
+    // Laatste kwaliteitslaag: inhoud en gegenereerde beeldrollen aanscherpen
+    // zonder de gekozen art direction, waarheid of compositiestructuur te veranderen.
+    const composition = await refinePreviewQuality(understanding, rawComposition);
 
     // Tijdelijke fallback voor de bestaande goedkeur-/publicatieketen.
     // De nieuwe preview renderer gebruikt composition. layoutVariant blijft
