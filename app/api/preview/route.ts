@@ -5,6 +5,7 @@ import { chooseLayoutVariant } from "@/lib/lumivey/layout-variant";
 import { createImageBrief } from "@/lib/lumivey/image-brief";
 import { assessPreviewReadiness } from "@/lib/lumivey/preview-readiness";
 import { createPreviewComposition } from "@/lib/lumivey/preview-composition";
+import { ensureSourceAssetsInPreview } from "@/lib/lumivey/preview-source-guard";
 import { choreographPreviewPage } from "@/lib/lumivey/page-choreography";
 import { refinePreviewQuality } from "@/lib/lumivey/preview-quality";
 import { LumiveyUnderstanding } from "@/lib/lumivey/understanding";
@@ -40,15 +41,22 @@ export async function POST(request: Request) {
       createImageBrief(understanding, artDirection),
     ]);
 
-    // Nieuwe whole-page regielaag: geen losse blokken optimaliseren,
-    // maar de volledige homepage als één ritme laten bewegen.
-    const choreographedComposition = await choreographPreviewPage(
+    // Echte, door de ondernemer aangeleverde foto's mogen niet verdwijnen doordat
+    // de composer liever generieke AI-beelden kiest. Bruikbare bronfoto's worden
+    // daarom vóór de whole-page regie als herkenningsanker teruggezet.
+    const sourceProtectedComposition = await ensureSourceAssetsInPreview(
       understanding,
       rawComposition
     );
 
+    // Whole-page regielaag: de volledige homepage als één ritme laten bewegen.
+    const choreographedComposition = await choreographPreviewPage(
+      understanding,
+      sourceProtectedComposition
+    );
+
     // Laatste kwaliteitslaag: copy en gegenereerde beeldrollen aanscherpen
-    // zonder de gekozen waarheid of page choreography weer uit elkaar te trekken.
+    // zonder bronbeelden of de gekozen page choreography weer uit elkaar te trekken.
     const composition = await refinePreviewQuality(
       understanding,
       choreographedComposition
