@@ -1,0 +1,95 @@
+/* Final quality guardrails: readable contrast and tighter image-rich composition. */
+
+.rp-hero-cinematic .rp-hero-copy,
+.rp-hero-poster .rp-hero-copy,
+.rp-hero-overlay .rp-hero-copy {
+  color: #f7f5ef;
+}
+
+.rp-hero-cinematic h1,
+.rp-hero-poster h1,
+.rp-hero-overlay h1 {
+  color: #f7f5ef !important;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, .34);
+}
+
+.rp-hero-cinematic .rp-eyebrow,
+.rp-hero-poster .rp-eyebrow,
+.rp-hero-overlay .rp-eyebrow {
+  color: rgba(255, 255, 255, .76) !important;
+}
+
+.rp-hero-cinematic .rp-hero-subtitle,
+.rp-hero-poster .rp-hero-subtitle,
+.rp-hero-overlay .rp-hero-subtitle {
+  color: rgba(255, 255, 255, .94) !important;
+}
+
+.rp-hero-cinematic button,
+.rp-hero-poster button,
+.rp-hero-overlay button {
+  background: rgba(12, 12, 12, .82);
+  color: #fff;
+  border-color: rgba(255, 255, 255, .32);
+  backdrop-filter: blur(6px);
+}
+
+.rp-hero-cinematic .rp-hero-image::after {
+  background:
+    linear-gradient(90deg, rgba(0,0,0,.84) 0%, rgba(0,0,0,.58) 34%, rgba(0,0,0,.22) 62%, rgba(0,0,0,.08) 100%),
+    linear-gradient(0deg, rgba(0,0,0,.40) 0%, rgba(0,0,0,.06) 48%);
+}
+
+.rp-section-gallery .rp-visual-collection,
+.rp-section-mosaic .rp-visual-collection {
+  overflow: hidden;
+}
+
+.rp-section-gallery .rp-visual,
+.rp-section-mosaic .rp-visual,
+.rp-section-cards .rp-visual {
+  background: #20201e;
+}
+
+.rp-section-gallery .rp-visual .rp-image,
+.rp-section-mosaic .rp-visual .rp-image,
+.rp-section-cards .rp-visual .rp-image {
+  transition: transform .25s ease;
+}
+
+.rp-section-gallery .rp-visual:first-child .rp-image,
+.rp-section-mosaic .rp-visual:first-child .rp-image {
+  object-position: center center;
+}
+
+.rp-tone-dark .rp-body,
+.rp-tone-dark .rp-items h3,
+.rp-section-manifesto .rp-body,
+.rp-section-manifesto .rp-items h3 {
+  color: rgba(255,255,255,.9);
+}
+
+.rp-tone-dark .rp-eyebrow,
+.rp-section-manifesto .rp-eyebrow {
+  color: rgba(255,255,255,.58);
+}
+
+.rp-tone-accent .rp-section-inner {
+  position: relative;
+}
+
+.rp-tone-accent h2,
+.rp-tone-accent .rp-body {
+  max-width: 880px;
+}
+
+.rp-section-statement .rp-body,
+.rp-section-manifesto .rp-body {
+  max-width: 720px;
+}
+
+@media (max-width: 850px) {
+  .rp-hero-cinematic .rp-hero-image::after {
+    background: linear-gradient(0deg, rgba(0,0,0,.78) 0%, rgba(0,0,0,.36) 58%, rgba(0,0,0,.14) 100%);
+  }
+}
