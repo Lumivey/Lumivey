@@ -4,6 +4,7 @@ import "./globals.css";
 import "./components/RecognitionPreview.css";
 import "./components/RecognitionPreviewAdvanced.css";
 import "./components/RecognitionPreviewPolish.css";
+import "./components/RecognitionPreviewChoreography.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
