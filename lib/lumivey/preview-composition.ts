@@ -4,32 +4,23 @@ import { formatPreviewContext } from "@/lib/lumivey/preview-context";
 import { ArtDirection } from "@/lib/lumivey/art-direction";
 import { PreviewReadiness } from "@/lib/lumivey/preview-readiness";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export type PreviewSectionType =
-  | "intro"
-  | "story"
-  | "services"
-  | "projects"
-  | "approach"
-  | "proof"
-  | "content"
-  | "contact";
+  | "intro" | "story" | "services" | "projects" | "approach" | "proof" | "content" | "contact";
 
-export type PreviewSectionLayout =
-  | "text"
-  | "split"
-  | "split-reverse"
-  | "grid"
-  | "feature"
-  | "list"
-  | "statement"
-  | "manifesto"
-  | "cards"
-  | "mosaic"
-  | "gallery";
+export type PreviewVisual = {
+  id: string;
+  kind: "source" | "generated";
+  sourceAssetId?: string | null;
+  purpose: string;
+  subject: string;
+  setting: string;
+  composition: string;
+  atmosphere: string;
+  avoid: string[];
+  crop: "portrait" | "landscape" | "square" | "wide" | "detail";
+};
 
 export type PreviewSection = {
   type: PreviewSectionType;
@@ -39,10 +30,12 @@ export type PreviewSection = {
   items?: string[];
   imageSlot?: "hero" | "story" | "detail" | null;
   sourceAssetId?: string | null;
-  layout: PreviewSectionLayout;
+  visuals?: PreviewVisual[];
+  layout:
+    | "text" | "split" | "grid" | "feature" | "list"
+    | "split-reverse" | "statement" | "manifesto" | "cards" | "mosaic" | "gallery";
   tone?: "base" | "surface" | "accent" | "dark";
   emphasis?: "quiet" | "normal" | "strong" | "heroic";
-  imageCrop?: "portrait" | "landscape" | "square" | "wide" | "detail";
 };
 
 export type PreviewComposition = {
@@ -52,17 +45,10 @@ export type PreviewComposition = {
     eyebrow?: string;
     title: string;
     subtitle?: string;
-    layout:
-      | "split"
-      | "full"
-      | "overlay"
-      | "minimal"
-      | "image-led"
-      | "cinematic"
-      | "poster"
-      | "editorial";
+    layout: "split" | "full" | "overlay" | "minimal" | "image-led" | "cinematic" | "poster" | "editorial";
     imageSlot?: "hero" | null;
     sourceAssetId?: string | null;
+    visuals?: PreviewVisual[];
     primaryAction?: string;
   };
   sections: PreviewSection[];
@@ -77,21 +63,11 @@ export type PreviewComposition = {
     heroScale: "restrained" | "bold" | "cinematic";
     sectionTreatment: "open" | "panels" | "bands" | "mixed";
     imageTreatment: "clean" | "documentary" | "cinematic" | "detail-led";
-    palette: {
-      background: string;
-      surface: string;
-      text: string;
-      muted: string;
-      accent: string;
-      dark: string;
-    };
+    palette: { background: string; surface: string; text: string; muted: string; accent: string; dark: string; };
     colorDirection: string;
     typographyDirection: string;
   };
-  pageHints: Array<{
-    label: string;
-    purpose: string;
-  }>;
+  pageHints: Array<{ label: string; purpose: string }>;
   recognitionAnchors: string[];
   doNotChange: string[];
 };
@@ -104,120 +80,68 @@ export async function createPreviewComposition(
   const response = await openai.responses.create({
     model: "gpt-5.6-terra",
     instructions: `
-Je bent Lumiveys recognition-first homepage-componist.
+Je bent Lumiveys recognition-first homepage art director en componist.
 
-Je maakt GEEN templatekeuze. Je ontwerpt een eerste homepage vanuit het begrip van precies deze ondernemer of organisatie.
+Je taak is NIET om nette content in een rustige website-template te zetten.
+Je ontwerpt een eerste homepage die visueel en inhoudelijk voortkomt uit precies deze ondernemer.
 
-DOEL
-De ondernemer moet bij de eerste preview kunnen denken:
-"Ja. Dit ben ik. Dit is mijn onderneming, maar dan beter verteld."
+ACCEPTATIELAT
+De preview moet het niveau benaderen van een door een goede designer samengestelde concept-homepage: duidelijke art direction, visuele hiërarchie, beeldritme, spanning, herkenning en een eigen wereld. Een generieke Squarespace/Webflow-achtige pagina met veel witruimte en afwisselend tekstblokken is onvoldoende.
 
-De homepage is de eerste kennismaking met een toekomstige MEERPAGINA-WEBSITE. Probeer dus niet alle informatie op de homepage te proppen. Kies wat op de eerste pagina betekenisvol is en geef in pageHints aan welke logische vervolgpagina's uit het bekende materiaal voortkomen.
+De ondernemer moet kunnen denken: "Ja. Dit ben ik."
+Niet alleen: "Ja, dit gaat over mijn vak."
 
-BELANGRIJKE KWALITEITSLAT
-Een homepage mag niet voelen alsof tekst in een nette generieke layout is gezet.
-De compositie moet voortkomen uit de identiteit, het werk, het verhaal en het beschikbare echte beeldmateriaal.
-Gebruik visuele spanning, ritme, schaal, contrast en beeld waar dat bij deze ondernemer past.
-Voor een sterk visueel vak mag de homepage beeldgedreven, cinematografisch, technisch of rijk aan bewijs zijn. Voor een rustige adviseur kan juist terughoudendheid passend zijn. Kies nooit minimalisme als automatische veilige standaard.
+REFERENTIEPRINCIPES
+- mens en identiteit vóór layout;
+- echte beelden vóór gegenereerde vervangers;
+- een sterk verhaal mag de visuele richting bepalen;
+- een vak met sterk beeldpotentieel moet ook beeldrijk worden vertaald;
+- durf full-bleed, cinematic hero, donkere zones, detailgrids, beeldreeksen, asymmetrie en sterke statements te gebruiken wanneer dat past;
+- een rustige ondernemer hoeft niet automatisch een lege minimalistische website te krijgen;
+- rust kan ook ontstaan door focus, ritme, contrast en gecontroleerde rijkdom.
 
-HERKENNING EERST
-- mens/organisatie en echte onderneming gaan vóór generieke webdesignconventies;
-- bestaand logo, huisstijl, kleuren, voertuig, pand, werk, fotografie of andere herkenningsankers moeten gerespecteerd worden wanneer ze betrouwbaar bekend zijn;
-- moderniseren betekent niet rebranden;
-- behoud vóór vervangen;
-- echt bronmateriaal vóór verzonnen beeld;
-- gebruik AI-stijl alleen om het bestaande karakter beter te vertalen, niet om een nieuw karakter op te leggen.
+ANTI-TEMPLATE REGEL
+Vermijd de standaardformule: lichte hero + tekstblok + donkere band + tekstblok + lichte sectie.
+Gebruik de beschikbare bouwvormen bewust en gevarieerd. Als drie opeenvolgende secties visueel hetzelfde ritme hebben, hercomposeer.
 
-EIGEN BEELDASSETS ZIJN EERSTE KLAS
-In de preview-context staat een lijst BESCHIKBARE EIGEN BEELDASSETS met sourceId's.
-- Wanneer een aangeleverde foto inhoudelijk sterk past bij hero of sectie, gebruik die foto door exact die sourceId in sourceAssetId te zetten.
-- Verzin nooit een sourceAssetId.
-- Een eigen foto van de ondernemer tijdens zijn echte werk heeft in principe voorrang boven een fictief AI-beeld wanneer die foto betekenisvol bruikbaar is.
-- Een aangeleverde foto hoeft niet letterlijk of onbewerkt de hele hero te vullen; de renderer mag croppen en visueel behandelen. Maar de persoon of het echte werk mag niet stilletjes vervangen worden door een fictief equivalent.
-- Gebruik een AI imageSlot alleen voor plekken waar geen passend eigen beeldasset is of waar aanvullend beeld werkelijk iets toevoegt.
+VISUELE VERHALEN
+Je kunt per hero en sectie een visuals-array gebruiken. Gebruik die rijkelijk wanneer beeld essentieel is.
+- source = echt aangeleverd beeld; gebruik exact bestaande sourceAssetId.
+- generated = tijdelijk AI-beeld zonder fictieve herkenbare ondernemer.
+- een eigen foto van de ondernemer tijdens echt werk heeft prioriteit als die bruikbaar is.
+- generated visuals mogen werkdetails, materiaal, objecten, omgeving, effecten of resultaat tonen.
+- genereer NOOIT een herkenbare ondernemer zonder bronfoto.
+- gebruik voor beeldrijke cases doorgaans 4-8 visuals over de homepage; voor tekstgedreven cases minder.
+- elk beeld moet een andere taak hebben: mens, detail, bewijs, sfeer, resultaat, verhaal, materiaal of context.
+- vermijd grote lege placeholders als compositorisch hoofdonderdeel; visualiseer liever meerdere compacte betekenisvolle beelden.
 
-DISCOVERY EERST
-- een rijk gesprek kan voldoende zijn, ook zonder bestaande website;
-- bronnen zijn extra ogen en oren, niet het hart van de identiteit;
-- veel bronfeiten zijn geen vervanging voor menselijk begrip;
-- als readiness laag is, blijf terughoudend en maak geen persoonlijk verhaal van gaten.
+Voor een specialist in autodetailing kan dat bijvoorbeeld betekenen: echte werkfoto als menselijke hero, close-ups van lakdefecten, reflectie/inspectielicht, behandelingsdetail, eindresultaat en een historische/karaktervolle auto als verhaalbeeld — maar alleen als het begrip dat draagt. Kopieer dit voorbeeld niet mechanisch naar andere beroepen.
 
-WAARHEID
-- bevestigde ondernemersinformatie is leidend;
-- bron-gesteunde concrete feiten en visuele ankers mogen nauw aan het bewijs worden gebruikt;
-- broninformatie mag nooit stilletjes worden opgewaardeerd naar motivatie, trots, identiteit, kwaliteit of persoonlijke eigenschappen;
-- interpretaties zijn richting, geen publiceerbare feiten;
-- onbekenden worden niet ingevuld;
-- geen generieke claims zoals zorgvuldig, persoonlijk, kwaliteit, passie, betrouwbaar tenzij daar echte grond voor is.
+EIGEN BEELDASSETS
+In de preview-context staat BESCHIKBARE EIGEN BEELDASSETS.
+Gebruik sourceAssetId exact wanneer een bronbeeld inhoudelijk past. Je mag hetzelfde bronbeeld hoogstens twee keer gebruiken, alleen met een duidelijk andere crop/functie.
 
-STEM
-Schrijf de homepage alsof het de website van deze ondernemer is, niet alsof Lumivey een profiel OVER hem schrijft.
-- Voor een zelfstandige persoon is ik/wij-taal meestal natuurlijker dan steeds de naam van de ondernemer in de derde persoon.
-- Gebruik derde persoon alleen als de organisatiecontext daar echt om vraagt.
-- Houd de woorden dicht bij hoe de ondernemer zelf praat.
+STEM EN WAARHEID
+Schrijf alsof dit de website van de ondernemer is. Gebruik ik/wij waar natuurlijk.
+Bevestigde ondernemersinformatie is leidend. Broninformatie mag niet stilletjes motivatie, trots of kwaliteit worden. Geen generieke marketingclaims zonder grond. Vul onbekenden niet in.
 
-VISUELE VRIJHEID
-De visuele taal moet uit de ondernemer voortkomen, niet uit Lumivey.
-Bepaal daarom expliciet:
-- light, dark of mixed;
-- neutrale, redactionele, technische of expressieve typografie;
-- hero restrained, bold of cinematic;
-- open secties, panelen, kleurbanden of een mix;
-- clean, documentary, cinematic of detail-led beeldgebruik;
-- een concrete kleurpalette in geldige 6-cijferige HEX-kleuren.
+MEERPAGINA
+De homepage is een krachtige voordeur, niet de hele website. Gebruik pageHints voor verdieping.
 
-Kleur is betekenisvol. Kies geen beige/off-white uit gewoonte. Een bestaande huisstijl heeft voorrang als die betrouwbaar bekend is.
+VISUEEL SYSTEEM
+Bepaal theme, typeCharacter, heroScale, sectionTreatment, imageTreatment en een concreet HEX-palet. Kies niet automatisch beige/off-white. Bestaande identiteit heeft voorrang.
 
-COMPOSITIEGRAMMATICA
-Je beschikt over rijkere bouwvormen. Gebruik ze bewust, niet allemaal tegelijk:
-- text: rustige tekstsectie;
-- split: tekst links, beeld rechts;
-- split-reverse: beeld links, tekst rechts;
-- grid: meerdere gelijkwaardige punten;
-- feature: groot beeld of bewijs naast compacte tekst;
-- list: ritmische lijst;
-- statement: één grote gedachte met veel visueel gewicht;
-- manifesto: uitgesproken kernzin of visie, bijna posterachtig;
-- cards: inhoud als duidelijke losse bewijsblokken;
-- mosaic: asymmetrische combinatie van beeld, titel en punten;
-- gallery: werk/resultaat staat centraal, tekst ondersteunt.
+COMPOSITIE
+Gebruik maximaal 7 secties. Kies per sectie layout, tone en emphasis. Beschikbare geavanceerde layouts: split-reverse, statement, manifesto, cards, mosaic, gallery. Hero kan cinematic, poster of editorial zijn.
 
-Hero-keuzes:
-- split: klassiek tweeluik;
-- full: brede tekstgedreven hero;
-- overlay: tekst over beeld;
-- minimal: bewust sober wanneer dat werkelijk past;
-- image-led: beeld heeft duidelijk de leiding;
-- cinematic: bijna schermvullend beeld met sterke typografische laag;
-- poster: krachtige grafische compositie met compacte copy;
-- editorial: asymmetrische redactionele compositie.
-
-Gebruik emphasis en imageCrop om hiërarchie te sturen. Een belangrijke identiteitspijler mag heroic zijn. Een ondersteunend feit mag quiet zijn.
-
-VERMIJD HERHALING
-- Niet iedere sectie hoeft dezelfde maximale breedte te hebben.
-- Niet iedere sectie hoeft titel + alinea + lijst te zijn.
-- Vermijd lange opeenvolgingen van witte tekstvlakken.
-- Gebruik donkere, lichte of accentzones alleen wanneer ze inhoudelijk of ritmisch iets doen.
-- Laat visueel werk visueel bewijs krijgen.
-- Een sterk verhaal mag als zelfstandig moment in de pagina ademen.
-
-Een adviseur, kapper, stichting, schilder en detailer moeten aantoonbaar verschillend kunnen uitkomen wanneer hun begrip verschilt.
-
-DO NOT CHANGE
-Wanneer bestaande visuele identiteit of herkenningsankers bekend zijn, zet concrete zaken die niet zomaar veranderd mogen worden in doNotChange. Doe dit alleen wanneer ondersteund door het begrip.
-
-Geef uitsluitend geldige JSON terug. Geen markdown. Geen uitleg.
-    `,
+Geef uitsluitend geldige JSON terug. Geen markdown of uitleg.
+`,
     input: `
-PREVIEW READINESS:
-${JSON.stringify(readiness, null, 2)}
+PREVIEW READINESS:\n${JSON.stringify(readiness, null, 2)}
 
-ART DIRECTION:
-${JSON.stringify(artDirection, null, 2)}
+ART DIRECTION:\n${JSON.stringify(artDirection, null, 2)}
 
-LUMIVEY PREVIEW CONTEXT:
-${formatPreviewContext(understanding)}
+LUMIVEY PREVIEW CONTEXT:\n${formatPreviewContext(understanding)}
 
 Geef exact dit JSON-formaat terug:
 {
@@ -228,36 +152,50 @@ Geef exact dit JSON-formaat terug:
     "title": "",
     "subtitle": "",
     "layout": "cinematic",
-    "imageSlot": "hero",
+    "imageSlot": null,
     "sourceAssetId": null,
+    "visuals": [
+      {
+        "id": "hero-primary",
+        "kind": "source",
+        "sourceAssetId": "",
+        "purpose": "",
+        "subject": "",
+        "setting": "",
+        "composition": "",
+        "atmosphere": "",
+        "avoid": [],
+        "crop": "wide"
+      }
+    ],
     "primaryAction": ""
   },
   "sections": [
     {
-      "type": "intro",
+      "type": "story",
       "eyebrow": "",
       "title": "",
       "body": "",
       "items": [],
       "imageSlot": null,
       "sourceAssetId": null,
-      "layout": "statement",
-      "tone": "base",
-      "emphasis": "strong",
-      "imageCrop": "landscape"
+      "visuals": [],
+      "layout": "mosaic",
+      "tone": "dark",
+      "emphasis": "strong"
     }
   ],
   "design": {
     "character": "",
     "density": "balanced",
-    "contrast": "clear",
-    "imagePresence": "balanced",
-    "shapeLanguage": "mixed",
-    "theme": "light",
-    "typeCharacter": "neutral",
-    "heroScale": "bold",
+    "contrast": "strong",
+    "imagePresence": "dominant",
+    "shapeLanguage": "square",
+    "theme": "mixed",
+    "typeCharacter": "technical",
+    "heroScale": "cinematic",
     "sectionTreatment": "mixed",
-    "imageTreatment": "clean",
+    "imageTreatment": "cinematic",
     "palette": {
       "background": "#F6F5F1",
       "surface": "#FFFFFF",
@@ -269,17 +207,18 @@ Geef exact dit JSON-formaat terug:
     "colorDirection": "",
     "typographyDirection": ""
   },
-  "pageHints": [
-    { "label": "", "purpose": "" }
-  ],
+  "pageHints": [{ "label": "", "purpose": "" }],
   "recognitionAnchors": [],
   "doNotChange": []
 }
 
-Gebruik lege strings of arrays waar informatie niet verantwoord ingevuld kan worden.
-Gebruik maximaal 7 homepage-secties; de rest hoort naar vervolgpagina's.
-Gebruik uitsluitend geldige 6-cijferige HEX-kleuren in palette.
-    `,
+Regels:
+- sourceAssetId alleen vullen met een werkelijk beschikbare sourceId.
+- generated visual krijgt sourceAssetId null.
+- visual id's moeten uniek zijn.
+- voor generated visuals moeten purpose, subject, setting, composition, atmosphere en avoid concreet genoeg zijn voor beeldgeneratie.
+- gebruik geldige 6-cijferige HEX-kleuren.
+`
   });
 
   return JSON.parse(response.output_text) as PreviewComposition;
