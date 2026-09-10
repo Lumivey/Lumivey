@@ -6,6 +6,7 @@ import { createImageBrief } from "@/lib/lumivey/image-brief";
 import { assessPreviewReadiness } from "@/lib/lumivey/preview-readiness";
 import { createPreviewComposition } from "@/lib/lumivey/preview-composition";
 import { ensureSourceAssetsInPreview } from "@/lib/lumivey/preview-source-guard";
+import { applyVisualIdentity } from "@/lib/lumivey/visual-identity";
 import { choreographPreviewPage } from "@/lib/lumivey/page-choreography";
 import { refinePreviewQuality } from "@/lib/lumivey/preview-quality";
 import { LumiveyUnderstanding } from "@/lib/lumivey/understanding";
@@ -43,20 +44,28 @@ export async function POST(request: Request) {
 
     // Echte, door de ondernemer aangeleverde foto's mogen niet verdwijnen doordat
     // de composer liever generieke AI-beelden kiest. Bruikbare bronfoto's worden
-    // daarom vóór de whole-page regie als herkenningsanker teruggezet.
+    // daarom eerst als herkenningsanker teruggezet.
     const sourceProtectedComposition = await ensureSourceAssetsInPreview(
       understanding,
       rawComposition
     );
 
-    // Whole-page regielaag: de volledige homepage als één ritme laten bewegen.
-    const choreographedComposition = await choreographPreviewPage(
+    // Nieuwe laag: leid vóór de page choreography één visuele identiteit af uit
+    // mens, vak en bronmateriaal. Zo gaan kleur, typografie, fotografie en ritme
+    // dezelfde taal spreken in plaats van per sectie opnieuw te beginnen.
+    const identityLedComposition = await applyVisualIdentity(
       understanding,
       sourceProtectedComposition
     );
 
+    // Whole-page regielaag: de volledige homepage als één ritme laten bewegen.
+    const choreographedComposition = await choreographPreviewPage(
+      understanding,
+      identityLedComposition
+    );
+
     // Laatste kwaliteitslaag: copy en gegenereerde beeldrollen aanscherpen
-    // zonder bronbeelden of de gekozen page choreography weer uit elkaar te trekken.
+    // zonder bronbeelden, visuele identiteit of page choreography uiteen te trekken.
     const composition = await refinePreviewQuality(
       understanding,
       choreographedComposition
