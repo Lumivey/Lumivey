@@ -1,0 +1,174 @@
+/* Whole-page choreography: sections should feel connected, not stacked. */
+
+.rp-page {
+  overflow-x: clip;
+}
+
+.rp-sections-open .rp-section,
+.rp-sections-mixed .rp-section {
+  position: relative;
+}
+
+/* Adjacent sections share rhythm instead of resetting completely. */
+.rp-sections-open .rp-section + .rp-section .rp-section-inner,
+.rp-sections-mixed .rp-section + .rp-section .rp-section-inner {
+  padding-top: clamp(54px, 7vw, 110px);
+}
+
+.rp-sections-mixed .rp-section-statement + .rp-section-mosaic,
+.rp-sections-mixed .rp-section-statement + .rp-section-gallery,
+.rp-sections-mixed .rp-section-manifesto + .rp-section-mosaic,
+.rp-sections-mixed .rp-section-manifesto + .rp-section-gallery {
+  margin-top: clamp(-70px, -4vw, -34px);
+  z-index: 2;
+}
+
+.rp-sections-mixed .rp-section-mosaic + .rp-section-statement,
+.rp-sections-mixed .rp-section-gallery + .rp-section-statement {
+  margin-top: clamp(-28px, -2vw, -14px);
+}
+
+/* Let image-heavy sections visually escape the strict central column. */
+.rp-sections-mixed .rp-section-gallery .rp-section-inner,
+.rp-sections-mixed .rp-section-mosaic .rp-section-inner {
+  width: min(1380px, calc(100% - 36px));
+}
+
+.rp-sections-mixed .rp-section-gallery .rp-section-image {
+  margin-left: clamp(-34px, -2.5vw, -12px);
+  margin-right: clamp(-34px, -2.5vw, -12px);
+}
+
+.rp-sections-mixed .rp-section-mosaic .rp-section-image {
+  transform: translateY(clamp(-34px, -2vw, -12px));
+}
+
+/* Accent should travel through the page, not live only in background bands. */
+.rp-page .rp-eyebrow,
+.rp-page .rp-items article > span,
+.rp-page .rp-page-hints span {
+  color: var(--rp-accent);
+}
+
+.rp-tone-dark .rp-eyebrow,
+.rp-section-manifesto .rp-eyebrow {
+  color: color-mix(in srgb, var(--rp-accent) 82%, white 18%) !important;
+}
+
+.rp-page button {
+  border-radius: 999px;
+}
+
+.rp-theme-dark .rp-page button,
+.rp-theme-mixed .rp-tone-dark button,
+.rp-section-manifesto button {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rp-accent) 42%, transparent);
+}
+
+/* Build a repeating visual motif through small rules and item numbers. */
+.rp-section-copy::before {
+  content: "";
+  display: block;
+  width: 44px;
+  height: 2px;
+  margin-bottom: 22px;
+  background: var(--rp-accent);
+  opacity: .9;
+}
+
+.rp-section-statement .rp-section-copy::before,
+.rp-section-manifesto .rp-section-copy::before {
+  width: 74px;
+}
+
+/* Different page treatments get genuinely different movement. */
+.rp-sections-open .rp-section {
+  border-top: 0;
+}
+
+.rp-sections-open .rp-section-inner {
+  width: min(1180px, calc(100% - 48px));
+}
+
+.rp-sections-panels .rp-section {
+  width: min(1320px, calc(100% - 36px));
+  margin: 22px auto;
+  border-radius: 28px;
+  overflow: hidden;
+}
+
+.rp-sections-panels .rp-section:first-of-type {
+  margin-top: 36px;
+}
+
+.rp-sections-bands .rp-section + .rp-section {
+  border-top: 0;
+}
+
+/* Editorial pages get softer transition rhythm, technical pages remain tighter. */
+.rp-type-editorial .rp-section-copy::before {
+  width: 28px;
+  height: 1px;
+}
+
+.rp-type-editorial .rp-section h2 {
+  text-transform: none;
+  letter-spacing: -.045em;
+}
+
+.rp-type-expressive .rp-section:nth-of-type(even) .rp-section-copy {
+  transform: translateX(clamp(0px, 3vw, 42px));
+}
+
+.rp-type-technical .rp-section-copy::before {
+  width: 54px;
+}
+
+/* A connected visual scene can partially bridge into the next section. */
+.rp-sections-mixed .rp-section-gallery:not(.rp-tone-dark) .rp-visual:first-child,
+.rp-sections-mixed .rp-section-mosaic:not(.rp-tone-dark) .rp-visual:first-child {
+  box-shadow: 0 18px 46px rgba(0,0,0,.10);
+}
+
+.rp-sections-mixed .rp-tone-dark + .rp-tone-base,
+.rp-sections-mixed .rp-tone-dark + .rp-tone-surface,
+.rp-sections-mixed .rp-section-manifesto + .rp-tone-base,
+.rp-sections-mixed .rp-section-manifesto + .rp-tone-surface {
+  margin-top: 0;
+}
+
+/* Footer should close the visual story instead of feeling like a separate widget. */
+.rp-footer {
+  border-top: 1px solid color-mix(in srgb, var(--rp-text) 12%, transparent);
+}
+
+.rp-footer::before {
+  content: "";
+  display: block;
+  width: 72px;
+  height: 3px;
+  background: var(--rp-accent);
+  margin-bottom: 28px;
+}
+
+@media (max-width: 850px) {
+  .rp-sections-mixed .rp-section-statement + .rp-section-mosaic,
+  .rp-sections-mixed .rp-section-statement + .rp-section-gallery,
+  .rp-sections-mixed .rp-section-manifesto + .rp-section-mosaic,
+  .rp-sections-mixed .rp-section-manifesto + .rp-section-gallery,
+  .rp-sections-mixed .rp-section-mosaic + .rp-section-statement,
+  .rp-sections-mixed .rp-section-gallery + .rp-section-statement {
+    margin-top: 0;
+  }
+
+  .rp-sections-mixed .rp-section-mosaic .rp-section-image,
+  .rp-type-expressive .rp-section:nth-of-type(even) .rp-section-copy {
+    transform: none;
+  }
+
+  .rp-sections-panels .rp-section {
+    width: calc(100% - 18px);
+    border-radius: 18px;
+    margin: 10px auto;
+  }
+}
