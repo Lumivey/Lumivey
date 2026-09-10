@@ -1,0 +1,116 @@
+/* Connected page flow: reduce the feeling of full-width blocks stacked on top of each other. */
+
+.rp-sections-mixed,
+.rp-sections-open {
+  --rp-flow-gap: clamp(44px, 7vw, 110px);
+}
+
+/* In mixed/open mode, ordinary sections live on one continuous canvas. */
+.rp-sections-mixed .rp-section,
+.rp-sections-open .rp-section {
+  border-top: 0;
+}
+
+.rp-sections-mixed .rp-section:not(.rp-section-manifesto):not(.rp-section-statement),
+.rp-sections-open .rp-section:not(.rp-section-manifesto):not(.rp-section-statement) {
+  background: transparent !important;
+}
+
+.rp-sections-mixed .rp-section:not(.rp-section-manifesto):not(.rp-section-statement) .rp-section-inner,
+.rp-sections-open .rp-section:not(.rp-section-manifesto):not(.rp-section-statement) .rp-section-inner {
+  position: relative;
+  width: min(1260px, calc(100% - 48px));
+  padding-top: var(--rp-flow-gap);
+  padding-bottom: var(--rp-flow-gap);
+}
+
+/* Dark/accent moments become composed scenes instead of anonymous full-width stripes. */
+.rp-sections-mixed .rp-tone-dark:not(.rp-section-manifesto):not(.rp-section-statement) .rp-section-inner {
+  width: min(1320px, calc(100% - 36px));
+  background: var(--rp-dark);
+  color: #f5f3ed;
+  padding-left: clamp(26px, 5vw, 76px);
+  padding-right: clamp(26px, 5vw, 76px);
+  margin-top: clamp(18px, 3vw, 44px);
+  margin-bottom: clamp(18px, 3vw, 44px);
+}
+
+.rp-sections-mixed .rp-tone-accent:not(.rp-section-manifesto):not(.rp-section-statement) .rp-section-inner {
+  width: min(1320px, calc(100% - 36px));
+  background: var(--rp-accent);
+  color: var(--rp-dark);
+  padding-left: clamp(26px, 5vw, 76px);
+  padding-right: clamp(26px, 5vw, 76px);
+  margin-top: clamp(18px, 3vw, 44px);
+  margin-bottom: clamp(18px, 3vw, 44px);
+}
+
+/* Let image-led scenes visibly cross the notional section boundary. */
+.rp-sections-mixed .rp-section-gallery + .rp-section,
+.rp-sections-mixed .rp-section-mosaic + .rp-section,
+.rp-sections-open .rp-section-gallery + .rp-section,
+.rp-sections-open .rp-section-mosaic + .rp-section {
+  margin-top: clamp(-50px, -3vw, -20px);
+}
+
+.rp-sections-mixed .rp-section-gallery .rp-section-image,
+.rp-sections-mixed .rp-section-mosaic .rp-section-image,
+.rp-sections-open .rp-section-gallery .rp-section-image,
+.rp-sections-open .rp-section-mosaic .rp-section-image {
+  position: relative;
+  z-index: 2;
+}
+
+/* Alternate horizontal gravity so a page does not repeatedly reset to the same centered block. */
+.rp-sections-mixed .rp-section:nth-of-type(odd):not(.rp-section-manifesto):not(.rp-section-statement) .rp-section-inner {
+  transform: translateX(clamp(-28px, -1.5vw, 0px));
+}
+
+.rp-sections-mixed .rp-section:nth-of-type(even):not(.rp-section-manifesto):not(.rp-section-statement) .rp-section-inner {
+  transform: translateX(clamp(0px, 1.5vw, 28px));
+}
+
+/* Source photographs should keep their human composition. Avoid aggressive zoom/cropping. */
+.rp-source-figure .rp-image,
+.rp-visual:has(.rp-image[src^="data:"]) .rp-image {
+  object-position: center center;
+}
+
+/* On expressive/social pages, accent travels through text hierarchy instead of only big color fields. */
+.rp-type-expressive .rp-section h2::first-line,
+.rp-type-expressive .rp-hero h1::first-line {
+  text-decoration-color: var(--rp-accent);
+}
+
+.rp-type-expressive .rp-section-copy::before,
+.rp-type-expressive .rp-footer::before {
+  background: var(--rp-accent);
+}
+
+/* Full-bleed statement/manifesto moments remain available, but become rarer visual punctuation. */
+.rp-sections-mixed .rp-section-statement,
+.rp-sections-mixed .rp-section-manifesto {
+  margin-top: clamp(18px, 3vw, 44px);
+  margin-bottom: clamp(18px, 3vw, 44px);
+}
+
+@media (max-width: 850px) {
+  .rp-sections-mixed .rp-section:nth-of-type(odd):not(.rp-section-manifesto):not(.rp-section-statement) .rp-section-inner,
+  .rp-sections-mixed .rp-section:nth-of-type(even):not(.rp-section-manifesto):not(.rp-section-statement) .rp-section-inner {
+    transform: none;
+  }
+
+  .rp-sections-mixed .rp-section-gallery + .rp-section,
+  .rp-sections-mixed .rp-section-mosaic + .rp-section,
+  .rp-sections-open .rp-section-gallery + .rp-section,
+  .rp-sections-open .rp-section-mosaic + .rp-section {
+    margin-top: 0;
+  }
+
+  .rp-sections-mixed .rp-tone-dark:not(.rp-section-manifesto):not(.rp-section-statement) .rp-section-inner,
+  .rp-sections-mixed .rp-tone-accent:not(.rp-section-manifesto):not(.rp-section-statement) .rp-section-inner {
+    width: calc(100% - 18px);
+    padding-left: 22px;
+    padding-right: 22px;
+  }
+}
