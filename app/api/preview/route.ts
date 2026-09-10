@@ -5,6 +5,7 @@ import { chooseLayoutVariant } from "@/lib/lumivey/layout-variant";
 import { createImageBrief } from "@/lib/lumivey/image-brief";
 import { assessPreviewReadiness } from "@/lib/lumivey/preview-readiness";
 import { createPreviewComposition } from "@/lib/lumivey/preview-composition";
+import { choreographPreviewPage } from "@/lib/lumivey/page-choreography";
 import { refinePreviewQuality } from "@/lib/lumivey/preview-quality";
 import { LumiveyUnderstanding } from "@/lib/lumivey/understanding";
 
@@ -39,9 +40,19 @@ export async function POST(request: Request) {
       createImageBrief(understanding, artDirection),
     ]);
 
-    // Laatste kwaliteitslaag: inhoud en gegenereerde beeldrollen aanscherpen
-    // zonder de gekozen art direction, waarheid of compositiestructuur te veranderen.
-    const composition = await refinePreviewQuality(understanding, rawComposition);
+    // Nieuwe whole-page regielaag: geen losse blokken optimaliseren,
+    // maar de volledige homepage als één ritme laten bewegen.
+    const choreographedComposition = await choreographPreviewPage(
+      understanding,
+      rawComposition
+    );
+
+    // Laatste kwaliteitslaag: copy en gegenereerde beeldrollen aanscherpen
+    // zonder de gekozen waarheid of page choreography weer uit elkaar te trekken.
+    const composition = await refinePreviewQuality(
+      understanding,
+      choreographedComposition
+    );
 
     // Tijdelijke fallback voor de bestaande goedkeur-/publicatieketen.
     // De nieuwe preview renderer gebruikt composition. layoutVariant blijft
