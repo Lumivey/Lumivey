@@ -128,14 +128,26 @@ COPY-KWALITEIT
 - Vermijd herhaling van dezelfde gedachte in hero en secties.
 - Een sterke kop mag compact en eigen zijn, maar niet bedacht klinken.
 - CTA's concreet en rustig.
+- Gebruik bevestigde concrete vaktaal wanneer die in het begrip aanwezig is. Vervang specifieke handelingen, problemen, materialen of controles niet door vage woorden als aandacht, kwaliteit, vakmanschap of resultaat.
+- Laat minstens één sectie bij een vakinhoudelijke ondernemer concreet bewijzen WAT hij doet of WAAR hij op let, wanneer het begrip daarvoor voldoende feiten bevat.
+- Een persoonlijk oorsprongsverhaal mag emotioneel dragen, maar hoeft niet in meerdere secties opnieuw uitgelegd te worden.
 
 VISUELE FUNCTIE
-Beoordeel alleen de GENERATED visuals. Iedere visual moet een duidelijke eigen taak hebben: bijvoorbeeld mens/context, materiaal, technisch detail, probleem/bewijs, werkwijze, resultaat of verhaal.
+Beoordeel alleen de GENERATED visuals. Iedere visual moet één duidelijke eigen taak hebben: mens/context, materiaal, technisch detail, probleem/bewijs, werkwijze, resultaat of verhaal.
 - voorkom meerdere beelden die feitelijk hetzelfde laten zien;
 - maak subject/composition specifieker als twee beelden te veel op elkaar lijken;
+- koppel een probleem/bewijs-beeld alleen aan een concreet bevestigd probleem of inspectiepunt uit het begrip;
+- koppel een werkwijze-beeld alleen aan een concreet bevestigde handeling, materiaalkeuze of controle;
+- laat resultaatbeelden zien wat visueel waarneembaar mag zijn zonder onbevestigde prestatieretoriek;
 - laat beeldbrieven aansluiten op de identiteit en het vak, niet op generieke stockfotografie;
 - source visuals nooit veranderen of vervangen;
 - geen herkenbare fictieve ondernemer of medewerker genereren.
+
+COMPOSITIE-HYGIENE
+Je kunt de layout niet veranderen, maar voorkom tekst die door zijn lengte waarschijnlijk met beelden gaat botsen.
+- Houd koppen in beeldrijke split/mosaic/gallery-secties bij voorkeur compact: meestal 3-8 woorden.
+- Verplaats nuance naar bodytekst in plaats van een extreem lange kop.
+- Laat twee naast elkaar liggende tekst- en beeldonderdelen ieder ademruimte houden.
 
 CONTRAST
 Je kunt geen CSS wijzigen. Zorg daarom dat de tekstinhoud niet afhankelijk is van een subtiele kleurtruc. De renderer bewaakt technisch leesbaar contrast.
