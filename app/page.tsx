@@ -8,11 +8,9 @@ import {
   useState,
 } from "react";
 
-import CleanProfessionalPreview from "@/app/components/CleanProfessionalPreview";
-import WarmCraftPreview, {
-  GeneratedImages,
-} from "@/app/components/WarmCraftPreview";
-
+import RecognitionPreview from "@/app/components/RecognitionPreview";
+import type { GeneratedImages } from "@/app/components/WarmCraftPreview";
+import type { PreviewComposition } from "@/lib/lumivey/preview-composition";
 import { storeImage } from "@/lib/lumivey/image-store";
 
 type ChatMessage = {
@@ -82,6 +80,14 @@ type ImageBrief = {
   detail: ImageBriefItem;
 };
 
+type PreviewReadiness = {
+  ready: boolean;
+  confidence: "low" | "medium" | "high";
+  reason: string;
+  strongSignals: string[];
+  missingForRecognition: string[];
+};
+
 type ApprovedSitePackage = {
   site: SiteDescription;
   layoutVariant: LayoutVariant | null;
@@ -106,7 +112,6 @@ const MAX_IMAGE_EDGE = 1800;
 function blobToDataUrl(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-
     reader.onload = () => resolve(String(reader.result));
     reader.onerror = () => reject(new Error("Bestand kon niet worden gelezen."));
     reader.readAsDataURL(blob);
@@ -144,34 +149,24 @@ async function compressImage(file: File): Promise<Blob> {
   canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
 
   const context = canvas.getContext("2d");
-
-  if (!context) {
-    throw new Error("Afbeelding kon niet worden voorbereid.");
-  }
+  if (!context) throw new Error("Afbeelding kon niet worden voorbereid.");
 
   context.drawImage(image, 0, 0, canvas.width, canvas.height);
 
   const toJpeg = (quality: number) =>
     new Promise<Blob>((resolve, reject) => {
       canvas.toBlob(
-        (blob) => {
-          if (blob) {
-            resolve(blob);
-          } else {
-            reject(new Error("Afbeelding kon niet worden voorbereid."));
-          }
-        },
+        (blob) =>
+          blob
+            ? resolve(blob)
+            : reject(new Error("Afbeelding kon niet worden voorbereid.")),
         "image/jpeg",
         quality
       );
     });
 
   let blob = await toJpeg(0.84);
-
-  if (blob.size > MAX_DIRECT_FILE_BYTES) {
-    blob = await toJpeg(0.68);
-  }
-
+  if (blob.size > MAX_DIRECT_FILE_BYTES) blob = await toJpeg(0.68);
   return blob;
 }
 
@@ -204,64 +199,36 @@ export default function Home() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
-
-  const [understanding, setUnderstanding] =
-    useState<UnderstandingState | null>(null);
-
-  const [attachment, setAttachment] =
-    useState<SelectedAttachment | null>(null);
-
+  const [understanding, setUnderstanding] = useState<UnderstandingState | null>(null);
+  const [attachment, setAttachment] = useState<SelectedAttachment | null>(null);
   const [attachmentError, setAttachmentError] = useState("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [previewLoading, setPreviewLoading] =
-    useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [site, setSite] = useState<SiteDescription | null>(null);
+  const [composition, setComposition] = useState<PreviewComposition | null>(null);
+  const [readiness, setReadiness] = useState<PreviewReadiness | null>(null);
+  const [artDirection, setArtDirection] = useState<ArtDirection | null>(null);
+  const [layoutVariant, setLayoutVariant] = useState<LayoutVariant | null>(null);
+  const [imageBrief, setImageBrief] = useState<ImageBrief | null>(null);
+  const [generatedImages, setGeneratedImages] = useState<GeneratedImages>(emptyGeneratedImages);
+  const [approveLoading, setApproveLoading] = useState(false);
 
-  const [site, setSite] =
-    useState<SiteDescription | null>(null);
+  const handleImagesChange = useCallback((images: GeneratedImages) => {
+    setGeneratedImages(images);
+  }, []);
 
-  const [artDirection, setArtDirection] =
-    useState<ArtDirection | null>(null);
-
-  const [layoutVariant, setLayoutVariant] =
-    useState<LayoutVariant | null>(null);
-
-  const [imageBrief, setImageBrief] =
-    useState<ImageBrief | null>(null);
-
-  const [generatedImages, setGeneratedImages] =
-    useState<GeneratedImages>(emptyGeneratedImages);
-
-  const [approveLoading, setApproveLoading] =
-    useState(false);
-
-  const handleImagesChange = useCallback(
-    (images: GeneratedImages) => {
-      setGeneratedImages(images);
-    },
-    []
-  );
-
-  async function handleFileChange(
-    event: ChangeEvent<HTMLInputElement>
-  ) {
+  async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
-
-    if (!file) {
-      return;
-    }
+    if (!file) return;
 
     setAttachmentError("");
-
     try {
-      const prepared = await prepareAttachment(file);
-      setAttachment(prepared);
+      setAttachment(await prepareAttachment(file));
     } catch (error) {
       setAttachment(null);
       setAttachmentError(
-        error instanceof Error
-          ? error.message
-          : "Bestand kon niet worden toegevoegd."
+        error instanceof Error ? error.message : "Bestand kon niet worden toegevoegd."
       );
     }
   }
@@ -269,22 +236,13 @@ export default function Home() {
   function clearAttachment() {
     setAttachment(null);
     setAttachmentError("");
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
-  async function handleSubmit(
-    event: FormEvent<HTMLFormElement>
-  ) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
     const trimmed = input.trim();
-
-    if ((!trimmed && !attachment) || loading) {
-      return;
-    }
+    if ((!trimmed && !attachment) || loading) return;
 
     const userContent = attachment
       ? `${trimmed || "Ik deel hierbij een bestand."}\n\nBijlage: ${attachment.name}`
@@ -292,10 +250,7 @@ export default function Home() {
 
     const nextMessages: ChatMessage[] = [
       ...messages,
-      {
-        role: "user",
-        content: userContent,
-      },
+      { role: "user", content: userContent },
     ];
 
     setMessages(nextMessages);
@@ -305,9 +260,7 @@ export default function Home() {
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: nextMessages,
           sourceContexts: understanding?.sources ?? [],
@@ -316,33 +269,19 @@ export default function Home() {
       });
 
       const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data.error || "Er ging iets mis."
-        );
-      }
+      if (!response.ok) throw new Error(data.error || "Er ging iets mis.");
 
       setMessages([
         ...nextMessages,
-        {
-          role: "assistant",
-          content: data.reply,
-        },
+        { role: "assistant", content: data.reply },
       ]);
-
       setUnderstanding(data.understanding);
       clearAttachment();
     } catch (error) {
       console.error(error);
-
       setMessages([
         ...nextMessages,
-        {
-          role: "assistant",
-          content:
-            "Er ging iets mis. Probeer het nog eens.",
-        },
+        { role: "assistant", content: "Er ging iets mis. Probeer het nog eens." },
       ]);
     } finally {
       setLoading(false);
@@ -350,9 +289,7 @@ export default function Home() {
   }
 
   async function handlePreview() {
-    if (!understanding || previewLoading) {
-      return;
-    }
+    if (!understanding || previewLoading) return;
 
     setPreviewLoading(true);
     setGeneratedImages(emptyGeneratedImages);
@@ -360,23 +297,17 @@ export default function Home() {
     try {
       const response = await fetch("/api/preview", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          understanding,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ understanding }),
       });
 
       const data = await response.json();
-
       if (!response.ok) {
-        throw new Error(
-          data.error ||
-            "Preview kon niet worden gemaakt."
-        );
+        throw new Error(data.error || "Preview kon niet worden gemaakt.");
       }
 
+      setReadiness(data.readiness ?? null);
+      setComposition(data.composition ?? null);
       setSite(data.site);
       setArtDirection(data.artDirection);
       setLayoutVariant(data.layoutVariant);
@@ -389,49 +320,28 @@ export default function Home() {
   }
 
   function handleBackToConversation() {
+    setComposition(null);
     setSite(null);
     setInput("");
   }
 
   async function handleApprove() {
-    if (!site || approveLoading) {
-      return;
-    }
-
+    if (!site || approveLoading) return;
     setApproveLoading(true);
 
     try {
-      const heroKey = generatedImages.heroImage
-        ? "lumivey-approved-hero"
-        : null;
-
-      const storyKey = generatedImages.storyImage
-        ? "lumivey-approved-story"
-        : null;
-
-      const detailKey = generatedImages.detailImage
-        ? "lumivey-approved-detail"
-        : null;
+      const heroKey = generatedImages.heroImage ? "lumivey-approved-hero" : null;
+      const storyKey = generatedImages.storyImage ? "lumivey-approved-story" : null;
+      const detailKey = generatedImages.detailImage ? "lumivey-approved-detail" : null;
 
       if (heroKey && generatedImages.heroImage) {
-        await storeImage(
-          heroKey,
-          generatedImages.heroImage
-        );
+        await storeImage(heroKey, generatedImages.heroImage);
       }
-
       if (storyKey && generatedImages.storyImage) {
-        await storeImage(
-          storyKey,
-          generatedImages.storyImage
-        );
+        await storeImage(storyKey, generatedImages.storyImage);
       }
-
       if (detailKey && generatedImages.detailImage) {
-        await storeImage(
-          detailKey,
-          generatedImages.detailImage
-        );
+        await storeImage(detailKey, generatedImages.detailImage);
       }
 
       const approvedPackage: ApprovedSitePackage = {
@@ -439,103 +349,60 @@ export default function Home() {
         layoutVariant,
         artDirection,
         imageBrief,
-        images: {
-          heroKey,
-          storyKey,
-          detailKey,
-        },
+        images: { heroKey, storyKey, detailKey },
       };
 
       localStorage.setItem(
         "lumivey-approved-package",
         JSON.stringify(approvedPackage)
       );
-
       window.location.href = "/site";
     } catch (error) {
-      console.error(
-        "Goedkeuren mislukt:",
-        error
-      );
-
-      alert(
-        "De goedgekeurde versie kon niet worden opgeslagen."
-      );
+      console.error("Goedkeuren mislukt:", error);
+      alert("De goedgekeurde versie kon niet worden opgeslagen.");
     } finally {
       setApproveLoading(false);
     }
   }
 
-  function countGeneratedImages() {
-    return [
-      generatedImages.heroImage,
-      generatedImages.storyImage,
-      generatedImages.detailImage,
-    ].filter(Boolean).length;
-  }
-
   function renderPreviewMeta() {
     return (
       <section className="preview-section preview-meta">
-        {layoutVariant && (
-          <p>
-            Gekozen layout:{" "}
-            <strong>{layoutVariant}</strong>
-          </p>
+        {readiness && (
+          <details className="understanding">
+            <summary>
+              Preview readiness: {readiness.ready ? "ready" : "nog niet ready"}
+            </summary>
+            <pre>{JSON.stringify(readiness, null, 2)}</pre>
+          </details>
         )}
 
-        {(layoutVariant === "warm-craft" ||
-          layoutVariant === "clean-professional") && (
-          <p>
-            Gegenereerde beelden:{" "}
-            <strong>
-              {countGeneratedImages()} / 3
-            </strong>
-          </p>
+        {composition && (
+          <details className="understanding">
+            <summary>Recognition composition</summary>
+            <pre>{JSON.stringify(composition, null, 2)}</pre>
+          </details>
         )}
 
         {artDirection && (
           <details className="understanding">
             <summary>Art direction</summary>
-
-            <pre>
-              {JSON.stringify(
-                artDirection,
-                null,
-                2
-              )}
-            </pre>
+            <pre>{JSON.stringify(artDirection, null, 2)}</pre>
           </details>
         )}
 
         {imageBrief && (
           <details className="understanding">
             <summary>Image brief</summary>
-
-            <pre>
-              {JSON.stringify(
-                imageBrief,
-                null,
-                2
-              )}
-            </pre>
+            <pre>{JSON.stringify(imageBrief, null, 2)}</pre>
           </details>
         )}
 
         <div className="preview-buttons">
-          <button
-            onClick={handleApprove}
-            disabled={approveLoading}
-          >
-            {approveLoading
-              ? "Even opslaan..."
-              : "Deze klopt"}
+          <button onClick={handleApprove} disabled={approveLoading}>
+            {approveLoading ? "Even opslaan..." : "Deze klopt"}
           </button>
-
-          <button
-            onClick={handleBackToConversation}
-            disabled={approveLoading}
-          >
+          <button onClick={handleBackToConversation} disabled={approveLoading}>
             Dit wil ik aanpassen
           </button>
         </div>
@@ -543,110 +410,14 @@ export default function Home() {
     );
   }
 
-  if (site) {
-    if (layoutVariant === "warm-craft") {
-      return (
-        <main className="preview-page layout-warm-craft">
-          <WarmCraftPreview
-            site={site}
-            imageBrief={imageBrief}
-            onImagesChange={handleImagesChange}
-          />
-
-          {renderPreviewMeta()}
-        </main>
-      );
-    }
-
-    if (layoutVariant === "clean-professional") {
-      return (
-        <main className="preview-page layout-clean-professional">
-          <CleanProfessionalPreview
-            site={site}
-            imageBrief={imageBrief}
-            onImagesChange={handleImagesChange}
-          />
-
-          {renderPreviewMeta()}
-        </main>
-      );
-    }
-
-    const layoutClass = layoutVariant
-      ? `layout-${layoutVariant}`
-      : "";
-
+  if (composition) {
     return (
-      <main
-        className={`preview-page ${layoutClass}`}
-      >
-        <section className="preview-hero">
-          <p className="eyebrow">
-            Preview
-          </p>
-
-          <h1>{site.title}</h1>
-
-          {site.subtitle && (
-            <p className="preview-subtitle">
-              {site.subtitle}
-            </p>
-          )}
-        </section>
-
-        {site.intro && (
-          <section className="preview-section">
-            <p className="preview-intro">
-              {site.intro}
-            </p>
-          </section>
-        )}
-
-        {site.story && (
-          <section className="preview-section">
-            {site.storyTitle && (
-              <h2>{site.storyTitle}</h2>
-            )}
-
-            <p>{site.story}</p>
-          </section>
-        )}
-
-        {site.services.length > 0 && (
-          <section className="preview-section">
-            {site.servicesTitle && (
-              <h2>
-                {site.servicesTitle}
-              </h2>
-            )}
-
-            <ul>
-              {site.services.map(
-                (service, index) => (
-                  <li key={index}>
-                    {service}
-                  </li>
-                )
-              )}
-            </ul>
-          </section>
-        )}
-
-        {(site.contactTitle ||
-          site.contactText) && (
-          <section className="preview-section">
-            {site.contactTitle && (
-              <h2>
-                {site.contactTitle}
-              </h2>
-            )}
-
-            {site.contactText && (
-              <p>{site.contactText}</p>
-            )}
-          </section>
-        )}
-
+      <main className="recognition-preview-shell">
+        <RecognitionPreview
+          composition={composition}
+          imageBrief={imageBrief}
+          onImagesChange={handleImagesChange}
+        />
         {renderPreviewMeta()}
       </main>
     );
@@ -655,62 +426,41 @@ export default function Home() {
   return (
     <main className="home">
       <section className="intro">
-        <p className="eyebrow">
-          Lumivey
-        </p>
+        <p className="eyebrow">Lumivey</p>
 
         {messages.length === 0 ? (
           <>
             <h1>Vertel eens.</h1>
-
             <p className="lead">
-              Je hoeft nog niet te weten hoe je
-              website eruit moet zien. Begin gewoon
-              bij je bedrijf.
+              Je hoeft nog niet te weten hoe je website eruit moet zien. Begin gewoon bij je bedrijf.
             </p>
           </>
         ) : (
           <div className="conversation">
-            {messages.map(
-              (message, index) => (
-                <div
-                  key={index}
-                  className={
-                    message.role === "user"
-                      ? "message user-message"
-                      : "message assistant-message"
-                  }
-                >
-                  {message.content}
-                </div>
-              )
-            )}
-
-            {loading && (
-              <div className="message assistant-message">
-                Even denken...
+            {messages.map((message, index) => (
+              <div
+                key={index}
+                className={
+                  message.role === "user"
+                    ? "message user-message"
+                    : "message assistant-message"
+                }
+              >
+                {message.content}
               </div>
-            )}
+            ))}
+            {loading && <div className="message assistant-message">Even denken...</div>}
           </div>
         )}
 
-        <form
-          className="start"
-          onSubmit={handleSubmit}
-        >
+        <form className="start" onSubmit={handleSubmit}>
           <textarea
             name="message"
             aria-label="Vertel verder"
-            placeholder={
-              messages.length === 0
-                ? "Ik ben..."
-                : "Vertel wat je wilt veranderen..."
-            }
+            placeholder={messages.length === 0 ? "Ik ben..." : "Vertel verder..."}
             rows={4}
             value={input}
-            onChange={(event) =>
-              setInput(event.target.value)
-            }
+            onChange={(event) => setInput(event.target.value)}
           />
 
           <input
@@ -721,54 +471,27 @@ export default function Home() {
             onChange={handleFileChange}
           />
 
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
-              flexWrap: "wrap",
-            }}
-          >
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
             <button
               type="button"
               aria-label="Bestand toevoegen"
               title="Bestand toevoegen"
               onClick={() => fileInputRef.current?.click()}
               disabled={loading}
-              style={{
-                width: "38px",
-                height: "38px",
-                padding: 0,
-                borderRadius: "999px",
-                fontSize: "24px",
-                lineHeight: 1,
-              }}
+              style={{ width: "38px", height: "38px", padding: 0, borderRadius: "999px", fontSize: "24px", lineHeight: 1 }}
             >
               +
             </button>
 
             {attachment && (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  fontSize: "14px",
-                }}
-              >
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "14px" }}>
                 <span>{attachment.name}</span>
                 <button
                   type="button"
                   aria-label="Bestand verwijderen"
                   onClick={clearAttachment}
                   disabled={loading}
-                  style={{
-                    padding: 0,
-                    background: "transparent",
-                    color: "inherit",
-                    border: 0,
-                    fontSize: "18px",
-                  }}
+                  style={{ padding: 0, background: "transparent", color: "inherit", border: 0, fontSize: "18px" }}
                 >
                   ×
                 </button>
@@ -776,50 +499,27 @@ export default function Home() {
             )}
           </div>
 
-          {attachmentError && (
-            <p className="quiet">{attachmentError}</p>
-          )}
+          {attachmentError && <p className="quiet">{attachmentError}</p>}
 
-          <button
-            type="submit"
-            disabled={loading || (!input.trim() && !attachment)}
-          >
-            {loading
-              ? "Even denken..."
-              : "Verder"}
+          <button type="submit" disabled={loading || (!input.trim() && !attachment)}>
+            {loading ? "Even denken..." : "Verder"}
           </button>
         </form>
 
         {understanding && (
           <div className="preview-actions">
-            <button
-              onClick={handlePreview}
-              disabled={previewLoading}
-            >
-              {previewLoading
-                ? "Even maken..."
-                : "Laat iets zien"}
+            <button onClick={handlePreview} disabled={previewLoading}>
+              {previewLoading ? "Even maken..." : "Laat iets zien"}
             </button>
 
             <details className="understanding">
-              <summary>
-                Intern begrip
-              </summary>
-
-              <pre>
-                {JSON.stringify(
-                  understanding,
-                  null,
-                  2
-                )}
-              </pre>
+              <summary>Intern begrip</summary>
+              <pre>{JSON.stringify(understanding, null, 2)}</pre>
             </details>
           </div>
         )}
 
-        <p className="quiet">
-          Keep it simple. Keep it human.
-        </p>
+        <p className="quiet">Keep it simple. Keep it human.</p>
       </section>
     </main>
   );
