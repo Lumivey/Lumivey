@@ -8,7 +8,9 @@ import {
   useState,
 } from "react";
 
-import RecognitionPreview from "@/app/components/RecognitionPreview";
+import RecognitionPreview, {
+  type SourceImageAsset,
+} from "@/app/components/RecognitionPreview";
 import type { GeneratedImages } from "@/app/components/WarmCraftPreview";
 import type { PreviewComposition } from "@/lib/lumivey/preview-composition";
 import { storeImage } from "@/lib/lumivey/image-store";
@@ -201,6 +203,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [understanding, setUnderstanding] = useState<UnderstandingState | null>(null);
   const [attachment, setAttachment] = useState<SelectedAttachment | null>(null);
+  const [sourceAssets, setSourceAssets] = useState<SourceImageAsset[]>([]);
   const [attachmentError, setAttachmentError] = useState("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -244,8 +247,9 @@ export default function Home() {
     const trimmed = input.trim();
     if ((!trimmed && !attachment) || loading) return;
 
-    const userContent = attachment
-      ? `${trimmed || "Ik deel hierbij een bestand."}\n\nBijlage: ${attachment.name}`
+    const submittedAttachment = attachment;
+    const userContent = submittedAttachment
+      ? `${trimmed || "Ik deel hierbij een bestand."}\n\nBijlage: ${submittedAttachment.name}`
       : trimmed;
 
     const nextMessages: ChatMessage[] = [
@@ -264,7 +268,7 @@ export default function Home() {
         body: JSON.stringify({
           messages: nextMessages,
           sourceContexts: understanding?.sources ?? [],
-          attachment,
+          attachment: submittedAttachment,
         }),
       });
 
@@ -276,6 +280,24 @@ export default function Home() {
         { role: "assistant", content: data.reply },
       ]);
       setUnderstanding(data.understanding);
+
+      if (submittedAttachment?.mimeType.startsWith("image/")) {
+        setSourceAssets((current) => {
+          if (current.some((asset) => asset.sourceId === submittedAttachment.id)) {
+            return current;
+          }
+
+          return [
+            ...current,
+            {
+              sourceId: submittedAttachment.id,
+              name: submittedAttachment.name,
+              dataUrl: submittedAttachment.dataUrl,
+            },
+          ];
+        });
+      }
+
       clearAttachment();
     } catch (error) {
       console.error(error);
@@ -416,6 +438,7 @@ export default function Home() {
         <RecognitionPreview
           composition={composition}
           imageBrief={imageBrief}
+          sourceAssets={sourceAssets}
           onImagesChange={handleImagesChange}
         />
         {renderPreviewMeta()}
