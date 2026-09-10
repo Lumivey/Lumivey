@@ -11,6 +11,8 @@
 .rp-hero-overlay h1 {
   color: #f7f5ef !important;
   text-shadow: 0 2px 18px rgba(0, 0, 0, .34);
+  max-width: 11ch;
+  text-wrap: balance;
 }
 
 .rp-hero-cinematic .rp-eyebrow,
@@ -88,8 +90,89 @@
   max-width: 720px;
 }
 
+/* Collision guardrails for rich split/mosaic/gallery sections. */
+.rp-section-mosaic .rp-section-inner {
+  grid-template-columns: minmax(260px, .78fr) minmax(0, 1.22fr);
+  grid-template-areas: "copy image";
+  gap: clamp(40px, 6vw, 88px);
+  align-items: center;
+}
+
+.rp-section-mosaic .rp-section-copy {
+  display: block;
+  grid-area: copy;
+  min-width: 0;
+  position: relative;
+  z-index: 2;
+}
+
+.rp-section-mosaic .rp-section-copy > .rp-eyebrow,
+.rp-section-mosaic .rp-section-copy > h2,
+.rp-section-mosaic .rp-section-copy > .rp-body {
+  margin-top: 0;
+}
+
+.rp-section-mosaic .rp-section-copy > h2 {
+  margin-top: 16px;
+  max-width: 12ch;
+  text-wrap: balance;
+}
+
+.rp-section-mosaic .rp-section-copy > .rp-body {
+  margin-top: 20px;
+  max-width: 46ch;
+}
+
+.rp-section-mosaic .rp-items {
+  margin-top: 30px;
+}
+
+.rp-section-mosaic .rp-section-image {
+  grid-area: image;
+  min-width: 0;
+  min-height: 0;
+}
+
+.rp-section-gallery .rp-section-copy,
+.rp-section-split .rp-section-copy,
+.rp-section-split-reverse .rp-section-copy {
+  position: relative;
+  z-index: 2;
+  min-width: 0;
+}
+
+.rp-section-gallery h2,
+.rp-section-split h2,
+.rp-section-split-reverse h2 {
+  max-width: 13ch;
+  text-wrap: balance;
+}
+
+.rp-section-gallery .rp-body,
+.rp-section-split .rp-body,
+.rp-section-split-reverse .rp-body {
+  max-width: 52ch;
+}
+
+.rp-section-with-image .rp-section-copy {
+  isolation: isolate;
+}
+
 @media (max-width: 850px) {
   .rp-hero-cinematic .rp-hero-image::after {
     background: linear-gradient(0deg, rgba(0,0,0,.78) 0%, rgba(0,0,0,.36) 58%, rgba(0,0,0,.14) 100%);
+  }
+
+  .rp-section-mosaic .rp-section-inner {
+    grid-template-columns: 1fr;
+    grid-template-areas: "copy" "image";
+    gap: 28px;
+  }
+
+  .rp-section-mosaic .rp-section-copy > h2,
+  .rp-section-gallery h2,
+  .rp-section-split h2,
+  .rp-section-split-reverse h2 {
+    max-width: none;
   }
 }
