@@ -167,14 +167,15 @@ export default function RecognitionPreview({
   function renderImage(
     slot?: "hero" | "story" | "detail" | null,
     label = "Beeld",
-    sourceAssetId?: string | null
+    sourceAssetId?: string | null,
+    crop: PreviewSection["imageCrop"] = "landscape"
   ) {
     if (!slot && !sourceAssetId) return null;
 
     const sourceAsset = sourceAssetId ? sourceAssetMap.get(sourceAssetId) : undefined;
     if (sourceAsset) {
       return (
-        <figure className="rp-source-figure">
+        <figure className={`rp-source-figure rp-crop-${crop}`}>
           <img className="rp-image rp-source-image" src={sourceAsset.dataUrl} alt="" />
         </figure>
       );
@@ -187,11 +188,11 @@ export default function RecognitionPreview({
     const hasError = errorSlots.includes(slot);
 
     if (src) {
-      return <img className="rp-image" src={src} alt="" />;
+      return <img className={`rp-image rp-crop-${crop}`} src={src} alt="" />;
     }
 
     return (
-      <div className={`rp-image-placeholder ${loading ? "is-loading" : ""}`}>
+      <div className={`rp-image-placeholder rp-crop-${crop} ${loading ? "is-loading" : ""}`}>
         <span>{loading ? "Tijdelijk beeld wordt gemaakt" : label}</span>
         {brief?.subject && <p>{brief.subject}</p>}
         {allowGeneration && brief && !loading && (
@@ -207,10 +208,13 @@ export default function RecognitionPreview({
   function renderSection(section: PreviewSection, index: number) {
     const hasImage = Boolean(section.imageSlot || section.sourceAssetId);
     const tone = section.tone || "base";
+    const emphasis = section.emphasis || "normal";
+    const crop = section.imageCrop || "landscape";
+
     return (
       <section
         key={`${section.type}-${index}`}
-        className={`rp-section rp-section-${section.layout} rp-tone-${tone} ${hasImage ? "rp-section-with-image" : ""}`}
+        className={`rp-section rp-section-${section.layout} rp-tone-${tone} rp-emphasis-${emphasis} ${hasImage ? "rp-section-with-image" : ""}`}
       >
         <div className="rp-section-inner">
           <div className="rp-section-copy">
@@ -233,7 +237,8 @@ export default function RecognitionPreview({
               {renderImage(
                 section.imageSlot,
                 section.eyebrow || section.title || "Beeld",
-                section.sourceAssetId
+                section.sourceAssetId,
+                crop
               )}
             </div>
           )}
@@ -280,7 +285,8 @@ export default function RecognitionPreview({
             {renderImage(
               composition.hero.imageSlot,
               "Hoofdbeeld",
-              composition.hero.sourceAssetId
+              composition.hero.sourceAssetId,
+              "wide"
             )}
           </div>
         )}
