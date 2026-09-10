@@ -3,6 +3,7 @@ import { createSiteDescription } from "@/lib/lumivey/site-description";
 import { createArtDirection } from "@/lib/lumivey/art-direction";
 import { chooseLayoutVariant } from "@/lib/lumivey/layout-variant";
 import { createImageBrief } from "@/lib/lumivey/image-brief";
+import { assessPreviewReadiness } from "@/lib/lumivey/preview-readiness";
 import { LumiveyUnderstanding } from "@/lib/lumivey/understanding";
 
 export async function POST(request: Request) {
@@ -17,6 +18,11 @@ export async function POST(request: Request) {
       );
     }
 
+    const readiness = await assessPreviewReadiness(understanding);
+
+    // In deze bouwfase blijft de handmatige testknop bewust bestaan.
+    // Daarom blokkeren we een vroege preview nog niet wanneer readiness=false.
+    // In de echte productflow wordt readiness de trigger voor het verrassingsmoment.
     const [site, artDirection] = await Promise.all([
       createSiteDescription(understanding),
       createArtDirection(understanding),
@@ -30,6 +36,7 @@ export async function POST(request: Request) {
     );
 
     return NextResponse.json({
+      readiness,
       site,
       artDirection,
       layoutVariant,
