@@ -26,6 +26,7 @@ export type PreviewSection = {
   items?: string[];
   imageSlot?: "hero" | "story" | "detail" | null;
   layout: "text" | "split" | "grid" | "feature" | "list";
+  tone?: "base" | "surface" | "accent" | "dark";
 };
 
 export type PreviewComposition = {
@@ -46,6 +47,19 @@ export type PreviewComposition = {
     contrast: "soft" | "clear" | "strong";
     imagePresence: "restrained" | "balanced" | "dominant";
     shapeLanguage: "square" | "soft" | "mixed";
+    theme: "light" | "dark" | "mixed";
+    typeCharacter: "neutral" | "editorial" | "technical" | "expressive";
+    heroScale: "restrained" | "bold" | "cinematic";
+    sectionTreatment: "open" | "panels" | "bands" | "mixed";
+    imageTreatment: "clean" | "documentary" | "cinematic" | "detail-led";
+    palette: {
+      background: string;
+      surface: string;
+      text: string;
+      muted: string;
+      accent: string;
+      dark: string;
+    };
     colorDirection: string;
     typographyDirection: string;
   };
@@ -98,6 +112,24 @@ WAARHEID
 - onbekenden worden niet ingevuld;
 - geen generieke claims zoals zorgvuldig, persoonlijk, kwaliteit, passie, betrouwbaar tenzij daar echte grond voor is.
 
+STEM
+Schrijf de homepage alsof het de website van deze ondernemer is, niet alsof Lumivey een profiel OVER hem schrijft.
+- Voor een zelfstandige persoon is ik/wij-taal meestal natuurlijker dan steeds de naam van de ondernemer in de derde persoon.
+- Gebruik derde persoon alleen als de organisatiecontext daar echt om vraagt.
+- Houd de woorden dicht bij hoe de ondernemer zelf praat.
+
+VISUELE VRIJHEID
+De visuele taal moet uit de ondernemer voortkomen, niet uit Lumivey.
+Bepaal daarom expliciet een visueel systeem:
+- light, dark of mixed;
+- neutrale, redactionele, technische of expressieve typografie;
+- hero restrained, bold of cinematic;
+- open secties, panelen, kleurbanden of een mix;
+- clean, documentary, cinematic of detail-led beeldgebruik;
+- een concrete kleurpalette in geldige 6-cijferige HEX-kleuren.
+
+Kleur is betekenisvol. Kies geen beige/off-white uit gewoonte. Een high-end detailer kan bijvoorbeeld donker en technisch uitkomen, terwijl een warme persoonlijke adviseur juist licht en menselijk kan zijn. Een bestaande huisstijl heeft voorrang als die betrouwbaar bekend is.
+
 COMPOSITIE
 Kies per ondernemer zelf:
 - hero-opbouw;
@@ -105,6 +137,7 @@ Kies per ondernemer zelf:
 - hoeveel tekst versus beeld;
 - ritme en dichtheid;
 - wat prominent is en wat juist niet;
+- welke secties donker/licht/accent mogen zijn;
 - welke informatie naar vervolgpagina's hoort.
 
 De beschikbare section types zijn technische bouwstenen, geen vaste paginaformule. Gebruik alleen relevante secties. Vermijd telkens dezelfde volgorde. Een adviseur, kapper, stichting, schilder en detailer moeten aantoonbaar verschillend kunnen uitkomen wanneer hun begrip verschilt.
@@ -144,7 +177,8 @@ Geef exact dit JSON-formaat terug:
       "body": "",
       "items": [],
       "imageSlot": null,
-      "layout": "text"
+      "layout": "text",
+      "tone": "base"
     }
   ],
   "design": {
@@ -153,6 +187,19 @@ Geef exact dit JSON-formaat terug:
     "contrast": "clear",
     "imagePresence": "balanced",
     "shapeLanguage": "mixed",
+    "theme": "light",
+    "typeCharacter": "neutral",
+    "heroScale": "bold",
+    "sectionTreatment": "mixed",
+    "imageTreatment": "clean",
+    "palette": {
+      "background": "#F6F5F1",
+      "surface": "#FFFFFF",
+      "text": "#1B1B19",
+      "muted": "#6F6F69",
+      "accent": "#B6914C",
+      "dark": "#151515"
+    },
     "colorDirection": "",
     "typographyDirection": ""
   },
@@ -165,6 +212,7 @@ Geef exact dit JSON-formaat terug:
 
 Gebruik lege strings of arrays waar informatie niet verantwoord ingevuld kan worden.
 Gebruik maximaal 7 homepage-secties; de rest hoort naar vervolgpagina's.
+Gebruik uitsluitend geldige 6-cijferige HEX-kleuren in palette.
     `,
   });
 
