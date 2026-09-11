@@ -1,30 +1,9 @@
 "use client";
 
-import {
-  ChangeEvent,
-  FormEvent,
-  useCallback,
-  useRef,
-  useState,
-} from "react";
+import { ChangeEvent, FormEvent, useRef, useState } from "react";
 
-import CleanProfessionalPreview from "@/app/components/CleanProfessionalPreview";
-import WarmCraftPreview, {
-  GeneratedImages,
-} from "@/app/components/WarmCraftPreview";
-
-import { storeImage } from "@/lib/lumivey/image-store";
-
-type ChatMessage = {
-  role: "user" | "assistant";
-  content: string;
-};
-
-type UnderstandingState = {
-  sources?: unknown[];
-  [key: string]: unknown;
-};
-
+type ChatMessage = { role: "user" | "assistant"; content: string };
+type UnderstandingState = { sources?: unknown[]; [key: string]: unknown };
 type SelectedAttachment = {
   id: string;
   name: string;
@@ -32,72 +11,12 @@ type SelectedAttachment = {
   dataUrl: string;
   size: number;
 };
-
-type SiteDescription = {
-  title: string;
-  subtitle: string;
-  intro: string;
-  storyTitle?: string;
-  story?: string;
-  servicesTitle?: string;
-  services: string[];
-  contactTitle: string;
-  contactText: string;
-  visualDirection: {
-    mood: string;
-    tone: string;
-  };
-};
-
-type ArtDirection = {
-  personality: string[];
-  visualMood: string;
-  layoutStyle: string;
-  heroStyle: string;
-  imageStyle: string;
-  colorDirection: string;
-  typographyDirection: string;
-  sectionRhythm: string;
-  emphasis: string[];
-  avoid: string[];
-};
-
-type LayoutVariant =
-  | "quiet-editorial"
-  | "warm-craft"
-  | "clean-professional";
-
-type ImageBriefItem = {
-  purpose: string;
-  subject: string;
-  setting: string;
-  composition: string;
-  atmosphere: string;
-  avoid: string[];
-};
-
-type ImageBrief = {
-  hero: ImageBriefItem;
-  story: ImageBriefItem;
-  detail: ImageBriefItem;
-};
-
-type ApprovedSitePackage = {
-  site: SiteDescription;
-  layoutVariant: LayoutVariant | null;
-  artDirection: ArtDirection | null;
-  imageBrief: ImageBrief | null;
-  images: {
-    heroKey: string | null;
-    storyKey: string | null;
-    detailKey: string | null;
-  };
-};
-
-const emptyGeneratedImages: GeneratedImages = {
-  heroImage: null,
-  storyImage: null,
-  detailImage: null,
+type ArtistImpression = {
+  id: string;
+  imageDataUrl: string;
+  headline: string;
+  rationale: string[];
+  createdAt: string;
 };
 
 const MAX_DIRECT_FILE_BYTES = 2_500_000;
@@ -106,7 +25,6 @@ const MAX_IMAGE_EDGE = 1800;
 function blobToDataUrl(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-
     reader.onload = () => resolve(String(reader.result));
     reader.onerror = () => reject(new Error("Bestand kon niet worden gelezen."));
     reader.readAsDataURL(blob);
@@ -117,61 +35,35 @@ function loadImage(file: File): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const image = new Image();
     const objectUrl = URL.createObjectURL(file);
-
     image.onload = () => {
       URL.revokeObjectURL(objectUrl);
       resolve(image);
     };
-
     image.onerror = () => {
       URL.revokeObjectURL(objectUrl);
       reject(new Error("Afbeelding kon niet worden geopend."));
     };
-
     image.src = objectUrl;
   });
 }
 
 async function compressImage(file: File): Promise<Blob> {
   const image = await loadImage(file);
-  const scale = Math.min(
-    1,
-    MAX_IMAGE_EDGE / Math.max(image.naturalWidth, image.naturalHeight)
-  );
-
+  const scale = Math.min(1, MAX_IMAGE_EDGE / Math.max(image.naturalWidth, image.naturalHeight));
   const canvas = document.createElement("canvas");
   canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
   canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
-
   const context = canvas.getContext("2d");
-
-  if (!context) {
-    throw new Error("Afbeelding kon niet worden voorbereid.");
-  }
-
+  if (!context) throw new Error("Afbeelding kon niet worden voorbereid.");
   context.drawImage(image, 0, 0, canvas.width, canvas.height);
 
   const toJpeg = (quality: number) =>
     new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob(
-        (blob) => {
-          if (blob) {
-            resolve(blob);
-          } else {
-            reject(new Error("Afbeelding kon niet worden voorbereid."));
-          }
-        },
-        "image/jpeg",
-        quality
-      );
+      canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("Afbeelding kon niet worden voorbereid."))), "image/jpeg", quality);
     });
 
   let blob = await toJpeg(0.84);
-
-  if (blob.size > MAX_DIRECT_FILE_BYTES) {
-    blob = await toJpeg(0.68);
-  }
-
+  if (blob.size > MAX_DIRECT_FILE_BYTES) blob = await toJpeg(0.68);
   return blob;
 }
 
@@ -186,9 +78,7 @@ async function prepareAttachment(file: File): Promise<SelectedAttachment> {
   }
 
   if (uploadBlob.size > MAX_DIRECT_FILE_BYTES) {
-    throw new Error(
-      "Dit bestand is nog te groot voor deze bouwfase. Kies een bestand kleiner dan ongeveer 2,5 MB."
-    );
+    throw new Error("Dit bestand is nog te groot voor deze bouwfase. Kies een bestand kleiner dan ongeveer 2,5 MB.");
   }
 
   return {
@@ -204,99 +94,41 @@ export default function Home() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
-
-  const [understanding, setUnderstanding] =
-    useState<UnderstandingState | null>(null);
-
-  const [attachment, setAttachment] =
-    useState<SelectedAttachment | null>(null);
-
+  const [understanding, setUnderstanding] = useState<UnderstandingState | null>(null);
+  const [attachment, setAttachment] = useState<SelectedAttachment | null>(null);
   const [attachmentError, setAttachmentError] = useState("");
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [impression, setImpression] = useState<ArtistImpression | null>(null);
+  const [approved, setApproved] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [previewLoading, setPreviewLoading] =
-    useState(false);
-
-  const [site, setSite] =
-    useState<SiteDescription | null>(null);
-
-  const [artDirection, setArtDirection] =
-    useState<ArtDirection | null>(null);
-
-  const [layoutVariant, setLayoutVariant] =
-    useState<LayoutVariant | null>(null);
-
-  const [imageBrief, setImageBrief] =
-    useState<ImageBrief | null>(null);
-
-  const [generatedImages, setGeneratedImages] =
-    useState<GeneratedImages>(emptyGeneratedImages);
-
-  const [approveLoading, setApproveLoading] =
-    useState(false);
-
-  const handleImagesChange = useCallback(
-    (images: GeneratedImages) => {
-      setGeneratedImages(images);
-    },
-    []
-  );
-
-  async function handleFileChange(
-    event: ChangeEvent<HTMLInputElement>
-  ) {
+  async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
-
-    if (!file) {
-      return;
-    }
-
+    if (!file) return;
     setAttachmentError("");
-
     try {
-      const prepared = await prepareAttachment(file);
-      setAttachment(prepared);
+      setAttachment(await prepareAttachment(file));
     } catch (error) {
       setAttachment(null);
-      setAttachmentError(
-        error instanceof Error
-          ? error.message
-          : "Bestand kon niet worden toegevoegd."
-      );
+      setAttachmentError(error instanceof Error ? error.message : "Bestand kon niet worden toegevoegd.");
     }
   }
 
   function clearAttachment() {
     setAttachment(null);
     setAttachmentError("");
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
-  async function handleSubmit(
-    event: FormEvent<HTMLFormElement>
-  ) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
     const trimmed = input.trim();
-
-    if ((!trimmed && !attachment) || loading) {
-      return;
-    }
+    if ((!trimmed && !attachment) || loading) return;
 
     const userContent = attachment
       ? `${trimmed || "Ik deel hierbij een bestand."}\n\nBijlage: ${attachment.name}`
       : trimmed;
-
-    const nextMessages: ChatMessage[] = [
-      ...messages,
-      {
-        role: "user",
-        content: userContent,
-      },
-    ];
+    const nextMessages = [...messages, { role: "user" as const, content: userContent }];
 
     setMessages(nextMessages);
     setInput("");
@@ -305,349 +137,95 @@ export default function Home() {
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: nextMessages,
           sourceContexts: understanding?.sources ?? [],
           attachment,
         }),
       });
-
       const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data.error || "Er ging iets mis."
-        );
-      }
-
-      setMessages([
-        ...nextMessages,
-        {
-          role: "assistant",
-          content: data.reply,
-        },
-      ]);
-
+      if (!response.ok) throw new Error(data.error || "Er ging iets mis.");
+      setMessages([...nextMessages, { role: "assistant", content: data.reply }]);
       setUnderstanding(data.understanding);
       clearAttachment();
     } catch (error) {
       console.error(error);
-
-      setMessages([
-        ...nextMessages,
-        {
-          role: "assistant",
-          content:
-            "Er ging iets mis. Probeer het nog eens.",
-        },
-      ]);
+      setMessages([...nextMessages, { role: "assistant", content: "Er ging iets mis. Probeer het nog eens." }]);
     } finally {
       setLoading(false);
     }
   }
 
   async function handlePreview() {
-    if (!understanding || previewLoading) {
-      return;
-    }
-
+    if (!understanding || previewLoading) return;
     setPreviewLoading(true);
-    setGeneratedImages(emptyGeneratedImages);
-
     try {
       const response = await fetch("/api/preview", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          understanding,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ understanding }),
       });
-
       const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data.error ||
-            "Preview kon niet worden gemaakt."
-        );
-      }
-
-      setSite(data.site);
-      setArtDirection(data.artDirection);
-      setLayoutVariant(data.layoutVariant);
-      setImageBrief(data.imageBrief);
+      if (!response.ok) throw new Error(data.error || "Preview kon niet worden gemaakt.");
+      setImpression(data.impression);
     } catch (error) {
       console.error(error);
+      alert(error instanceof Error ? error.message : "Preview kon niet worden gemaakt.");
     } finally {
       setPreviewLoading(false);
     }
   }
 
-  function handleBackToConversation() {
-    setSite(null);
-    setInput("");
+  function approveImpression() {
+    if (!impression) return;
+    localStorage.setItem("lumivey-approved-impression", JSON.stringify(impression));
+    localStorage.setItem("lumivey-understanding", JSON.stringify(understanding));
+    setApproved(true);
   }
 
-  async function handleApprove() {
-    if (!site || approveLoading) {
-      return;
-    }
-
-    setApproveLoading(true);
-
-    try {
-      const heroKey = generatedImages.heroImage
-        ? "lumivey-approved-hero"
-        : null;
-
-      const storyKey = generatedImages.storyImage
-        ? "lumivey-approved-story"
-        : null;
-
-      const detailKey = generatedImages.detailImage
-        ? "lumivey-approved-detail"
-        : null;
-
-      if (heroKey && generatedImages.heroImage) {
-        await storeImage(
-          heroKey,
-          generatedImages.heroImage
-        );
-      }
-
-      if (storyKey && generatedImages.storyImage) {
-        await storeImage(
-          storyKey,
-          generatedImages.storyImage
-        );
-      }
-
-      if (detailKey && generatedImages.detailImage) {
-        await storeImage(
-          detailKey,
-          generatedImages.detailImage
-        );
-      }
-
-      const approvedPackage: ApprovedSitePackage = {
-        site,
-        layoutVariant,
-        artDirection,
-        imageBrief,
-        images: {
-          heroKey,
-          storyKey,
-          detailKey,
-        },
-      };
-
-      localStorage.setItem(
-        "lumivey-approved-package",
-        JSON.stringify(approvedPackage)
-      );
-
-      window.location.href = "/site";
-    } catch (error) {
-      console.error(
-        "Goedkeuren mislukt:",
-        error
-      );
-
-      alert(
-        "De goedgekeurde versie kon niet worden opgeslagen."
-      );
-    } finally {
-      setApproveLoading(false);
-    }
-  }
-
-  function countGeneratedImages() {
-    return [
-      generatedImages.heroImage,
-      generatedImages.storyImage,
-      generatedImages.detailImage,
-    ].filter(Boolean).length;
-  }
-
-  function renderPreviewMeta() {
+  if (approved) {
     return (
-      <section className="preview-section preview-meta">
-        {layoutVariant && (
-          <p>
-            Gekozen layout:{" "}
-            <strong>{layoutVariant}</strong>
+      <main className="home">
+        <section className="intro" style={{ maxWidth: 760 }}>
+          <p className="eyebrow">Lumivey</p>
+          <h1>Mooi. Dan gaan we hem echt maken.</h1>
+          <p className="lead">
+            De richting staat. Vanaf hier bewaren we de case als echte klantcase, verifiëren we wat al uit gesprek, website en assets bekend is en vullen we alleen aan wat nog ontbreekt.
           </p>
-        )}
-
-        {(layoutVariant === "warm-craft" ||
-          layoutVariant === "clean-professional") && (
-          <p>
-            Gegenereerde beelden:{" "}
-            <strong>
-              {countGeneratedImages()} / 3
-            </strong>
-          </p>
-        )}
-
-        {artDirection && (
-          <details className="understanding">
-            <summary>Art direction</summary>
-
-            <pre>
-              {JSON.stringify(
-                artDirection,
-                null,
-                2
-              )}
-            </pre>
-          </details>
-        )}
-
-        {imageBrief && (
-          <details className="understanding">
-            <summary>Image brief</summary>
-
-            <pre>
-              {JSON.stringify(
-                imageBrief,
-                null,
-                2
-              )}
-            </pre>
-          </details>
-        )}
-
-        <div className="preview-buttons">
-          <button
-            onClick={handleApprove}
-            disabled={approveLoading}
-          >
-            {approveLoading
-              ? "Even opslaan..."
-              : "Deze klopt"}
-          </button>
-
-          <button
-            onClick={handleBackToConversation}
-            disabled={approveLoading}
-          >
-            Dit wil ik aanpassen
-          </button>
-        </div>
-      </section>
+          <div className="preview-actions">
+            <button disabled>Account aanmaken — volgende bouwstap</button>
+          </div>
+          <p className="quiet">Pas na account, verificatie en Build Readiness gaat de echte website naar de productiemotor.</p>
+        </section>
+      </main>
     );
   }
 
-  if (site) {
-    if (layoutVariant === "warm-craft") {
-      return (
-        <main className="preview-page layout-warm-craft">
-          <WarmCraftPreview
-            site={site}
-            imageBrief={imageBrief}
-            onImagesChange={handleImagesChange}
-          />
-
-          {renderPreviewMeta()}
-        </main>
-      );
-    }
-
-    if (layoutVariant === "clean-professional") {
-      return (
-        <main className="preview-page layout-clean-professional">
-          <CleanProfessionalPreview
-            site={site}
-            imageBrief={imageBrief}
-            onImagesChange={handleImagesChange}
-          />
-
-          {renderPreviewMeta()}
-        </main>
-      );
-    }
-
-    const layoutClass = layoutVariant
-      ? `layout-${layoutVariant}`
-      : "";
-
+  if (impression) {
     return (
-      <main
-        className={`preview-page ${layoutClass}`}
-      >
-        <section className="preview-hero">
-          <p className="eyebrow">
-            Preview
-          </p>
+      <main className="home">
+        <section className="intro" style={{ maxWidth: 980 }}>
+          <p className="eyebrow">Eerste impressie</p>
+          <h1>{impression.headline || "Dit is wat ik voor me zie."}</h1>
+          <p className="lead">Geen definitieve website. Wel mijn beeld van wat ik tot nu toe van je bedrijf heb begrepen.</p>
 
-          <h1>{site.title}</h1>
+          <div style={{ margin: "32px auto", maxWidth: 780 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={impression.imageDataUrl}
+              alt="Lumivey artist impression"
+              style={{ width: "100%", height: "auto", borderRadius: 20, display: "block", boxShadow: "0 20px 70px rgba(0,0,0,.12)" }}
+            />
+          </div>
 
-          {site.subtitle && (
-            <p className="preview-subtitle">
-              {site.subtitle}
-            </p>
-          )}
+          <div className="preview-buttons" style={{ justifyContent: "center" }}>
+            <button onClick={approveImpression}>Deze klopt — ga door</button>
+            <button onClick={() => setImpression(null)}>Dit wil ik aanpassen</button>
+          </div>
+
+          <p className="quiet">De vraag is niet of elk detail af is. De vraag is: heb ik je goed begrepen?</p>
         </section>
-
-        {site.intro && (
-          <section className="preview-section">
-            <p className="preview-intro">
-              {site.intro}
-            </p>
-          </section>
-        )}
-
-        {site.story && (
-          <section className="preview-section">
-            {site.storyTitle && (
-              <h2>{site.storyTitle}</h2>
-            )}
-
-            <p>{site.story}</p>
-          </section>
-        )}
-
-        {site.services.length > 0 && (
-          <section className="preview-section">
-            {site.servicesTitle && (
-              <h2>
-                {site.servicesTitle}
-              </h2>
-            )}
-
-            <ul>
-              {site.services.map(
-                (service, index) => (
-                  <li key={index}>
-                    {service}
-                  </li>
-                )
-              )}
-            </ul>
-          </section>
-        )}
-
-        {(site.contactTitle ||
-          site.contactText) && (
-          <section className="preview-section">
-            {site.contactTitle && (
-              <h2>
-                {site.contactTitle}
-              </h2>
-            )}
-
-            {site.contactText && (
-              <p>{site.contactText}</p>
-            )}
-          </section>
-        )}
-
-        {renderPreviewMeta()}
       </main>
     );
   }
@@ -655,62 +233,31 @@ export default function Home() {
   return (
     <main className="home">
       <section className="intro">
-        <p className="eyebrow">
-          Lumivey
-        </p>
-
+        <p className="eyebrow">Lumivey</p>
         {messages.length === 0 ? (
           <>
             <h1>Vertel eens.</h1>
-
-            <p className="lead">
-              Je hoeft nog niet te weten hoe je
-              website eruit moet zien. Begin gewoon
-              bij je bedrijf.
-            </p>
+            <p className="lead">Je hoeft nog niet te weten hoe je website eruit moet zien. Begin gewoon bij je bedrijf.</p>
           </>
         ) : (
           <div className="conversation">
-            {messages.map(
-              (message, index) => (
-                <div
-                  key={index}
-                  className={
-                    message.role === "user"
-                      ? "message user-message"
-                      : "message assistant-message"
-                  }
-                >
-                  {message.content}
-                </div>
-              )
-            )}
-
-            {loading && (
-              <div className="message assistant-message">
-                Even denken...
+            {messages.map((message, index) => (
+              <div key={index} className={message.role === "user" ? "message user-message" : "message assistant-message"}>
+                {message.content}
               </div>
-            )}
+            ))}
+            {loading && <div className="message assistant-message">Even denken...</div>}
           </div>
         )}
 
-        <form
-          className="start"
-          onSubmit={handleSubmit}
-        >
+        <form className="start" onSubmit={handleSubmit}>
           <textarea
             name="message"
             aria-label="Vertel verder"
-            placeholder={
-              messages.length === 0
-                ? "Ik ben..."
-                : "Vertel wat je wilt veranderen..."
-            }
+            placeholder={messages.length === 0 ? "Ik ben..." : "Vertel verder..."}
             rows={4}
             value={input}
-            onChange={(event) =>
-              setInput(event.target.value)
-            }
+            onChange={(event) => setInput(event.target.value)}
           />
 
           <input
@@ -721,105 +268,44 @@ export default function Home() {
             onChange={handleFileChange}
           />
 
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
-              flexWrap: "wrap",
-            }}
-          >
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             <button
               type="button"
               aria-label="Bestand toevoegen"
               title="Bestand toevoegen"
               onClick={() => fileInputRef.current?.click()}
               disabled={loading}
-              style={{
-                width: "38px",
-                height: "38px",
-                padding: 0,
-                borderRadius: "999px",
-                fontSize: "24px",
-                lineHeight: 1,
-              }}
+              style={{ width: 38, height: 38, padding: 0, borderRadius: 999, fontSize: 24, lineHeight: 1 }}
             >
               +
             </button>
-
             {attachment && (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  fontSize: "14px",
-                }}
-              >
+              <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14 }}>
                 <span>{attachment.name}</span>
-                <button
-                  type="button"
-                  aria-label="Bestand verwijderen"
-                  onClick={clearAttachment}
-                  disabled={loading}
-                  style={{
-                    padding: 0,
-                    background: "transparent",
-                    color: "inherit",
-                    border: 0,
-                    fontSize: "18px",
-                  }}
-                >
-                  ×
-                </button>
+                <button type="button" aria-label="Bestand verwijderen" onClick={clearAttachment} disabled={loading} style={{ padding: 0, background: "transparent", color: "inherit", border: 0, fontSize: 18 }}>×</button>
               </div>
             )}
           </div>
 
-          {attachmentError && (
-            <p className="quiet">{attachmentError}</p>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading || (!input.trim() && !attachment)}
-          >
-            {loading
-              ? "Even denken..."
-              : "Verder"}
+          {attachmentError && <p className="quiet">{attachmentError}</p>}
+          <button type="submit" disabled={loading || (!input.trim() && !attachment)}>
+            {loading ? "Even denken..." : "Verder"}
           </button>
         </form>
 
         {understanding && (
           <div className="preview-actions">
-            <button
-              onClick={handlePreview}
-              disabled={previewLoading}
-            >
-              {previewLoading
-                ? "Even maken..."
-                : "Laat iets zien"}
+            <button onClick={handlePreview} disabled={previewLoading}>
+              {previewLoading ? "Even kijken wat past..." : "Laat iets zien"}
             </button>
-
             <details className="understanding">
-              <summary>
-                Intern begrip
-              </summary>
-
-              <pre>
-                {JSON.stringify(
-                  understanding,
-                  null,
-                  2
-                )}
-              </pre>
+              <summary>Intern begrip</summary>
+              <pre>{JSON.stringify(understanding, null, 2)}</pre>
             </details>
           </div>
         )}
 
-        <p className="quiet">
-          Keep it simple. Keep it human.
-        </p>
+        <p className="quiet">Keep it simple. Keep it human.</p>
       </section>
     </main>
   );
