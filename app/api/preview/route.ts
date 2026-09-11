@@ -10,6 +10,7 @@ function compactUnderstanding(understanding: LumiveyUnderstanding) {
   return {
     entrepreneur: understanding.entrepreneur,
     identity: understanding.identity,
+    humanSignals: understanding.humanSignals,
     business: understanding.business,
     website: understanding.website,
     facts: understanding.facts,
@@ -33,6 +34,10 @@ export async function POST(request: Request) {
       createArtDirection(understanding),
     ]);
 
+    const highHumanSignals = (understanding.humanSignals || [])
+      .filter((item) => item.previewRelevance === "high")
+      .slice(0, 4);
+
     const prompt = `
 Create ONE polished visual artist impression of a future website for an entrepreneur.
 This is a Lumivey Preview: a high-fidelity website concept image whose purpose is recognition and WoW before the real website is built.
@@ -48,6 +53,14 @@ IMPORTANT
 - Avoid excessive dashboard/card UI unless the business genuinely calls for it.
 - Use concise Dutch website copy where copy is visible.
 - The design should be strong enough that the entrepreneur can react: “Ja, dit ben ik.”
+
+HUMAN RECOGNITION RULE
+When HIGH-RELEVANCE HUMAN SIGNALS are provided below, use at least one of them meaningfully in the image, copy, atmosphere or composition, unless doing so would be inappropriate or technically unrealistic.
+Do not reduce it to a decorative hobby card. Let it help make this the website of this specific entrepreneur rather than a generic website for the profession.
+Never extend the signal beyond its evidence.
+
+HIGH-RELEVANCE HUMAN SIGNALS
+${JSON.stringify(highHumanSignals, null, 2)}
 
 CURRENT LUMIVEY UNDERSTANDING
 ${JSON.stringify(compactUnderstanding(understanding), null, 2)}
@@ -81,9 +94,10 @@ Do not show visual or interaction ideas that a modern production engine such as 
         imageDataUrl: `data:image/png;base64,${imageBase64}`,
         headline: site.title || "Eerste impressie",
         rationale: [
+          ...highHumanSignals.map((item) => item.signal),
           ...(artDirection.personality || []).slice(0, 3),
           ...(understanding.identity.recognitionAnchors || []).slice(0, 3),
-        ].filter(Boolean),
+        ].filter(Boolean).slice(0, 6),
         createdAt: new Date().toISOString(),
       },
       artDirection,
