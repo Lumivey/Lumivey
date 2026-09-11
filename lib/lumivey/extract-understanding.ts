@@ -30,15 +30,12 @@ export async function extractUnderstanding(
 
   const transcript = messages
     .map((message) => {
-      const speaker =
-        message.role === "user" ? "Ondernemer" : "Lumivey";
-
+      const speaker = message.role === "user" ? "Ondernemer" : "Lumivey";
       return `${speaker}: ${message.content}`;
     })
     .join("\n\n");
 
-  const sourcePrompt =
-    formatSourceContextsForPrompt(sourceContexts);
+  const sourcePrompt = formatSourceContextsForPrompt(sourceContexts);
 
   const response = await openai.responses.create({
     model: "gpt-5.6-terra",
@@ -48,66 +45,61 @@ Je helpt Lumivey om intern bij te houden wat werkelijk bekend is.
 Dit is geen gesprek met de ondernemer.
 Dit is interne interpretatie.
 
-Maak streng onderscheid tussen vier lagen:
+Maak onderscheid tussen vijf lagen:
 
 1. BEVESTIGDE FEITEN
 Wat de ondernemer zelf duidelijk heeft gezegd of expliciet heeft bevestigd.
 Deze informatie mag naar entrepreneur, business, website en facts.
 
-IDENTITEIT IS ALLEEN BEVESTIGD UIT HET GESPREK
-De velden identity.motivation, identity.craftsmanship, identity.pride, identity.story en identity.recognitionAnchors mogen ALLEEN worden gevuld wanneer de ondernemer zelf de betekenis heeft uitgesproken of ondubbelzinnig heeft bevestigd.
+2. BEVESTIGDE IDENTITEIT
+De velden identity.motivation, identity.craftsmanship, identity.pride, identity.story en identity.recognitionAnchors mogen alleen worden gevuld wanneer de ondernemer zelf de betekenis heeft uitgesproken of ondubbelzinnig heeft bevestigd.
 
-ABSOLUTE BETEKENISREGEL
-- Een aangeleverde foto, website of document kan een signaal, herkenningsanker, goudkandidaat of deur opleveren, maar nooit automatisch persoonlijke betekenis.
-- Alleen het feit dat de ondernemer een bus, logo, project, foto of document aanlevert betekent NIET dat hij daar trots op is.
-- Alleen het feit dat iets opvallend of herkenbaar in een bron staat betekent NIET dat het voor de ondernemer een recognitionAnchor in zijn identiteit is.
-- Zet bron-afgeleide herkenningssignalen daarom in sourceBacked.visualAnchors, niet in identity.recognitionAnchors.
-- Zet mogelijke trots uit bronnen of interpretatie nooit in identity.pride voordat de ondernemer zelf heeft gezegd dat hij daar trots op is of dit duidelijk heeft bevestigd.
-- Formuleringen van Lumivey in eerdere assistentberichten tellen niet als bevestiging door de ondernemer.
-- Een vraag als "ben je hier trots op?" of "zit hier een verhaal achter?" is nadrukkelijk GEEN bewijs dat het antwoord ja is.
+3. HUMAN SIGNALS / GOUDKLOMPJES
+Leg hier betekenisvolle menselijke signalen vast die sterk uit het gesprek blijken en die een website persoonlijker en herkenbaarder kunnen maken.
 
-2. INTERPRETATIES
-Wat redelijk uit het gesprek lijkt te volgen, maar niet letterlijk als feit is uitgesproken.
-Interpretaties mogen voorzichtig mogelijke betekenis benoemen, maar mogen nooit als bevestigde identity-velden worden opgeslagen.
+Een humanSignal is GEEN hard bedrijfsfeit en hoeft dus niet als feit geformuleerd te worden.
+Het mag gaan om bijvoorbeeld:
+- een manier van kijken of werken;
+- een persoonlijk ritueel of detail dat iets laat zien over karakter;
+- een gebeurtenis of herinnering die betekenis geeft aan het werk;
+- een uitspraak die de ondernemer onderscheidt;
+- een opvallende verbinding tussen persoonlijk gedrag en professioneel gedrag;
+- een verhaal, keuze of trotsmoment dat visueel of inhoudelijk bruikbaar is in de Preview.
 
-3. SOURCE-BACKED KANDIDATEN
-Concrete informatie die aantoonbaar uit een externe bron komt, maar nog NIET door de ondernemer is bevestigd.
-Zet zulke informatie NIET in facts en vul er de bevestigde hoofdvelden niet mee.
+Voor humanSignals gelden harde regels:
+- het signaal moet aantoonbaar uit het gesprek komen;
+- evidence citeert of parafraseert concreet waarop het signaal is gebaseerd;
+- geen psychologische diagnoses of wilde karakteraannames;
+- geen betekenis verzinnen uit alleen een foto of externe bron;
+- wanneer de ondernemer zelf de verbinding legt tussen een persoonlijk detail en zijn manier van werken, mag dat met confidence=high worden vastgelegd;
+- gebruik previewRelevance=high wanneer het signaal de ondernemer duidelijk menselijker of onderscheidender kan maken in een artist impression.
+
+Voorbeeld van WEL toegestaan:
+Ondernemer zegt dat hij op zondagochtend met een camera rustig composities zoekt en dat hij in zijn werk ook eerst kijkt en luistert voordat hij oordeelt.
+Dan mag humanSignals bevatten: "Neemt bewust tijd om te observeren en samenhang te zien; verbindt dit zelf aan zijn manier van werken."
+
+Voorbeeld van NIET toegestaan:
+Een bron bevat een foto van een motor. Daaruit mag je niet afleiden dat vrijheid belangrijk voor hem is.
+
+4. SOURCE-BACKED KANDIDATEN
+Concrete informatie die aantoonbaar uit een externe bron komt, maar nog niet door de ondernemer is bevestigd.
+Zet zulke informatie niet in facts en vul er de bevestigde hoofdvelden niet mee.
 Zet deze informatie in sourceBacked met exact bewijs.
 
-Gebruik sourceBacked voor concrete preview-relevante kandidaten zoals:
-- bedrijfsnaam;
-- beroep of bedrijfssoort;
-- plaatsnaam;
-- diensten;
-- contactgegevens;
-- visuele herkenningsankers zoals logo, woordmerk, opvallende kleuren of herkenbare bedrijfsbelettering.
+Gebruik sourceBacked voor concrete kandidaten zoals bedrijfsnaam, beroep, plaatsnaam, diensten, contactgegevens en visuele herkenningsankers.
 
-Voor ieder sourceBacked-item geldt:
-- value moet letterlijk of ondubbelzinnig uit de bron volgen;
-- evidence moet het concrete bewijs noemen;
-- status is altijd "source-backed-unconfirmed";
-- sourceLabel noemt waar mogelijk de website of bestandsnaam.
-
-BELANGRIJK BIJ TEKST UIT AFBEELDINGEN
-- Promote GEEN bedrijfsnaam, persoonsnaam, slogan, telefoonnummer of andere tekst naar sourceBacked wanneer de bronanalyse aangeeft dat de tekst onzeker, gedeeltelijk leesbaar, vermoedelijk of niet volledig zeker is.
-- Gebruik bij twijfel alleen het betrouwbaar leesbare deel als visueel anker of laat het item weg uit sourceBacked.
-- Zet de onzekerheid expliciet in unknowns.
-- Als de ondernemer zelf een naam noemt en een afbeelding lijkt een afwijkende naamvorm te tonen, kies niet automatisch één van beide. Houd de bronlezing onzeker totdat de ondernemer bevestigt wat correct is.
-
-4. ONBEKEND / NOG TE BEVESTIGEN
+5. ONBEKEND / NOG TE BEVESTIGEN
 Maak onderscheid tussen echt onbekend en informatie waarvoor al een bronkandidaat bestaat.
-Noem een veld NIET simpelweg "onbekend" als sourceBacked al een concrete kandidaat bevat.
-Formuleer dan bijvoorbeeld: "Nog te bevestigen: bedrijfsnaam uit de bron" of "Nog te bevestigen: Leeuwarden als vestigingsplaats of werkgebied".
 
-Verzin niets.
-Vul geen gaten op.
-Maak geen marketingverhaal.
-Maak geen aannames over karakter, kwaliteit, doelgroep of bedrijfsvoering zonder voldoende grond.
+ABSOLUTE WAARHEIDSREGELS
+- Een aangeleverde foto, website of document kan een signaal of deur opleveren, maar nooit automatisch persoonlijke betekenis.
+- Formuleringen van Lumivey in eerdere assistentberichten tellen niet als bevestiging door de ondernemer.
+- Een korte reactie als "ja", "klopt" of "inderdaad" geldt alleen als bevestiging wanneer ondubbelzinnig duidelijk is wat bevestigd wordt.
+- Verzin geen feiten.
+- Vul geen gaten op.
+- Maak geen marketingverhaal.
 
-Zoek alleen naar informatie die later kan helpen om een website te maken waarin de ondernemer zichzelf herkent.
-
-Een korte reactie als "ja", "klopt" of "inderdaad" mag alleen als bevestiging gelden wanneer uit de direct voorafgaande context ondubbelzinnig duidelijk is welk concreet bronfeit of welke concrete betekenis wordt bevestigd.
+Zoek alleen naar informatie die later helpt om een website te maken waarin de ondernemer zichzelf herkent.
 
 Geef uitsluitend geldige JSON terug.
 Geen uitleg.
@@ -137,6 +129,14 @@ Geef exact dit JSON-formaat terug:
     "story": [],
     "recognitionAnchors": []
   },
+  "humanSignals": [
+    {
+      "signal": "",
+      "evidence": "",
+      "confidence": "high",
+      "previewRelevance": "high"
+    }
+  ],
   "business": {
     "services": [],
     "audience": [],
@@ -149,14 +149,7 @@ Geef exact dit JSON-formaat terug:
     "usefulContent": []
   },
   "sourceBacked": {
-    "businessNames": [
-      {
-        "value": "",
-        "evidence": "",
-        "sourceLabel": "",
-        "status": "source-backed-unconfirmed"
-      }
-    ],
+    "businessNames": [],
     "professions": [],
     "locations": [],
     "services": [],
@@ -169,16 +162,15 @@ Geef exact dit JSON-formaat terug:
 }
 
 Gebruik lege strings of lege arrays wanneer iets niet bekend is.
-Verwijder het voorbeelditem uit businessNames wanneer er geen concrete kandidaat is.
+Verwijder lege voorbeelditems.
     `,
   });
 
-  const parsed = JSON.parse(
-    response.output_text
-  ) as LumiveyUnderstanding;
+  const parsed = JSON.parse(response.output_text) as LumiveyUnderstanding;
 
   return {
     ...parsed,
+    humanSignals: parsed.humanSignals ?? [],
     sourceBacked: parsed.sourceBacked ?? EMPTY_UNDERSTANDING.sourceBacked,
     sources: sourceContexts,
   };

@@ -23,58 +23,38 @@ export async function createArtDirection(
 ): Promise<ArtDirection> {
   const response = await openai.responses.create({
     model: "gpt-5.6-terra",
-
     instructions: `
 Je bent de art director van Lumivey.
 
-Je ontvangt Lumiveys interne begrip van een ondernemer.
+Je ontvangt Lumiveys interne begrip van een ondernemer en vertaalt dat naar een eerste visuele richting voor de artist impression.
 
-Bepaal op basis daarvan een eerste visuele richting voor de website.
+De visuele richting moet voortkomen uit identiteit, vakmanschap, verhaal, doelgroep, gewenste uitstraling, herkenningsankers, aard van het werk én humanSignals/goudklompjes.
 
-Je taak is NIET om zomaar iets moois te verzinnen.
-De visuele richting moet voortkomen uit:
-- identiteit;
-- vakmanschap;
-- verhaal;
-- doelgroep;
-- gewenste uitstraling;
-- herkenningsankers;
-- aard van het werk.
+BELANGRIJK
+Wanneer er humanSignals met previewRelevance=high bestaan, moet minstens één daarvan zichtbaar of inhoudelijk voelbaar worden in de artist impression, tenzij dat aantoonbaar ongepast of onmaakbaar is.
+Gebruik zo'n signaal niet als los hobbyblokje wanneer het sterker werkt als sfeer, beeldmotief, compositie, ritme of persoonlijke verhaallijn.
 
-Als informatie ontbreekt:
-kies rustig en terughoudend.
-Vul geen persoonlijkheid in die niet uit het begrip blijkt.
+Voorbeeld:
+Als iemand zegt dat hij rustig met zijn camera composities zoekt en dat hij in zijn werk ook eerst kijkt en luistert, behandel dit als een sterk menselijk herkenningsanker. Het hoeft niet letterlijk een camera in de hero te worden, maar de Preview moet die menselijke laag wel merkbaar benutten.
 
-Denk aan:
-- visuele rust versus energie;
-- fotografie versus grafische vormen;
-- lichte versus donkere hero;
-- veel witruimte versus compactere compositie;
-- redactioneel, ambachtelijk, modern, technisch, warm, zakelijk of persoonlijk;
-- welke delen van het verhaal visueel nadruk verdienen;
-- welke soorten beelden betekenisvol zijn;
-- welk ritme past bij deze ondernemer.
+Waarheidsgrens:
+- verzin geen persoonlijke betekenis die niet uit het begrip blijkt;
+- maak geen nieuwe bedrijfsfeiten;
+- source-backed informatie blijft onbevestigd;
+- gebruik humanSignals alleen zoals hun evidence het ondersteunt.
 
-Vermijd:
-- generieke templates;
-- overdreven luxe als daar geen aanleiding voor is;
-- modieuze effecten zonder betekenis;
-- marketingclichés;
-- visuele drukte;
-- stijlen die niet passen bij de ondernemer.
+Denk aan visuele rust versus energie, fotografie versus grafische vormen, hero, witruimte, typografie, kleur, betekenisvolle beelden en paginaritme.
 
-Geef uitsluitend geldige JSON terug.
-Geen markdown.
-Geen uitleg.
+Vermijd generieke templates, marketingclichés, overdreven luxe, modieuze effecten zonder betekenis en een zakelijke stijl die de mens achter de ondernemer wegdrukt.
+
+Geef uitsluitend geldige JSON terug. Geen markdown of uitleg.
     `,
-
     input: `
 Dit is Lumiveys actuele begrip:
 
 ${JSON.stringify(understanding, null, 2)}
 
 Geef exact dit JSON-formaat terug:
-
 {
   "personality": [],
   "visualMood": "",
