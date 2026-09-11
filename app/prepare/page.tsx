@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import type { ArtistImpression, WebsiteBrief, WebsiteFact } from "@/lib/lumivey/primary-flow";
-import type { LumiveyUnderstanding } from "@/lib/lumivey/understanding";
+import type { LumiveyUnderstanding, SourceBackedCandidate } from "@/lib/lumivey/understanding";
 
 type BuildResult = {
   chatId: string;
@@ -15,6 +15,39 @@ function splitLines(value: string): string[] {
     .split(/\r?\n|,/)
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function unique(values: string[]): string[] {
+  return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
+}
+
+function firstCandidate(candidates: SourceBackedCandidate[] | undefined): string {
+  return candidates?.find((item) => item.value?.trim())?.value?.trim() || "";
+}
+
+function findContactCandidate(
+  candidates: SourceBackedCandidate[] | undefined,
+  kind: "email" | "phone" | "link"
+): string {
+  const values = (candidates || []).map((item) => item.value?.trim()).filter(Boolean) as string[];
+
+  if (kind === "email") {
+    return values.find((value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/i.test(value)) || "";
+  }
+
+  if (kind === "link") {
+    return (
+      values.find((value) => /linkedin\.com|instagram\.com|facebook\.com|https?:\/\//i.test(value)) ||
+      ""
+    );
+  }
+
+  return (
+    values.find((value) => {
+      const digits = value.replace(/\D/g, "");
+      return digits.length >= 8 && !value.includes("@");
+    }) || ""
+  );
 }
 
 export default function PreparePage() {
@@ -42,10 +75,22 @@ export default function PreparePage() {
       if (rawUnderstanding) {
         const parsed = JSON.parse(rawUnderstanding) as LumiveyUnderstanding;
         setUnderstanding(parsed);
+
+        const sourceBacked = parsed.sourceBacked;
+        const sourceBusinessName = firstCandidate(sourceBacked?.businessNames);
+        const sourceLocation = firstCandidate(sourceBacked?.locations);
+        const sourceEmail = findContactCandidate(sourceBacked?.contactDetails, "email");
+        const sourcePhone = findContactCandidate(sourceBacked?.contactDetails, "phone");
+        const sourceLink = findContactCandidate(sourceBacked?.contactDetails, "link");
+        const sourceServices = (sourceBacked?.services || []).map((item) => item.value);
+
         setName(parsed.entrepreneur?.name || "");
-        setBusinessName(parsed.entrepreneur?.businessName || "");
-        setLocation(parsed.entrepreneur?.location || "");
-        setServices((parsed.business?.services || []).join("\n"));
+        setBusinessName(parsed.entrepreneur?.businessName || sourceBusinessName);
+        setLocation(parsed.entrepreneur?.location || sourceLocation);
+        setContactEmail(sourceEmail);
+        setPhone(sourcePhone);
+        setLinkedin(sourceLink);
+        setServices(unique([...(parsed.business?.services || []), ...sourceServices]).join("\n"));
       }
 
       if (rawImpression) {
