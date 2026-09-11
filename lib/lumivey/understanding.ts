@@ -7,6 +7,13 @@ export type SourceBackedCandidate = {
   status: "source-backed-unconfirmed";
 };
 
+export type HumanSignal = {
+  signal: string;
+  evidence: string;
+  confidence: "medium" | "high";
+  previewRelevance: "medium" | "high";
+};
+
 export type LumiveyUnderstanding = {
   entrepreneur: {
     name?: string;
@@ -22,6 +29,8 @@ export type LumiveyUnderstanding = {
     story?: string[];
     recognitionAnchors?: string[];
   };
+
+  humanSignals: HumanSignal[];
 
   business: {
     services?: string[];
@@ -54,6 +63,7 @@ export type LumiveyUnderstanding = {
 export const EMPTY_UNDERSTANDING: LumiveyUnderstanding = {
   entrepreneur: {},
   identity: {},
+  humanSignals: [],
   business: {},
   website: {},
   sourceBacked: {
