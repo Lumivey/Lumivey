@@ -194,9 +194,9 @@ export default function Home() {
             De richting staat. Vanaf hier bewaren we de case als echte klantcase, verifiëren we wat al uit gesprek, website en assets bekend is en vullen we alleen aan wat nog ontbreekt.
           </p>
           <div className="preview-actions">
-            <button disabled>Account aanmaken — volgende bouwstap</button>
+            <button onClick={() => { window.location.href = "/prepare"; }}>Account en gegevens controleren</button>
           </div>
-          <p className="quiet">Pas na account, verificatie en Build Readiness gaat de echte website naar de productiemotor.</p>
+          <p className="quiet">Pas na verificatie en Build Readiness gaat de echte website naar de productiemotor.</p>
         </section>
       </main>
     );
