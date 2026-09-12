@@ -24,7 +24,7 @@ const MICHAEL_TURNS = [
 ];
 
 const REFERENCE_EXPECTATIONS = [
-  "Corrigeert tijdstip kort, bevestigt dat buitenland mogelijk is en vraagt wat voor bedrijf/werk de ondernemer wil doen.",
+  "Beantwoordt de concrete vraag eerst volgens de huidige productwaarheid: Lumivey richt zich in deze fase op Nederland. Gaat daarna zonder intake-modus naar wat voor bedrijf/werk de ondernemer wil doen.",
   "Laat de oppervlakkige wens 'klanten krijgen' los en vraagt wat de student voor klanten wil gaan doen.",
   "Herkent topsegment/detailing als meer dan bijverdienen en opent één persoonlijke deur: welke auto veroorzaakte de eerste echte fascinatie.",
   "Begrijpt Porsche 356 als oorsprong van zorg/respect voor bijzondere auto's en koppelt dit voorzichtig aan topsegment. Geen verplicht vervolgveld of zakelijke intake.",
@@ -38,7 +38,7 @@ async function evaluateReplay(replay: ReplayTurn[]) {
 Je beoordeelt een regressietest voor Lumivey Discovery.
 
 De norm is NIET letterlijke overeenkomst met juni.
-De norm is vergelijkbare diepte, betekenis, menselijke nieuwsgierigheid en het volgen van dezelfde belangrijke deuren.
+De norm is vergelijkbare diepte, betekenis, menselijke nieuwsgierigheid en het volgen van dezelfde belangrijke deuren, voor zover dat niet strijdt met de actuele productwaarheid en Plan v0.4.
 
 Beoordeel per beurt:
 - PASS: huidig gedrag bewaart de functie en betekenis van de juni-referentie, ook als formulering anders is.
