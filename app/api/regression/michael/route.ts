@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { NextResponse } from "next/server";
+import { extractUnderstanding } from "@/lib/lumivey/extract-understanding";
 
 type ChatMessage = {
   role: "user" | "assistant";
@@ -86,6 +87,44 @@ Gebruik firstDeviationTurn = 0 als er in deze vijf beurten geen materiële afwij
   return parseJsonObject(response.output_text);
 }
 
+async function evaluateUnderstanding(understanding: unknown) {
+  const response = await openai.responses.create({
+    model: "gpt-5.6-terra",
+    instructions: `
+Je beoordeelt de interne Understanding-laag van Lumivey na de eerste vijf Michael-beurten.
+
+Dit is de Golden Path norm voor wat op dit moment NIET mag verdampen:
+1. Michael is student en wil bijverdienen met high-end detailing van luxe auto's/sportwagens.
+2. Hij kiest bewust voor topkwaliteit/topsegment, met reinigen, kleien, polijsten, harde wax en optioneel wetlook.
+3. De Porsche 356 van zijn vader is de concrete oorsprong van zijn fascinatie.
+4. De Porsche is niet alleen een automodel maar een persoonlijk oorsprongsverhaal dat later identiteit/preview kan dragen.
+5. Zijn spontane afkeer van wasstraten vanwege swirls is een sterk menselijk/vakinhoudelijk signaal: hij kijkt verder dan schoon naar behoud, lakzorg, schade voorkomen en kwaliteit.
+
+Beoordeel NIET of ieder woord letterlijk zo in één veld staat. Beoordeel of deze betekenis in de totale Understanding voldoende behouden blijft om later een persoonlijke Preview te kunnen maken.
+
+PASS = de kernbetekenis en goudklompjes zijn voldoende bewaard.
+WARN = feiten zijn er grotendeels, maar één belangrijke betekenis/goudklomp is afgezwakt of alleen als vlak feit opgeslagen.
+FAIL = een kernbetekenis zoals Porsche-oorsprong of swirls/kwaliteitsnorm ontbreekt of verdampt.
+
+Geef uitsluitend geldige JSON terug:
+{
+  "overall":"PASS|WARN|FAIL",
+  "firstLoss":"",
+  "diagnosis":"",
+  "checks":[
+    {"name":"topsegment","status":"PASS|WARN|FAIL","reason":""},
+    {"name":"porsche-origin","status":"PASS|WARN|FAIL","reason":""},
+    {"name":"swirls-quality-signal","status":"PASS|WARN|FAIL","reason":""},
+    {"name":"preview-usability","status":"PASS|WARN|FAIL","reason":""}
+  ]
+}
+`,
+    input: JSON.stringify(understanding, null, 2),
+  });
+
+  return parseJsonObject(response.output_text);
+}
+
 export async function GET(request: Request) {
   try {
     const messages: ChatMessage[] = [];
@@ -125,12 +164,16 @@ export async function GET(request: Request) {
     }
 
     const evaluation = await evaluateReplay(replay);
+    const understanding = await extractUnderstanding(messages, []);
+    const understandingEvaluation = await evaluateUnderstanding(understanding);
 
     return NextResponse.json({
       case: "Michael / high-end detailing",
-      purpose: "Golden Path replay — first five text-only turns before the photo enters the June reference conversation.",
-      note: "Stops before the photo-dependent part. This is for finding the first behavioral deviation, not for judging the final preview.",
+      purpose: "Golden Path replay — first five text-only turns plus Understanding preservation check.",
+      note: "Stops before the photo-dependent part. First checks conversation behavior, then whether the discovered meaning survives into Understanding.",
       evaluation,
+      understandingEvaluation,
+      understanding,
       replay,
     });
   } catch (error) {
