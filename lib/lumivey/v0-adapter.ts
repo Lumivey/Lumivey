@@ -1,4 +1,4 @@
-import { WebsiteBrief } from "@/lib/lumivey/primary-flow";
+import { WebsiteBrief, WebsiteAsset } from "@/lib/lumivey/primary-flow";
 
 type V0BuildResult = {
   chatId: string;
@@ -8,6 +8,17 @@ type V0BuildResult = {
 };
 
 type V0Attachment = { url: string } | { name?: string; content: string };
+
+function compositionalRole(asset: WebsiteAsset): string {
+  const role = (asset.role || "").toLowerCase();
+
+  if (asset.purpose === "primary") return "HERO_PRIMARY";
+  if (role.includes("cta") || role.includes("climax")) return "CTA_CLIMAX";
+  if (role.includes("dienst") || role.includes("service") || role.includes("werkwijze") || role.includes("proces")) return "SERVICE_PROCESS";
+  if (role.includes("oorsprong") || role.includes("origin") || role.includes("verhaal") || role.includes("vader")) return "STORY_ORIGIN";
+  if (role.includes("detail") || role.includes("textuur") || role.includes("texture")) return "DETAIL_TEXTURE";
+  return "SUPPORTING_VISUAL";
+}
 
 function compactBriefForV0(brief: WebsiteBrief) {
   const { sources: _sources, ...understandingWithoutSources } = brief.understanding;
@@ -28,6 +39,7 @@ function compactBriefForV0(brief: WebsiteBrief) {
       name: asset.name,
       kind: asset.kind,
       purpose: asset.purpose,
+      compositionalRole: compositionalRole(asset),
       aiStatus: asset.aiStatus,
       role: asset.role,
       origin: asset.origin,
@@ -59,11 +71,19 @@ DESIGN AUTHORITY
 - The Website Brief is a guardrail for truth, required functionality and asset meaning. It is NOT a second design brief and must not override the approved Preview unless there is a factual/safety/technical conflict.
 
 ASSET MAP
-- Attachments after the Preview are production assets mapped to visible elements from the approved Preview.
-- Respect each asset's role, origin, validation status and production instruction.
-- A preview-derived or generated personal image may be used as an artistic element when marked as such. Do not silently present it as documentary truth.
+- Attachments after the Preview are clean production assets mapped to visual responsibilities from the approved Preview.
+- Respect each asset's compositionalRole, role, origin, validation status and production instruction.
+- The role describes WHAT JOB the image must do in the composition, not a rigid pixel position. Preserve your creative freedom while making sure each important role is visibly fulfilled.
+- HERO_PRIMARY: identity anchor in the opening experience. It should carry strong visual weight.
+- SERVICE_PROCESS: use meaningfully in the services/working-method part of the page so that section is not reduced to text/icons only.
+- STORY_ORIGIN: use in the personal origin-story area. Keep it emotionally meaningful but secondary to the current business proposition.
+- DETAIL_TEXTURE: use as an accent/detail layer to create depth, materiality and rhythm. Do not let it dominate the page.
+- CTA_CLIMAX: use toward the closing conversion area as a strong visual climax, not as a small thumbnail.
+- SUPPORTING_VISUAL: use where it strengthens pacing and continuity without competing with the hero.
+- A generated personal image may be used as an artistic element when marked as such. Do not silently present it as documentary truth.
 - When a real customer asset is supplied for the same role, prefer it over a generated substitute.
 - Do not repeatedly crop/reuse one real photo where dedicated mapped assets are supplied for other visual moments.
+- Do not leave an important supplied asset unused unless using it would conflict with the approved Preview or truth guardrails.
 
 TRUTH & FUNCTION GUARDRAILS
 - Do not invent phone numbers, email addresses, addresses, opening hours, prices, years of experience, awards, certifications, clients, projects, staff, services or biography.
