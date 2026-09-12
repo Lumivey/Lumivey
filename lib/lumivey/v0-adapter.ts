@@ -7,6 +7,8 @@ type V0BuildResult = {
   raw: unknown;
 };
 
+type V0Attachment = { url: string } | { name?: string; content: string };
+
 function compactBriefForV0(brief: WebsiteBrief) {
   const { sources: _sources, ...understandingWithoutSources } = brief.understanding;
 
@@ -18,14 +20,17 @@ function compactBriefForV0(brief: WebsiteBrief) {
       headline: brief.artistImpression.headline,
       rationale: brief.artistImpression.rationale,
       createdAt: brief.artistImpression.createdAt,
-      note: "The approved visual Preview exists in Lumivey but its base64 image is intentionally omitted from this first API handoff to stay within v0 message limits.",
+      note: "The approved Preview is supplied separately as an attachment and is the primary visual reference.",
     },
     facts: brief.facts,
     assets: brief.assets.map((asset) => ({
       name: asset.name,
       kind: asset.kind,
+      purpose: asset.purpose,
+      aiStatus: asset.aiStatus,
       url: asset.url,
       source: asset.source ? asset.source.slice(0, 1500) : undefined,
+      attached: Boolean(asset.dataUrl || asset.url),
     })),
     pages: brief.pages,
     functionalRequirements: brief.functionalRequirements,
@@ -39,23 +44,46 @@ function buildV0Prompt(brief: WebsiteBrief): string {
 
   return `
 You are the technical production engine for Lumivey.
-Build the real responsive website from the validated Website Brief below.
+Build the real responsive website from the validated Website Brief and supplied visual attachments below.
 
 ABSOLUTE RULES
 - Do not invent facts.
 - Do not invent phone numbers, email addresses, addresses, opening hours, prices, years of experience, awards, certifications, clients, projects, staff, services or biography.
 - If information is unknown, keep it omitted or clearly marked as a placeholder.
-- Preserve the creative direction and recognition anchors of the approved artist impression as closely as practical.
-- Use supplied real assets before generated or generic alternatives.
+- The APPROVED PREVIEW attachment is the primary creative contract. Preserve its overall visual language, hierarchy, color rhythm, typography feeling, image/text interplay and recognition as closely as practical.
+- Use supplied REAL ASSETS before generated or generic alternatives. Do not replace a real entrepreneur/work photo with a generic or generated person when a real asset is supplied.
+- Supporting personal AI elements in the Preview are creative direction only unless explicitly marked as approved production assets.
+- Keep the Porsche 356 origin story supporting, not dominant, unless the Website Brief explicitly says otherwise.
 - The result must work responsively on desktop and mobile.
 - Do not mention v0, Vercel, prompts, AI tooling or Lumivey's internal process in the public website.
+- Do not convert the approved Preview into a generic stack of cards/blocks. Sections are allowed, but the page should read as one coherent designed composition.
 
-IMPORTANT FOR THIS FIRST END-TO-END TEST
-The binary/base64 Preview image itself is deliberately not embedded in this message because that exceeds v0's message limit. Use the Preview headline, rationale, identity, human signals, facts and constraints below as the creative contract for this first build. A later handoff will send the approved Preview as a separate attachment.
+ASSET PRIORITY
+1. Real entrepreneur / team / work / location images supplied as attachments.
+2. AI-enhanced real sources that are explicitly supplied as production assets.
+3. Approved artist-impression elements as visual direction.
+4. Generated/generic imagery only when no relevant real source exists and only when it does not impersonate a real person.
 
 WEBSITE BRIEF
 ${JSON.stringify(compactBrief, null, 2)}
 `;
+}
+
+function buildV0Attachments(brief: WebsiteBrief): V0Attachment[] {
+  const attachments: V0Attachment[] = [];
+
+  if (brief.artistImpression?.imageDataUrl) {
+    attachments.push({ url: brief.artistImpression.imageDataUrl });
+  }
+
+  for (const asset of brief.assets) {
+    if (asset.kind !== "image") continue;
+    const assetUrl = asset.dataUrl || asset.url;
+    if (!assetUrl) continue;
+    attachments.push({ url: assetUrl });
+  }
+
+  return attachments;
 }
 
 export async function createV0Build(brief: WebsiteBrief): Promise<V0BuildResult> {
@@ -73,6 +101,7 @@ export async function createV0Build(brief: WebsiteBrief): Promise<V0BuildResult>
     },
     body: JSON.stringify({
       message: buildV0Prompt(brief),
+      attachments: buildV0Attachments(brief),
       responseMode: "sync",
       chatPrivacy: "private",
     }),
