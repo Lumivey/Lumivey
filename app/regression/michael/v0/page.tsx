@@ -79,11 +79,10 @@ export default function MichaelV0Page() {
 
   async function handleBuild(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!preview || !sourcePhoto || building) return;
+    if (!preview || !sourcePhoto || building || build) return;
 
     setBuilding(true);
     setError("");
-    setBuild(null);
     setAssetSummary([]);
     setStatus("Lumivey maakt server-side schone productie-assets en stuurt daarna één productiepack naar v0...");
 
@@ -105,7 +104,8 @@ export default function MichaelV0Page() {
       if (!response.ok) throw new Error(data.error || "Clean productiepack kon niet worden gebouwd.");
       setBuild(data.build as BuildResult);
       setAssetSummary(Array.isArray(data.assetSummary) ? data.assetSummary : []);
-      setStatus("Clean productiepack is naar v0 gestuurd.");
+      setStatus("GEREED — clean productiepack is naar v0 gestuurd. Open hieronder de v0-build.");
+      setTimeout(() => document.getElementById("build-result")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Clean productiepack kon niet worden gebouwd.");
       setStatus("");
@@ -124,18 +124,18 @@ export default function MichaelV0Page() {
         <form className="start" onSubmit={handleBuild} style={{ gap: 20 }}>
           <label>
             1. Goedgekeurde Preview
-            <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => onImage(e, "preview")} required />
+            <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => onImage(e, "preview")} required disabled={Boolean(build)} />
           </label>
           {preview && <p className="quiet">Geladen: {preview.name} — design authority en assetblauwdruk.</p>}
 
           <label>
             2. Originele foto van Michael met de gele auto
-            <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => onImage(e, "source")} required />
+            <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => onImage(e, "source")} required disabled={Boolean(build)} />
           </label>
           {sourcePhoto && <p className="quiet">Geladen: {sourcePhoto.name} — echte primaire hero-asset.</p>}
 
-          <button type="submit" disabled={!preview || !sourcePhoto || building}>
-            {building ? "Schone assets genereren en v0 bouwen..." : "Maak clean productiepack en bouw website"}
+          <button type="submit" disabled={!preview || !sourcePhoto || building || Boolean(build)}>
+            {build ? "GEREED — v0-build staat hieronder" : building ? "Schone assets genereren en v0 bouwen..." : "Maak clean productiepack en bouw website"}
           </button>
         </form>
 
@@ -145,15 +145,15 @@ export default function MichaelV0Page() {
           <p className="quiet">Geen enkele productie-asset wordt uit de platte Preview uitgesneden.</p>
         </div>
 
-        {status && <p style={{ marginTop: 20 }}>{status}</p>}
+        {status && <p style={{ marginTop: 20, fontWeight: build ? 700 : 400 }}>{status}</p>}
         {error && <p style={{ marginTop: 20 }}>{error}</p>}
 
         {build && (
-          <div style={{ marginTop: 32, padding: 22, border: "1px solid #d8d8d2", borderRadius: 18 }}>
-            <h2>Clean productiepack is naar v0 gestuurd.</h2>
+          <div id="build-result" style={{ marginTop: 32, padding: 22, border: "2px solid #171714", borderRadius: 18, scrollMarginTop: 24 }}>
+            <h2>GEREED — clean productiepack is naar v0 gestuurd.</h2>
             <p><strong>Chat-id:</strong> {build.chatId}</p>
+            {build.webUrl && <p><a href={build.webUrl} target="_blank" rel="noreferrer"><strong>Open v0-build</strong></a></p>}
             {build.previewUrl && <p><a href={build.previewUrl} target="_blank" rel="noreferrer">Open technische preview</a></p>}
-            {build.webUrl && <p><a href={build.webUrl} target="_blank" rel="noreferrer">Open v0-build</a></p>}
             {assetSummary.length > 0 && (
               <div style={{ marginTop: 18 }}>
                 <strong>Gegenereerde productie-assets:</strong>
@@ -164,7 +164,7 @@ export default function MichaelV0Page() {
                 </ul>
               </div>
             )}
-            <p className="quiet">Nu toetsen we of v0 de WoW-rijkdom behoudt zonder tekst/layout dubbel in beeldlagen te krijgen.</p>
+            <p className="quiet">Deze pagina start na succes geen tweede build meer. Herlaad de pagina alleen wanneer je bewust een nieuwe test wilt uitvoeren.</p>
           </div>
         )}
       </section>
