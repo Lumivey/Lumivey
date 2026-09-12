@@ -146,8 +146,8 @@ async function crawlWebsite(url: string, apiKey: string): Promise<WebsiteResearc
     throw new Error("Firecrawl crawl duurde te lang.");
   }
 
-  const rawPages = Array.isArray(payload?.data) ? payload.data : [];
-  const pages = rawPages
+  const rawPages: unknown[] = Array.isArray(payload?.data) ? payload.data : [];
+  const pages: WebsiteResearchPage[] = rawPages
     .map((item: unknown) => pageFromPayload(item, url))
     .filter((page: WebsiteResearchPage | null): page is WebsiteResearchPage => Boolean(page));
 
@@ -156,7 +156,7 @@ async function crawlWebsite(url: string, apiKey: string): Promise<WebsiteResearc
   }
 
   const markdown = pages
-    .map((page, index) => `\n\n===== PAGINA ${index + 1}: ${page.title || page.url} =====\nURL: ${page.url}\n\n${page.markdown}`)
+    .map((page: WebsiteResearchPage, index: number) => `\n\n===== PAGINA ${index + 1}: ${page.title || page.url} =====\nURL: ${page.url}\n\n${page.markdown}`)
     .join("")
     .trim();
 
@@ -164,9 +164,9 @@ async function crawlWebsite(url: string, apiKey: string): Promise<WebsiteResearc
     url,
     title: pages[0]?.title,
     markdown,
-    links: uniqueStrings(pages.flatMap((page) => page.links)),
-    images: uniqueStrings(pages.flatMap((page) => page.images)),
-    branding: pages.find((page) => page.branding)?.branding,
+    links: uniqueStrings(pages.flatMap((page: WebsiteResearchPage) => page.links)),
+    images: uniqueStrings(pages.flatMap((page: WebsiteResearchPage) => page.images)),
+    branding: pages.find((page: WebsiteResearchPage) => page.branding)?.branding,
     pages,
   };
 }
