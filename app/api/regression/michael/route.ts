@@ -26,7 +26,7 @@ const MICHAEL_TURNS = [
 const REFERENCE_EXPECTATIONS = [
   "Beantwoordt de concrete vraag eerst volgens de huidige productwaarheid: Lumivey richt zich in deze fase op Nederland. Gaat daarna zonder intake-modus naar wat voor bedrijf/werk de ondernemer wil doen.",
   "Laat de oppervlakkige wens 'klanten krijgen' los en vraagt wat de student voor klanten wil gaan doen.",
-  "Herkent topsegment/detailing als meer dan bijverdienen en opent één persoonlijke deur: welke auto veroorzaakte de eerste echte fascinatie.",
+  "Herkent dat topsegment/detailing méér is dan zomaar bijverdienen en opent één persoonlijke oorsprongs- of fascinatie-deur. De deur hoeft niet exact 'welke auto?' te zijn; ook vragen naar waarom luxe auto's hem aantrekken, waar die fascinatie begon of wat hij daarin bijzonder vindt zijn functioneel gelijkwaardig zolang ze echt persoonlijk verdiepen.",
   "Begrijpt Porsche 356 als oorsprong van zorg/respect voor bijzondere auto's en koppelt dit voorzichtig aan topsegment. Geen verplicht vervolgveld of zakelijke intake.",
   "Herkent de spontane energie rond 'swirls' als betekenisvolle deur: niet alleen schoonmaken maar schade voorkomen, perfectie behouden en respect voor lak. Dit mag het beeld van Michael merkbaar verdiepen.",
 ];
@@ -40,8 +40,15 @@ Je beoordeelt een regressietest voor Lumivey Discovery.
 De norm is NIET letterlijke overeenkomst met juni.
 De norm is vergelijkbare diepte, betekenis, menselijke nieuwsgierigheid en het volgen van dezelfde belangrijke deuren, voor zover dat niet strijdt met de actuele productwaarheid en Plan v0.4.
 
+BELANGRIJK:
+- beoordeel functie, niet formulering;
+- een andere vraag mag PASS zijn als zij dezelfde persoonlijke deur opent en vergelijkbare kans op betekenis geeft;
+- geef GEEN WARN alleen omdat de huidige vraag breder of anders geformuleerd is dan juni;
+- gebruik WARN alleen als de huidige reactie aantoonbaar minder betekenis kan ontsluiten, te voorzichtig/zakelijk/intake-achtig wordt, of een rijke persoonlijke deur duidelijk laat liggen;
+- vraag jezelf steeds af: zou dit antwoord in een organisch gesprek plausibel dezelfde mens achter de ondernemer kunnen blootleggen?
+
 Beoordeel per beurt:
-- PASS: huidig gedrag bewaart de functie en betekenis van de juni-referentie, ook als formulering anders is.
+- PASS: huidig gedrag bewaart de functie en betekenis van de juni-referentie, ook als formulering of route anders is.
 - WARN: bruikbaar, maar duidelijk vlakker, te voorzichtig, te zakelijk, te intake-achtig of betekenis verliest.
 - FAIL: mist of sluit een belangrijke deur, springt naar oplossing/website/intake, of interpreteert zo star dat de essentie verloren gaat.
 
