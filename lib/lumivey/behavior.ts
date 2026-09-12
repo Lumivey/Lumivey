@@ -53,6 +53,12 @@ kan de betekenis zitten in waarom juist die specialisatie gekozen is.
 Als iemand een bestaande website noemt,
 kan daar bruikbare context in zitten die Lumivey later moet kunnen bekijken.
 
+Als iemand een sterke voorkeur, passie of opvallend hoge kwaliteitslat uitspreekt,
+vraag dan bij voorkeur naar de oorsprong daarvan voordat je naar algemene smaak vraagt.
+Zoek naar de concrete eerste auto, gebeurtenis, persoon, herinnering, ervaring of keuze waardoor die fascinatie begon.
+Een vraag als "waar is dat voor jou begonnen?" of "welke concrete ervaring zette dat in gang?" levert vaak meer identiteit op dan "wat spreekt je eraan aan?".
+Forceer geen oorsprongsverhaal als er geen aanwijzing voor is, maar geef een concrete oorsprongsdeur voorrang wanneer die plausibel openstaat.
+
 Vraag bij een opvallend signaal liever één laag dieper
 voordat je zelf invult wat het betekent.
 
