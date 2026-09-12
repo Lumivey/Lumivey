@@ -1,9 +1,19 @@
+import OpenAI from "openai";
 import { NextResponse } from "next/server";
 
 type ChatMessage = {
   role: "user" | "assistant";
   content: string;
 };
+
+type ReplayTurn = {
+  turn: number;
+  user: string;
+  assistant: string;
+  referenceExpectation: string;
+};
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 const MICHAEL_TURNS = [
   "Het is hier avond. Werken jullie in het buitenland? Ik wil een website hebben want ik wil klanten hebben.",
@@ -17,19 +27,49 @@ const REFERENCE_EXPECTATIONS = [
   "Corrigeert tijdstip kort, bevestigt dat buitenland mogelijk is en vraagt wat voor bedrijf/werk de ondernemer wil doen.",
   "Laat de oppervlakkige wens 'klanten krijgen' los en vraagt wat de student voor klanten wil gaan doen.",
   "Herkent topsegment/detailing als meer dan bijverdienen en opent één persoonlijke deur: welke auto veroorzaakte de eerste echte fascinatie.",
-  "Begrijpt Porsche 356 als oorsprong van zorg/respect voor bijzondere auto's en koppelt dit voorzichtig aan topsegment.",
-  "Herkent de spontane energie rond 'swirls' als betekenisvolle deur: niet alleen schoonmaken maar schade voorkomen, perfectie behouden en respect voor lak.",
+  "Begrijpt Porsche 356 als oorsprong van zorg/respect voor bijzondere auto's en koppelt dit voorzichtig aan topsegment. Geen verplicht vervolgveld of zakelijke intake.",
+  "Herkent de spontane energie rond 'swirls' als betekenisvolle deur: niet alleen schoonmaken maar schade voorkomen, perfectie behouden en respect voor lak. Dit mag het beeld van Michael merkbaar verdiepen.",
 ];
+
+async function evaluateReplay(replay: ReplayTurn[]) {
+  const response = await openai.responses.create({
+    model: "gpt-5.6-terra",
+    instructions: `
+Je beoordeelt een regressietest voor Lumivey Discovery.
+
+De norm is NIET letterlijke overeenkomst met juni.
+De norm is vergelijkbare diepte, betekenis, menselijke nieuwsgierigheid en het volgen van dezelfde belangrijke deuren.
+
+Beoordeel per beurt:
+- PASS: huidig gedrag bewaart de functie en betekenis van de juni-referentie, ook als formulering anders is.
+- WARN: bruikbaar, maar duidelijk vlakker, te voorzichtig, te zakelijk, te intake-achtig of betekenis verliest.
+- FAIL: mist of sluit een belangrijke deur, springt naar oplossing/website/intake, of interpreteert zo star dat de essentie verloren gaat.
+
+Zoek vooral de EERSTE betekenisvolle afwijking. Latere fouten kunnen gevolgschade zijn.
+Geen stijlpolitie en geen voorkeur voor de juni-zinnen zelf.
+
+Geef uitsluitend geldige JSON terug in exact dit formaat:
+{
+  "overall": "PASS|WARN|FAIL",
+  "firstDeviationTurn": 0,
+  "firstDeviation": "",
+  "diagnosis": "",
+  "turns": [
+    {"turn":1,"status":"PASS|WARN|FAIL","reason":""}
+  ]
+}
+
+Gebruik firstDeviationTurn = 0 als er in deze vijf beurten geen materiële afwijking is.
+`,
+    input: JSON.stringify(replay, null, 2),
+  });
+
+  return JSON.parse(response.output_text);
+}
 
 export async function GET(request: Request) {
   const messages: ChatMessage[] = [];
-  const replay: Array<{
-    turn: number;
-    user: string;
-    assistant: string;
-    referenceExpectation: string;
-  }> = [];
-
+  const replay: ReplayTurn[] = [];
   const base = new URL(request.url).origin;
 
   for (let index = 0; index < MICHAEL_TURNS.length; index += 1) {
@@ -64,10 +104,13 @@ export async function GET(request: Request) {
     });
   }
 
+  const evaluation = await evaluateReplay(replay);
+
   return NextResponse.json({
     case: "Michael / high-end detailing",
     purpose: "Golden Path replay — first five text-only turns before the photo enters the June reference conversation.",
-    note: "This endpoint deliberately stops before the photo-dependent part. It is for finding the first behavioral deviation, not for judging the final preview.",
+    note: "Stops before the photo-dependent part. This is for finding the first behavioral deviation, not for judging the final preview.",
+    evaluation,
     replay,
   });
 }
