@@ -20,14 +20,19 @@ function compactBriefForV0(brief: WebsiteBrief) {
       headline: brief.artistImpression.headline,
       rationale: brief.artistImpression.rationale,
       createdAt: brief.artistImpression.createdAt,
-      note: "The customer approved this Preview. It is the design authority and is supplied separately as the first visual attachment.",
+      note: "The approved Preview is supplied separately as an attachment and is the design authority.",
     },
     facts: brief.facts,
-    assets: brief.assets.map((asset) => ({
+    assets: brief.assets.map((asset, index) => ({
+      attachmentOrder: index + 2,
       name: asset.name,
       kind: asset.kind,
       purpose: asset.purpose,
       aiStatus: asset.aiStatus,
+      role: asset.role,
+      origin: asset.origin,
+      validationStatus: asset.validationStatus,
+      productionInstruction: asset.productionInstruction,
       url: asset.url,
       source: asset.source ? asset.source.slice(0, 1500) : undefined,
       attached: Boolean(asset.dataUrl || asset.url),
@@ -44,47 +49,27 @@ function buildV0Prompt(brief: WebsiteBrief): string {
 
   return `
 You are the technical production engine for Lumivey.
-The entrepreneur has already approved the attached Preview and is now moving into production.
-Your job is NOT to redesign it from the Website Brief. Your job is to turn that approved creative direction into a real responsive website.
+Turn the approved Preview into a real responsive website using the supplied production assets.
 
 DESIGN AUTHORITY
-- The APPROVED PREVIEW attachment is the primary source of truth for visual design.
-- Study it closely before building: composition, visual rhythm, image density, atmosphere, hierarchy, typography feeling, color, scale, layering, overlaps, background treatments, texture, pacing, visual surprises and emotional impact.
-- Recreate its intent as faithfully as technically practical.
-- Use your own frontend/design judgement where literal reproduction is impossible. You have creative freedom to solve implementation details, responsive behavior and missing visual transitions while staying recognizably faithful to the Preview.
-- Do NOT simplify a rich Preview into a safer, flatter or more generic website merely because that is easier to implement.
-- Do NOT let the Website Brief overrule the Preview on visual composition unless the brief explicitly identifies a hard truth, legal, functional or asset constraint.
+- Attachment 1 is the APPROVED PREVIEW. The customer has already approved this direction.
+- Treat the Preview as the primary source of truth for composition, visual richness, hierarchy, pacing, imagery, atmosphere, typography feeling, color rhythm, overlaps, texture and emotional impact.
+- Recreate the Preview's intent as faithfully as technically practical. Do not redesign it into a safer, flatter or more generic website.
+- Use your own implementation creativity where exact reproduction is not practical, but preserve the same story, energy and recognition.
+- The Website Brief is a guardrail for truth, required functionality and asset meaning. It is NOT a second design brief and must not override the approved Preview unless there is a factual/safety/technical conflict.
 
-THE WEBSITE BRIEF IS A GUARDRAIL, NOT THE DESIGN DRIVER
-Use it for:
-- confirmed facts and business meaning;
-- required functionality and pages;
-- truth boundaries and unknowns;
-- which assets are real and how they may be used;
-- explicit things that must not be invented.
-Do not treat prose in the brief as a replacement layout specification when the approved Preview already shows the creative answer.
+ASSET MAP
+- Attachments after the Preview are production assets mapped to visible elements from the approved Preview.
+- Respect each asset's role, origin, validation status and production instruction.
+- A preview-derived or generated personal image may be used as an artistic element when marked as such. Do not silently present it as documentary truth.
+- When a real customer asset is supplied for the same role, prefer it over a generated substitute.
+- Do not repeatedly crop/reuse one real photo where dedicated mapped assets are supplied for other visual moments.
 
-TRUTH & ASSET RULES
+TRUTH & FUNCTION GUARDRAILS
 - Do not invent phone numbers, email addresses, addresses, opening hours, prices, years of experience, awards, certifications, clients, projects, staff, services or biography.
 - If information is unknown, omit it or clearly mark it as a placeholder.
-- Use supplied REAL ASSETS before generic or generated alternatives.
-- Do not replace a real entrepreneur/work photo with a generic or generated person when a real asset is supplied.
-- Personal AI elements visible in the Preview may remain as clearly creative/illustrative placeholders when they help preserve the approved direction, but must not be presented as verified documentary fact unless validated.
-- The real entrepreneur must remain recognizable where the Preview relies on that person for identity.
 - The result must work responsively on desktop and mobile.
 - Do not mention v0, Vercel, prompts, AI tooling or Lumivey's internal process in the public website.
-
-CREATIVE FREEDOM
-You may:
-- create additional visual treatments, crops, gradients, masks, overlays, typography moments, transitions and responsive reinterpretations that help the real website retain the Preview's energy;
-- use repeated crops or transformed treatments of real supplied images when that supports the approved visual language;
-- use temporary non-documentary visual placeholders where the Preview clearly depends on imagery that has not yet been supplied, as long as they are not represented as factual evidence about the entrepreneur.
-
-ASSET PRIORITY
-1. Real entrepreneur / team / work / location images supplied as attachments.
-2. AI-enhanced real sources that are explicitly supplied as production assets.
-3. Approved Preview imagery and visual treatments as creative direction.
-4. Generated/generic imagery only when no relevant real source exists and only when it does not impersonate a real person as factual reality.
 
 WEBSITE BRIEF / PRODUCTION GUARDRAILS
 ${JSON.stringify(compactBrief, null, 2)}
