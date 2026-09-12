@@ -20,7 +20,7 @@ function compactBriefForV0(brief: WebsiteBrief) {
       headline: brief.artistImpression.headline,
       rationale: brief.artistImpression.rationale,
       createdAt: brief.artistImpression.createdAt,
-      note: "The approved Preview is supplied separately as an attachment and is the primary visual reference.",
+      note: "The customer approved this Preview. It is the design authority and is supplied separately as the first visual attachment.",
     },
     facts: brief.facts,
     assets: brief.assets.map((asset) => ({
@@ -44,27 +44,49 @@ function buildV0Prompt(brief: WebsiteBrief): string {
 
   return `
 You are the technical production engine for Lumivey.
-Build the real responsive website from the validated Website Brief and supplied visual attachments below.
+The entrepreneur has already approved the attached Preview and is now moving into production.
+Your job is NOT to redesign it from the Website Brief. Your job is to turn that approved creative direction into a real responsive website.
 
-ABSOLUTE RULES
-- Do not invent facts.
+DESIGN AUTHORITY
+- The APPROVED PREVIEW attachment is the primary source of truth for visual design.
+- Study it closely before building: composition, visual rhythm, image density, atmosphere, hierarchy, typography feeling, color, scale, layering, overlaps, background treatments, texture, pacing, visual surprises and emotional impact.
+- Recreate its intent as faithfully as technically practical.
+- Use your own frontend/design judgement where literal reproduction is impossible. You have creative freedom to solve implementation details, responsive behavior and missing visual transitions while staying recognizably faithful to the Preview.
+- Do NOT simplify a rich Preview into a safer, flatter or more generic website merely because that is easier to implement.
+- Do NOT let the Website Brief overrule the Preview on visual composition unless the brief explicitly identifies a hard truth, legal, functional or asset constraint.
+
+THE WEBSITE BRIEF IS A GUARDRAIL, NOT THE DESIGN DRIVER
+Use it for:
+- confirmed facts and business meaning;
+- required functionality and pages;
+- truth boundaries and unknowns;
+- which assets are real and how they may be used;
+- explicit things that must not be invented.
+Do not treat prose in the brief as a replacement layout specification when the approved Preview already shows the creative answer.
+
+TRUTH & ASSET RULES
 - Do not invent phone numbers, email addresses, addresses, opening hours, prices, years of experience, awards, certifications, clients, projects, staff, services or biography.
-- If information is unknown, keep it omitted or clearly marked as a placeholder.
-- The APPROVED PREVIEW attachment is the primary creative contract. Preserve its overall visual language, hierarchy, color rhythm, typography feeling, image/text interplay and recognition as closely as practical.
-- Use supplied REAL ASSETS before generated or generic alternatives. Do not replace a real entrepreneur/work photo with a generic or generated person when a real asset is supplied.
-- Supporting personal AI elements in the Preview are creative direction only unless explicitly marked as approved production assets.
-- Keep the Porsche 356 origin story supporting, not dominant, unless the Website Brief explicitly says otherwise.
+- If information is unknown, omit it or clearly mark it as a placeholder.
+- Use supplied REAL ASSETS before generic or generated alternatives.
+- Do not replace a real entrepreneur/work photo with a generic or generated person when a real asset is supplied.
+- Personal AI elements visible in the Preview may remain as clearly creative/illustrative placeholders when they help preserve the approved direction, but must not be presented as verified documentary fact unless validated.
+- The real entrepreneur must remain recognizable where the Preview relies on that person for identity.
 - The result must work responsively on desktop and mobile.
 - Do not mention v0, Vercel, prompts, AI tooling or Lumivey's internal process in the public website.
-- Do not convert the approved Preview into a generic stack of cards/blocks. Sections are allowed, but the page should read as one coherent designed composition.
+
+CREATIVE FREEDOM
+You may:
+- create additional visual treatments, crops, gradients, masks, overlays, typography moments, transitions and responsive reinterpretations that help the real website retain the Preview's energy;
+- use repeated crops or transformed treatments of real supplied images when that supports the approved visual language;
+- use temporary non-documentary visual placeholders where the Preview clearly depends on imagery that has not yet been supplied, as long as they are not represented as factual evidence about the entrepreneur.
 
 ASSET PRIORITY
 1. Real entrepreneur / team / work / location images supplied as attachments.
 2. AI-enhanced real sources that are explicitly supplied as production assets.
-3. Approved artist-impression elements as visual direction.
-4. Generated/generic imagery only when no relevant real source exists and only when it does not impersonate a real person.
+3. Approved Preview imagery and visual treatments as creative direction.
+4. Generated/generic imagery only when no relevant real source exists and only when it does not impersonate a real person as factual reality.
 
-WEBSITE BRIEF
+WEBSITE BRIEF / PRODUCTION GUARDRAILS
 ${JSON.stringify(compactBrief, null, 2)}
 `;
 }
