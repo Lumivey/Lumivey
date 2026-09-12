@@ -1,6 +1,8 @@
 import OpenAI from "openai";
 import { NextResponse } from "next/server";
 import { extractUnderstanding } from "@/lib/lumivey/extract-understanding";
+import { createArtDirection } from "@/lib/lumivey/art-direction";
+import { createSiteDescription } from "@/lib/lumivey/site-description";
 
 type ChatMessage = {
   role: "user" | "assistant";
@@ -125,6 +127,50 @@ Geef uitsluitend geldige JSON terug:
   return parseJsonObject(response.output_text);
 }
 
+async function evaluateCreativeDirection(input: {
+  understanding: unknown;
+  artDirection: unknown;
+  siteDirection: unknown;
+}) {
+  const response = await openai.responses.create({
+    model: "gpt-5.6-terra",
+    instructions: `
+Je beoordeelt de creatieve vertaallaag van Lumivey voor de Michael Golden Path.
+
+Dit is NOG GEEN pixel- of stijlvergelijking met de juni-preview. Je beoordeelt of de bewaarde betekenis terecht wordt omgezet in een creatieve richting die later een herkenbare Preview kan opleveren.
+
+Golden Path norm:
+- high-end detailing/topsegment moet duidelijk voelbaar zijn, zonder generieke luxe-clichés;
+- precisie, behoud en zien wat anderen missen moeten sterker zijn dan alleen "auto's mooi maken";
+- de Porsche 356 van zijn vader moet als persoonlijk oorsprongsanker bruikbaar blijven in verhaal, beeldmotief of contentrichting;
+- de swirls/wasstraat-reactie moet vertaald worden naar zorg voor lak, schade voorkomen, vakmanschap en kwaliteitsnorm;
+- de richting moet persoonlijk genoeg zijn dat zij niet net zo goed voor iedere willekeurige detailer kan gelden;
+- geen nieuwe feiten of biografie verzinnen;
+- een goede andere creatieve keuze dan juni mag PASS zijn als dezelfde identiteit en betekenis behouden blijven.
+
+PASS = creatieve richting draagt de specifieke Michael-identiteit en de belangrijkste goudklompjes.
+WARN = professioneel en passend, maar één goudklomp wordt vooral content in plaats van creatieve drager, of de richting wordt te generiek.
+FAIL = Porsche-oorsprong, kwaliteitsnorm of persoonlijke herkenning verdampt wezenlijk.
+
+Geef uitsluitend geldige JSON terug:
+{
+  "overall":"PASS|WARN|FAIL",
+  "firstLoss":"",
+  "diagnosis":"",
+  "checks":[
+    {"name":"michael-specificity","status":"PASS|WARN|FAIL","reason":""},
+    {"name":"porsche-as-creative-anchor","status":"PASS|WARN|FAIL","reason":""},
+    {"name":"swirls-to-quality-language","status":"PASS|WARN|FAIL","reason":""},
+    {"name":"preview-potential","status":"PASS|WARN|FAIL","reason":""}
+  ]
+}
+`,
+    input: JSON.stringify(input, null, 2),
+  });
+
+  return parseJsonObject(response.output_text);
+}
+
 export async function GET(request: Request) {
   try {
     const messages: ChatMessage[] = [];
@@ -166,13 +212,25 @@ export async function GET(request: Request) {
     const evaluation = await evaluateReplay(replay);
     const understanding = await extractUnderstanding(messages, []);
     const understandingEvaluation = await evaluateUnderstanding(understanding);
+    const [artDirection, siteDirection] = await Promise.all([
+      createArtDirection(understanding),
+      createSiteDescription(understanding),
+    ]);
+    const creativeEvaluation = await evaluateCreativeDirection({
+      understanding,
+      artDirection,
+      siteDirection,
+    });
 
     return NextResponse.json({
       case: "Michael / high-end detailing",
-      purpose: "Golden Path replay — first five text-only turns plus Understanding preservation check.",
-      note: "Stops before the photo-dependent part. First checks conversation behavior, then whether the discovered meaning survives into Understanding.",
+      purpose: "Golden Path replay — conversation, Understanding preservation and creative-direction preservation.",
+      note: "Stops before the photo-dependent image generation. Layer 3 checks whether meaning survives into art/content direction before judging the actual generated Preview image.",
       evaluation,
       understandingEvaluation,
+      creativeEvaluation,
+      artDirection,
+      siteDirection,
       understanding,
       replay,
     });
