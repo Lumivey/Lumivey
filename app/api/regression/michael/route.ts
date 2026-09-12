@@ -171,6 +171,60 @@ Geef uitsluitend geldige JSON terug:
   return parseJsonObject(response.output_text);
 }
 
+async function evaluatePreviewImage(imageDataUrl: string) {
+  const response = await openai.responses.create({
+    model: "gpt-5.6-terra",
+    instructions: `
+Je beoordeelt één gegenereerde Lumivey artist impression voor de Michael Golden Path.
+
+Dit is bewust een TEXT-ONLY probe: de test gebruikt alleen de eerste vijf Michael-beurten en nog geen echte foto van Michael. Beoordeel daarom NIET of de juiste persoon/foto is gebruikt en vergelijk niet op pixels met juni.
+
+Beoordeel alleen of het beeld de betekenis van die vijf beurten zichtbaar draagt:
+- high-end detailing/topsegment;
+- precisie, behoud en lakzorg in plaats van alleen schoon/glanzend;
+- Porsche 356/vader als persoonlijk oorsprongsanker moet zichtbaar, tekstueel of compositorisch betekenis krijgen; niet slechts een willekeurige Porsche als decor;
+- swirls/schade voorkomen/zien wat anderen missen moet inhoudelijk of visueel voelbaar zijn;
+- het beeld moet meer Michael-specifiek zijn dan een generieke luxe-detailing site;
+- geen verzonnen contactgegevens, prijzen, awards, locaties of biografische feiten.
+
+PASS = de artist impression draagt de specifieke betekenis overtuigend genoeg.
+WARN = sterk professioneel beeld, maar één of meer goudklompjes blijven te impliciet of decoratief.
+FAIL = vooral een generieke detailing-preview of de persoonlijke oorsprong/kwaliteitsnorm verdampt.
+
+Geef uitsluitend geldige JSON terug:
+{
+  "overall":"PASS|WARN|FAIL",
+  "firstLoss":"",
+  "diagnosis":"",
+  "checks":[
+    {"name":"michael-specificity","status":"PASS|WARN|FAIL","reason":""},
+    {"name":"porsche-origin-visible","status":"PASS|WARN|FAIL","reason":""},
+    {"name":"care-over-shine","status":"PASS|WARN|FAIL","reason":""},
+    {"name":"no-invented-facts","status":"PASS|WARN|FAIL","reason":""}
+  ]
+}
+`,
+    input: [
+      {
+        role: "user",
+        content: [
+          {
+            type: "input_text",
+            text: "Beoordeel deze Michael artist impression volgens de Golden Path norm.",
+          },
+          {
+            type: "input_image",
+            image_url: imageDataUrl,
+            detail: "auto",
+          },
+        ],
+      },
+    ],
+  });
+
+  return parseJsonObject(response.output_text);
+}
+
 export async function GET(request: Request) {
   try {
     const messages: ChatMessage[] = [];
@@ -222,13 +276,28 @@ export async function GET(request: Request) {
       siteDirection,
     });
 
+    const previewResponse = await fetch(`${base}/api/preview`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ understanding }),
+      cache: "no-store",
+    });
+    const previewData = await previewResponse.json();
+    if (!previewResponse.ok || !previewData?.impression?.imageDataUrl) {
+      throw new Error(previewData?.error || "Michael Preview kon niet worden gegenereerd.");
+    }
+
+    const previewEvaluation = await evaluatePreviewImage(previewData.impression.imageDataUrl);
+
     return NextResponse.json({
       case: "Michael / high-end detailing",
-      purpose: "Golden Path replay — conversation, Understanding preservation and creative-direction preservation.",
-      note: "Stops before the photo-dependent image generation. Layer 3 checks whether meaning survives into art/content direction before judging the actual generated Preview image.",
+      purpose: "Golden Path replay — conversation, Understanding, creative direction and actual artist-impression preservation.",
+      note: "Layer 4 is a text-only preview probe using the first five Michael turns. It deliberately excludes the later real-photo part of the June case so visual meaning loss can be isolated before asset fidelity is tested.",
       evaluation,
       understandingEvaluation,
       creativeEvaluation,
+      previewEvaluation,
+      previewImpression: previewData.impression,
       artDirection,
       siteDirection,
       understanding,
