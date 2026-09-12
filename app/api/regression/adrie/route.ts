@@ -4,6 +4,8 @@ import { createArtDirection } from "@/lib/lumivey/art-direction";
 import { createSiteDescription } from "@/lib/lumivey/site-description";
 import type { SourceContext } from "@/lib/lumivey/source-context";
 
+export const maxDuration = 300;
+
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 const ADRIE_TURNS = [
