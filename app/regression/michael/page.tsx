@@ -15,6 +15,12 @@ type EvaluationTurn = {
   reason: string;
 };
 
+type UnderstandingCheck = {
+  name: string;
+  status: "PASS" | "WARN" | "FAIL";
+  reason: string;
+};
+
 type Result = {
   case: string;
   purpose: string;
@@ -25,6 +31,19 @@ type Result = {
     firstDeviation: string;
     diagnosis: string;
     turns: EvaluationTurn[];
+  };
+  understandingEvaluation: {
+    overall: "PASS" | "WARN" | "FAIL";
+    firstLoss: string;
+    diagnosis: string;
+    checks: UnderstandingCheck[];
+  };
+  understanding: {
+    identity?: Record<string, unknown>;
+    humanSignals?: unknown[];
+    business?: Record<string, unknown>;
+    facts?: unknown[];
+    interpretations?: unknown[];
   };
   replay: Turn[];
 };
@@ -58,18 +77,29 @@ export default function MichaelRegressionPage() {
       <section className="intro" style={{ maxWidth: 960 }}>
         <p className="eyebrow">Golden Path</p>
         <h1>Michael regressietest</h1>
-        <p className="lead">Exacte juni-antwoorden, opnieuw door de huidige Discovery-runtime. Doel: de eerste betekenisvolle afwijking vinden, niet woordelijk juni kopiëren.</p>
+        <p className="lead">Exacte juni-antwoorden, opnieuw door de huidige Discovery-runtime. Eerst toetsen we het gesprek, daarna of de betekenis onderweg naar Understanding behouden blijft.</p>
 
-        {!result && !error && <p>Replay draait…</p>}
+        {!result && !error && <p>Replay en Understanding-check draaien…</p>}
         {error && <p>{error}</p>}
 
         {result && (
           <>
             <div style={{ margin: "28px 0", padding: 22, border: "1px solid #d8d8d2", borderRadius: 18 }}>
+              <p className="eyebrow">Laag 1 — gesprek</p>
               <p><strong>Uitkomst:</strong> {result.evaluation.overall}</p>
               <p><strong>Eerste afwijking:</strong> {result.evaluation.firstDeviationTurn || "geen in deze vijf beurten"}</p>
               {result.evaluation.firstDeviation && <p>{result.evaluation.firstDeviation}</p>}
               <p><strong>Diagnose:</strong> {result.evaluation.diagnosis}</p>
+            </div>
+
+            <div style={{ margin: "28px 0", padding: 22, border: "1px solid #d8d8d2", borderRadius: 18 }}>
+              <p className="eyebrow">Laag 2 — betekenisbehoud</p>
+              <p><strong>Uitkomst:</strong> {result.understandingEvaluation.overall}</p>
+              <p><strong>Eerste verlies:</strong> {result.understandingEvaluation.firstLoss || "geen"}</p>
+              <p><strong>Diagnose:</strong> {result.understandingEvaluation.diagnosis}</p>
+              {result.understandingEvaluation.checks.map((check) => (
+                <p key={check.name}><strong>{check.name} — {check.status}:</strong> {check.reason}</p>
+              ))}
             </div>
 
             {result.replay.map((turn) => {
@@ -84,6 +114,11 @@ export default function MichaelRegressionPage() {
                 </article>
               );
             })}
+
+            <details style={{ margin: "36px 0" }}>
+              <summary>Ruwe Understanding bekijken</summary>
+              <pre style={{ whiteSpace: "pre-wrap", marginTop: 18, fontSize: 13 }}>{JSON.stringify(result.understanding, null, 2)}</pre>
+            </details>
           </>
         )}
       </section>
