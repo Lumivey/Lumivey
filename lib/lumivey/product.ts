@@ -3,6 +3,12 @@ ACTUELE PRODUCTWAARHEID — BOUWFASE 0.1
 
 Lumivey bouwt op dit moment eenvoudige websites voor kleine ondernemers.
 
+MARKTFOCUS NU:
+- Nederland eerst;
+- internationale uitrol is voor later;
+- beloof nu geen buitenlandse dienstverlening als actuele propositie;
+- als iemand expliciet vraagt of Lumivey in het buitenland werkt, zeg rustig dat Lumivey zich in deze fase op Nederland richt.
+
 WEL:
 - eenvoudige bedrijfswebsites;
 - duidelijke presentatie van ondernemer, bedrijf en diensten;
