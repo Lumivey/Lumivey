@@ -26,10 +26,29 @@ const MICHAEL_TURNS = [
 const REFERENCE_EXPECTATIONS = [
   "Beantwoordt de concrete vraag eerst volgens de huidige productwaarheid: Lumivey richt zich in deze fase op Nederland. Gaat daarna zonder intake-modus naar wat voor bedrijf/werk de ondernemer wil doen.",
   "Laat de oppervlakkige wens 'klanten krijgen' los en vraagt wat de student voor klanten wil gaan doen.",
-  "Herkent dat topsegment/detailing méér is dan zomaar bijverdienen en opent één persoonlijke oorsprongs- of fascinatie-deur. De deur hoeft niet exact 'welke auto?' te zijn; ook vragen naar waarom luxe auto's hem aantrekken, waar die fascinatie begon of wat hij daarin bijzonder vindt zijn functioneel gelijkwaardig zolang ze echt persoonlijk verdiepen.",
+  "Herkent dat topsegment/detailing méér is dan zomaar bijverdienen en opent een concrete oorsprongsdeur: waar begon die fascinatie, welke auto/ervaring/persoon zette dit in gang? Een algemene smaakvraag als 'wat trekt je aan in sportwagens?' is hier onvoldoende omdat die net zo goed alleen een actuele voorkeur kan opleveren.",
   "Begrijpt Porsche 356 als oorsprong van zorg/respect voor bijzondere auto's en koppelt dit voorzichtig aan topsegment. Geen verplicht vervolgveld of zakelijke intake.",
   "Herkent de spontane energie rond 'swirls' als betekenisvolle deur: niet alleen schoonmaken maar schade voorkomen, perfectie behouden en respect voor lak. Dit mag het beeld van Michael merkbaar verdiepen.",
 ];
+
+function parseJsonObject(text: string) {
+  const trimmed = text.trim();
+  const unfenced = trimmed
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim();
+
+  try {
+    return JSON.parse(unfenced);
+  } catch {
+    const start = unfenced.indexOf("{");
+    const end = unfenced.lastIndexOf("}");
+    if (start >= 0 && end > start) {
+      return JSON.parse(unfenced.slice(start, end + 1));
+    }
+    throw new Error("Regressiebeoordelaar gaf geen geldige JSON terug.");
+  }
+}
 
 async function evaluateReplay(replay: ReplayTurn[]) {
   const response = await openai.responses.create({
@@ -41,19 +60,12 @@ De norm is NIET letterlijke overeenkomst met juni.
 De norm is vergelijkbare diepte, betekenis, menselijke nieuwsgierigheid en het volgen van dezelfde belangrijke deuren, voor zover dat niet strijdt met de actuele productwaarheid en Plan v0.4.
 
 BELANGRIJK:
-- beoordeel functie, niet formulering;
-- een andere vraag mag PASS zijn als zij dezelfde persoonlijke deur opent en vergelijkbare kans op betekenis geeft;
-- geef GEEN WARN alleen omdat de huidige vraag breder of anders geformuleerd is dan juni;
-- gebruik WARN alleen als de huidige reactie aantoonbaar minder betekenis kan ontsluiten, te voorzichtig/zakelijk/intake-achtig wordt, of een rijke persoonlijke deur duidelijk laat liggen;
-- vraag jezelf steeds af: zou dit antwoord in een organisch gesprek plausibel dezelfde mens achter de ondernemer kunnen blootleggen?
-
-Beoordeel per beurt:
-- PASS: huidig gedrag bewaart de functie en betekenis van de juni-referentie, ook als formulering of route anders is.
-- WARN: bruikbaar, maar duidelijk vlakker, te voorzichtig, te zakelijk, te intake-achtig of betekenis verliest.
-- FAIL: mist of sluit een belangrijke deur, springt naar oplossing/website/intake, of interpreteert zo star dat de essentie verloren gaat.
-
-Zoek vooral de EERSTE betekenisvolle afwijking. Latere fouten kunnen gevolgschade zijn.
-Geen stijlpolitie en geen voorkeur voor de juni-zinnen zelf.
+- beoordeel functie en informatiewaarde, niet formulering;
+- een andere vraag mag PASS zijn als zij dezelfde persoonlijke laag ontsluit;
+- onderscheid een algemene voorkeur-/smaakvraag van een echte oorsprongsdeur;
+- als de juni-route aantoonbaar een rijkere laag ontsloot, zoals een eerste concrete auto/persoon/herinnering, dan is een algemene vraag naar huidige aantrekkingskracht niet automatisch gelijkwaardig;
+- gebruik WARN als de huidige reactie bruikbaar is maar een rijkere persoonlijke oorsprongsdeur laat liggen;
+- FAIL is voor duidelijke ontsporing naar intake/oplossing of het missen/sluiten van een belangrijke deur.
 
 Geef uitsluitend geldige JSON terug in exact dit formaat:
 {
@@ -71,53 +83,61 @@ Gebruik firstDeviationTurn = 0 als er in deze vijf beurten geen materiële afwij
     input: JSON.stringify(replay, null, 2),
   });
 
-  return JSON.parse(response.output_text);
+  return parseJsonObject(response.output_text);
 }
 
 export async function GET(request: Request) {
-  const messages: ChatMessage[] = [];
-  const replay: ReplayTurn[] = [];
-  const base = new URL(request.url).origin;
+  try {
+    const messages: ChatMessage[] = [];
+    const replay: ReplayTurn[] = [];
+    const base = new URL(request.url).origin;
 
-  for (let index = 0; index < MICHAEL_TURNS.length; index += 1) {
-    const user = MICHAEL_TURNS[index];
-    messages.push({ role: "user", content: user });
+    for (let index = 0; index < MICHAEL_TURNS.length; index += 1) {
+      const user = MICHAEL_TURNS[index];
+      messages.push({ role: "user", content: user });
 
-    const response = await fetch(`${base}/api/chat`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messages, sourceContexts: [] }),
-      cache: "no-store",
-    });
+      const response = await fetch(`${base}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages, sourceContexts: [] }),
+        cache: "no-store",
+      });
 
-    const data = await response.json();
-    if (!response.ok) {
-      return NextResponse.json(
-        {
-          error: data?.error || `Replay stopte bij beurt ${index + 1}.`,
-          replay,
-        },
-        { status: response.status }
-      );
+      const data = await response.json();
+      if (!response.ok) {
+        return NextResponse.json(
+          {
+            error: data?.error || `Replay stopte bij beurt ${index + 1}.`,
+            replay,
+          },
+          { status: response.status }
+        );
+      }
+
+      const assistant = String(data.reply || "");
+      messages.push({ role: "assistant", content: assistant });
+      replay.push({
+        turn: index + 1,
+        user,
+        assistant,
+        referenceExpectation: REFERENCE_EXPECTATIONS[index],
+      });
     }
 
-    const assistant = String(data.reply || "");
-    messages.push({ role: "assistant", content: assistant });
-    replay.push({
-      turn: index + 1,
-      user,
-      assistant,
-      referenceExpectation: REFERENCE_EXPECTATIONS[index],
+    const evaluation = await evaluateReplay(replay);
+
+    return NextResponse.json({
+      case: "Michael / high-end detailing",
+      purpose: "Golden Path replay — first five text-only turns before the photo enters the June reference conversation.",
+      note: "Stops before the photo-dependent part. This is for finding the first behavioral deviation, not for judging the final preview.",
+      evaluation,
+      replay,
     });
+  } catch (error) {
+    console.error("Michael regression failed:", error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Regressietest kon niet worden uitgevoerd." },
+      { status: 500 }
+    );
   }
-
-  const evaluation = await evaluateReplay(replay);
-
-  return NextResponse.json({
-    case: "Michael / high-end detailing",
-    purpose: "Golden Path replay — first five text-only turns before the photo enters the June reference conversation.",
-    note: "Stops before the photo-dependent part. This is for finding the first behavioral deviation, not for judging the final preview.",
-    evaluation,
-    replay,
-  });
 }
