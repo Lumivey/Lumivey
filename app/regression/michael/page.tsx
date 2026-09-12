@@ -44,6 +44,17 @@ type Result = {
     diagnosis: string;
     checks: Check[];
   };
+  previewEvaluation: {
+    overall: "PASS" | "WARN" | "FAIL";
+    firstLoss: string;
+    diagnosis: string;
+    checks: Check[];
+  };
+  previewImpression: {
+    imageDataUrl: string;
+    headline?: string;
+    rationale?: string[];
+  };
   artDirection: Record<string, unknown>;
   siteDirection: Record<string, unknown>;
   understanding: {
@@ -55,6 +66,32 @@ type Result = {
   };
   replay: Turn[];
 };
+
+function ResultBlock({
+  label,
+  overall,
+  firstLoss,
+  diagnosis,
+  checks,
+}: {
+  label: string;
+  overall: "PASS" | "WARN" | "FAIL";
+  firstLoss: string;
+  diagnosis: string;
+  checks?: Check[];
+}) {
+  return (
+    <div style={{ margin: "28px 0", padding: 22, border: "1px solid #d8d8d2", borderRadius: 18 }}>
+      <p className="eyebrow">{label}</p>
+      <p><strong>Uitkomst:</strong> {overall}</p>
+      <p><strong>Eerste verlies:</strong> {firstLoss || "geen"}</p>
+      <p><strong>Diagnose:</strong> {diagnosis}</p>
+      {checks?.map((check) => (
+        <p key={check.name}><strong>{check.name} — {check.status}:</strong> {check.reason}</p>
+      ))}
+    </div>
+  );
+}
 
 export default function MichaelRegressionPage() {
   const [result, setResult] = useState<Result | null>(null);
@@ -85,9 +122,9 @@ export default function MichaelRegressionPage() {
       <section className="intro" style={{ maxWidth: 960 }}>
         <p className="eyebrow">Golden Path</p>
         <h1>Michael regressietest</h1>
-        <p className="lead">Exacte juni-antwoorden door de huidige keten. We toetsen gesprek, betekenisbehoud en daarna de creatieve vertaallaag vóór de echte beeldgeneratie.</p>
+        <p className="lead">Exacte juni-antwoorden door de huidige keten. We toetsen gesprek, betekenisbehoud, creatieve vertaling en nu ook de echte artist impression.</p>
 
-        {!result && !error && <p>Drie regressielagen draaien…</p>}
+        {!result && !error && <p>Vier regressielagen draaien — laag 4 genereert een echte Preview en kan wat langer duren…</p>}
         {error && <p>{error}</p>}
 
         {result && (
@@ -100,24 +137,38 @@ export default function MichaelRegressionPage() {
               <p><strong>Diagnose:</strong> {result.evaluation.diagnosis}</p>
             </div>
 
-            <div style={{ margin: "28px 0", padding: 22, border: "1px solid #d8d8d2", borderRadius: 18 }}>
-              <p className="eyebrow">Laag 2 — betekenisbehoud</p>
-              <p><strong>Uitkomst:</strong> {result.understandingEvaluation.overall}</p>
-              <p><strong>Eerste verlies:</strong> {result.understandingEvaluation.firstLoss || "geen"}</p>
-              <p><strong>Diagnose:</strong> {result.understandingEvaluation.diagnosis}</p>
-              {result.understandingEvaluation.checks.map((check) => (
-                <p key={check.name}><strong>{check.name} — {check.status}:</strong> {check.reason}</p>
-              ))}
-            </div>
+            <ResultBlock
+              label="Laag 2 — betekenisbehoud"
+              overall={result.understandingEvaluation.overall}
+              firstLoss={result.understandingEvaluation.firstLoss}
+              diagnosis={result.understandingEvaluation.diagnosis}
+              checks={result.understandingEvaluation.checks}
+            />
 
-            <div style={{ margin: "28px 0", padding: 22, border: "1px solid #d8d8d2", borderRadius: 18 }}>
-              <p className="eyebrow">Laag 3 — creatieve vertaling</p>
-              <p><strong>Uitkomst:</strong> {result.creativeEvaluation.overall}</p>
-              <p><strong>Eerste verlies:</strong> {result.creativeEvaluation.firstLoss || "geen"}</p>
-              <p><strong>Diagnose:</strong> {result.creativeEvaluation.diagnosis}</p>
-              {result.creativeEvaluation.checks.map((check) => (
-                <p key={check.name}><strong>{check.name} — {check.status}:</strong> {check.reason}</p>
-              ))}
+            <ResultBlock
+              label="Laag 3 — creatieve vertaling"
+              overall={result.creativeEvaluation.overall}
+              firstLoss={result.creativeEvaluation.firstLoss}
+              diagnosis={result.creativeEvaluation.diagnosis}
+              checks={result.creativeEvaluation.checks}
+            />
+
+            <ResultBlock
+              label="Laag 4 — echte artist impression"
+              overall={result.previewEvaluation.overall}
+              firstLoss={result.previewEvaluation.firstLoss}
+              diagnosis={result.previewEvaluation.diagnosis}
+              checks={result.previewEvaluation.checks}
+            />
+
+            <div style={{ margin: "28px 0" }}>
+              <p className="eyebrow">Gegenereerde Michael Preview — text-only probe</p>
+              <p>Deze test gebruikt bewust nog geen echte foto van Michael. We beoordelen hier alleen of de persoonlijke betekenis uit de eerste vijf beurten ook zichtbaar wordt.</p>
+              <img
+                src={result.previewImpression.imageDataUrl}
+                alt="Michael artist impression regressietest"
+                style={{ width: "100%", height: "auto", display: "block", borderRadius: 18, border: "1px solid #d8d8d2" }}
+              />
             </div>
 
             {result.replay.map((turn) => {
