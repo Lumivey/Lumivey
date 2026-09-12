@@ -25,6 +25,10 @@ export type WebsiteAsset = {
   dataUrl?: string;
   purpose?: "primary" | "supporting" | "reference";
   aiStatus?: "real" | "ai-enhanced-real" | "artist-interpretation" | "unknown";
+  role?: string;
+  origin?: "customer" | "preview-derived" | "generated" | "external" | "unknown";
+  validationStatus?: "approved" | "needs-owner-validation" | "replace-with-real-if-available" | "reference-only";
+  productionInstruction?: string;
 };
 
 export type WebsiteBrief = {
