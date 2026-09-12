@@ -22,6 +22,9 @@ export type WebsiteAsset = {
   kind: "image" | "document" | "website" | "social" | "other";
   source?: string;
   url?: string;
+  dataUrl?: string;
+  purpose?: "primary" | "supporting" | "reference";
+  aiStatus?: "real" | "ai-enhanced-real" | "artist-interpretation" | "unknown";
 };
 
 export type WebsiteBrief = {
