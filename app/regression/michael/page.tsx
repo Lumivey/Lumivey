@@ -15,7 +15,7 @@ type EvaluationTurn = {
   reason: string;
 };
 
-type UnderstandingCheck = {
+type Check = {
   name: string;
   status: "PASS" | "WARN" | "FAIL";
   reason: string;
@@ -36,8 +36,16 @@ type Result = {
     overall: "PASS" | "WARN" | "FAIL";
     firstLoss: string;
     diagnosis: string;
-    checks: UnderstandingCheck[];
+    checks: Check[];
   };
+  creativeEvaluation: {
+    overall: "PASS" | "WARN" | "FAIL";
+    firstLoss: string;
+    diagnosis: string;
+    checks: Check[];
+  };
+  artDirection: Record<string, unknown>;
+  siteDirection: Record<string, unknown>;
   understanding: {
     identity?: Record<string, unknown>;
     humanSignals?: unknown[];
@@ -77,9 +85,9 @@ export default function MichaelRegressionPage() {
       <section className="intro" style={{ maxWidth: 960 }}>
         <p className="eyebrow">Golden Path</p>
         <h1>Michael regressietest</h1>
-        <p className="lead">Exacte juni-antwoorden, opnieuw door de huidige Discovery-runtime. Eerst toetsen we het gesprek, daarna of de betekenis onderweg naar Understanding behouden blijft.</p>
+        <p className="lead">Exacte juni-antwoorden door de huidige keten. We toetsen gesprek, betekenisbehoud en daarna de creatieve vertaallaag vóór de echte beeldgeneratie.</p>
 
-        {!result && !error && <p>Replay en Understanding-check draaien…</p>}
+        {!result && !error && <p>Drie regressielagen draaien…</p>}
         {error && <p>{error}</p>}
 
         {result && (
@@ -102,6 +110,16 @@ export default function MichaelRegressionPage() {
               ))}
             </div>
 
+            <div style={{ margin: "28px 0", padding: 22, border: "1px solid #d8d8d2", borderRadius: 18 }}>
+              <p className="eyebrow">Laag 3 — creatieve vertaling</p>
+              <p><strong>Uitkomst:</strong> {result.creativeEvaluation.overall}</p>
+              <p><strong>Eerste verlies:</strong> {result.creativeEvaluation.firstLoss || "geen"}</p>
+              <p><strong>Diagnose:</strong> {result.creativeEvaluation.diagnosis}</p>
+              {result.creativeEvaluation.checks.map((check) => (
+                <p key={check.name}><strong>{check.name} — {check.status}:</strong> {check.reason}</p>
+              ))}
+            </div>
+
             {result.replay.map((turn) => {
               const judgement = result.evaluation.turns.find((item) => item.turn === turn.turn);
               return (
@@ -114,6 +132,11 @@ export default function MichaelRegressionPage() {
                 </article>
               );
             })}
+
+            <details style={{ margin: "36px 0" }}>
+              <summary>Ruwe creatieve richting bekijken</summary>
+              <pre style={{ whiteSpace: "pre-wrap", marginTop: 18, fontSize: 13 }}>{JSON.stringify({ artDirection: result.artDirection, siteDirection: result.siteDirection }, null, 2)}</pre>
+            </details>
 
             <details style={{ margin: "36px 0" }}>
               <summary>Ruwe Understanding bekijken</summary>
