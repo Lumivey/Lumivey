@@ -265,6 +265,18 @@ function parseAnalysis(
     doors,
     uncertainties,
     discoveredUrls,
+    assets: type === "image"
+      ? [
+          {
+            kind: "image",
+            name: file.name,
+            dataUrl: file.dataUrl,
+            origin: "uploaded",
+            status: "source-only",
+            evidence: `Door ondernemer aangeleverde afbeelding: ${file.name}`,
+          },
+        ]
+      : [],
   };
 }
 
