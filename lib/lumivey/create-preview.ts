@@ -81,7 +81,7 @@ async function generateWithReferenceImages(prompt: string, images: PreviewRefere
   const content: any[] = [
     {
       type: "input_text",
-      text: `${prompt}\n\nAANGELEVERDE FOTO'S\nDe onderstaande beelden zijn door de ondernemer aangeleverd als visuele bron. Gebruik ze als echte referentiebeelden. Behoud de persoon herkenbaar en verander zijn identiteit niet. Kies zelf welke beelden de compositie het beste ondersteunen; je hoeft ze niet allemaal te gebruiken. Genereer nu één Lumivey Preview met de image_generation tool.`,
+      text: `${prompt}\n\nAANGELEVERDE FOTO'S\nDe onderstaande beelden zijn door de ondernemer aangeleverd als visuele bron. Gebruik ze als echte referentiebeelden. Behoud de persoon herkenbaar en verander zijn identiteit niet. Kies zelf welke beelden de compositie het beste ondersteunen; je hoeft ze niet allemaal te gebruiken. Als een bestaande foto geloofwaardig kan worden gecropt, gebruik die crop en reconstrueer geen handen, armen, hoofden of andere lichaamsdelen met AI. Genereer nu één Lumivey Preview met de image_generation tool.`,
     },
     ...images.map((image) => ({
       type: "input_image",
@@ -173,12 +173,18 @@ REAL-IMAGE RULE
 - Prefer variation after the main personal image: technical environment, meaningful detail, work context or atmosphere can carry identity without repeating the face.
 - Do not change a real person's identity, facial features or apparent age.
 - Do not unintentionally crop off the head or face in prominent compositions.
+- NEVER create a floating hand, isolated arm, partial body or other anatomical fragment that implies a person without a physically credible visible or clearly continuous body/context.
+- NEVER use AI to invent or reconstruct a hand, arm, head or body part when the supplied real photo can simply be cropped to preserve the genuine scene.
+- If a useful crop would leave an awkward or impossible human fragment, choose a different crop or a different photo. Less image is better than fake anatomy.
+- Every human scene must pass an anatomy-and-continuity check: hands belong to bodies, limbs connect naturally, perspective is plausible, and no person appears to be cut apart by the composition.
+- Treat anatomical plausibility as a hard quality gate, not an aesthetic preference.
 - A personal hobby image may support identity and atmosphere but must never be presented as a professional service unless confirmed.
 - A recurring hobby prop must not become the visual shorthand for the whole entrepreneur. Normally show the prop only ONCE on the homepage unless a second appearance serves a clearly different evidence-backed story beat. Prefer the actual human ritual or atmosphere over repeated object shots.
 
 RECOGNIZABILITY TEST
 Before finalizing the concept, ask yourself: if the company name and profession were covered, would this still feel recognizably like this entrepreneur? If not, strengthen the evidence-backed personal layer without inventing facts.
 Then ask a second question: if the personal photos were removed, would the remaining copy and proof still reveal why this entrepreneur is professionally distinctive? If not, strengthen source-backed professional specificity.
+Before finalizing any image crop containing a person, ask a third question: could a real photograph physically look like this? If not, reject that crop or composition and use the supplied photo more faithfully.
 
 HIGH-RELEVANCE HUMAN SIGNALS
 ${JSON.stringify(highHumanSignals, null, 2)}

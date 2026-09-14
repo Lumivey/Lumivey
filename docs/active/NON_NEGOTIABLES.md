@@ -55,6 +55,10 @@ Deze regels zijn harde kwaliteits- en gedragsgrenzen. Een nieuwe chat, tool, gen
 - Een gegenereerde persoon mag niet stilzwijgend als de echte ondernemer worden gepresenteerd.
 - Bronfoto’s van echte personen moeten herkenbaar blijven.
 - Geen gezichten/hoofden onbedoeld afsnijden in hero of andere prominente compositie.
+- **Geen zwevende lichaamsdelen, losse handen, armen of andere anatomische fragmenten die visueel een persoon impliceren zonder geloofwaardig lichaam/context.**
+- Als een aangeleverde echte foto eenvoudig geloofwaardig kan worden gecropt, heeft die crop altijd voorrang boven een AI-gereconstrueerd lichaamsdeel of een synthetische vervanging.
+- Elke menselijke scène moet anatomisch en ruimtelijk geloofwaardig blijven: handen moeten logisch bij een zichtbaar of evident lichaam horen, ledematen mogen niet uit het niets verschijnen en een crop mag nooit horrorachtig of fysiek onmogelijk ogen.
+- Bij twijfel: toon minder van de foto, niet méér AI. Een veilige crop is beter dan een creatieve reconstructie.
 - Een beeld mag alleen als dienst/positionering worden gebruikt als dat inhoudelijk klopt; persoonlijke hobby’s worden niet als dienstverlening gepresenteerd.
 
 ## Feiten en bronnen
