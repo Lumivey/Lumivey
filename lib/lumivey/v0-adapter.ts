@@ -20,6 +20,14 @@ function compositionalRole(asset: WebsiteAsset): string {
   return "SUPPORTING_VISUAL";
 }
 
+function isAttachableImage(asset: WebsiteAsset): boolean {
+  if (asset.kind !== "image") return false;
+  if (!asset.dataUrl && !asset.url) return false;
+  if (asset.validationStatus === "needs-owner-validation") return false;
+  if (asset.validationStatus === "reference-only") return false;
+  return true;
+}
+
 function compactBriefForV0(brief: WebsiteBrief) {
   const { sources: _sources, ...understandingWithoutSources } = brief.understanding;
 
@@ -35,7 +43,7 @@ function compactBriefForV0(brief: WebsiteBrief) {
     },
     facts: brief.facts,
     assets: brief.assets.map((asset, index) => ({
-      attachmentOrder: index + 2,
+      attachmentOrder: isAttachableImage(asset) ? index + 2 : undefined,
       name: asset.name,
       kind: asset.kind,
       purpose: asset.purpose,
@@ -47,7 +55,7 @@ function compactBriefForV0(brief: WebsiteBrief) {
       productionInstruction: asset.productionInstruction,
       url: asset.url,
       source: asset.source ? asset.source.slice(0, 1500) : undefined,
-      attached: Boolean(asset.dataUrl || asset.url),
+      attached: isAttachableImage(asset),
     })),
     pages: brief.pages,
     functionalRequirements: brief.functionalRequirements,
@@ -73,6 +81,7 @@ DESIGN AUTHORITY
 ASSET MAP
 - Attachments after the Preview are clean production assets mapped to visual responsibilities from the approved Preview.
 - Respect each asset's compositionalRole, role, origin, validation status and production instruction.
+- Do NOT use assets marked needs-owner-validation or reference-only as production imagery unless they are later explicitly approved and attached.
 - The role describes WHAT JOB the image must do in the composition, not a rigid pixel position. Preserve your creative freedom while making sure each important role is visibly fulfilled.
 - HERO_PRIMARY: identity anchor in the opening experience. It should carry strong visual weight.
 - SERVICE_PROCESS: use meaningfully in the services/working-method part of the page so that section is not reduced to text/icons only.
@@ -82,8 +91,9 @@ ASSET MAP
 - SUPPORTING_VISUAL: use where it strengthens pacing and continuity without competing with the hero.
 - A generated personal image may be used as an artistic element when marked as such. Do not silently present it as documentary truth.
 - When a real customer asset is supplied for the same role, prefer it over a generated substitute.
+- Keep real people recognizable. Do not crop off faces or heads in prominent imagery unless that crop is explicitly part of the approved Preview.
 - Do not repeatedly crop/reuse one real photo where dedicated mapped assets are supplied for other visual moments.
-- Do not leave an important supplied asset unused unless using it would conflict with the approved Preview or truth guardrails.
+- Do not leave an important supplied approved asset unused unless using it would conflict with the approved Preview or truth guardrails.
 
 TRUTH & FUNCTION GUARDRAILS
 - Do not invent phone numbers, email addresses, addresses, opening hours, prices, years of experience, awards, certifications, clients, projects, staff, services or biography.
@@ -104,7 +114,7 @@ function buildV0Attachments(brief: WebsiteBrief): V0Attachment[] {
   }
 
   for (const asset of brief.assets) {
-    if (asset.kind !== "image") continue;
+    if (!isAttachableImage(asset)) continue;
     const assetUrl = asset.dataUrl || asset.url;
     if (!assetUrl) continue;
     attachments.push({ url: assetUrl });
