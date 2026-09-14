@@ -7,6 +7,8 @@ export type WebsiteResearchPage = {
   branding?: unknown;
 };
 
+export type WebsiteResearchMode = "full-crawl" | "single-page-fallback";
+
 export type WebsiteResearchResult = {
   url: string;
   title?: string;
@@ -15,6 +17,9 @@ export type WebsiteResearchResult = {
   images: string[];
   branding?: unknown;
   pages?: WebsiteResearchPage[];
+  mode: WebsiteResearchMode;
+  crawlJobId?: string;
+  fallbackReason?: string;
 };
 
 function normalizeUrl(url: string): string {
@@ -52,7 +57,11 @@ function pageFromPayload(item: any, fallbackUrl: string): WebsiteResearchPage | 
   };
 }
 
-async function scrapeSinglePage(url: string, apiKey: string): Promise<WebsiteResearchResult> {
+async function scrapeSinglePage(
+  url: string,
+  apiKey: string,
+  fallbackReason?: string
+): Promise<WebsiteResearchResult> {
   const endpoint = process.env.FIRECRAWL_API_URL || "https://api.firecrawl.dev/v2/scrape";
   const response = await fetch(endpoint, {
     method: "POST",
@@ -87,6 +96,8 @@ async function scrapeSinglePage(url: string, apiKey: string): Promise<WebsiteRes
     images: page.images,
     branding: page.branding,
     pages: [page],
+    mode: "single-page-fallback",
+    fallbackReason,
   };
 }
 
@@ -168,6 +179,8 @@ async function crawlWebsite(url: string, apiKey: string): Promise<WebsiteResearc
     images: uniqueStrings(pages.flatMap((page: WebsiteResearchPage) => page.images)),
     branding: pages.find((page: WebsiteResearchPage) => page.branding)?.branding,
     pages,
+    mode: "full-crawl",
+    crawlJobId: jobId,
   };
 }
 
@@ -182,7 +195,8 @@ export async function researchWebsite(inputUrl: string): Promise<WebsiteResearch
   try {
     return await crawlWebsite(url, apiKey);
   } catch (crawlError) {
+    const fallbackReason = crawlError instanceof Error ? crawlError.message : String(crawlError);
     console.error("Volledige Firecrawl crawl mislukt; val terug op homepage scrape:", crawlError);
-    return scrapeSinglePage(url, apiKey);
+    return scrapeSinglePage(url, apiKey, fallbackReason);
   }
 }
