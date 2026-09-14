@@ -1,5 +1,7 @@
 import OpenAI from "openai";
 import { NextResponse } from "next/server";
+import { createArtDirection } from "@/lib/lumivey/art-direction";
+import { createSiteDescription } from "@/lib/lumivey/site-description";
 
 export const maxDuration = 300;
 
@@ -15,6 +17,22 @@ function parseJson(text: string) {
     if (start >= 0 && end > start) return JSON.parse(clean.slice(start, end + 1));
     throw new Error("Adrie-beoordelaar gaf geen geldige JSON terug.");
   }
+}
+
+function errorMessage(value: unknown): string {
+  if (value instanceof Error) return value.message;
+  if (typeof value === "string") return value;
+  if (value && typeof value === "object") {
+    const object = value as Record<string, unknown>;
+    if (typeof object.message === "string") return object.message;
+    if (typeof object.error === "string") return object.error;
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(value);
+    }
+  }
+  return String(value || "Onbekende fout");
 }
 
 async function evaluate(input: unknown) {
@@ -33,6 +51,8 @@ Kern die niet mag verdampen:
 - De website moet vertrouwen, rust, overzicht en senioriteit voelen, zonder corporate consultant-clichés.
 - De bestaande website is bronmateriaal, niet de ontwerpwaarheid.
 - Geen nieuwe feiten verzinnen.
+
+Als previewAvailable=false, beoordeel preview-specificity uitsluitend op de creatieve richting en zet in de reden expliciet dat de beeldpreview technisch niet beschikbaar was. Laat een technisch previewprobleem niet automatisch de Discovery/Understanding-beoordeling vervuilen.
 
 Geef uitsluitend JSON terug:
 {
@@ -64,28 +84,40 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Geen Adrie Understanding ontvangen." }, { status: 400 });
     }
 
+    const [artDirection, siteDirection] = await Promise.all([
+      createArtDirection(understanding),
+      createSiteDescription(understanding),
+    ]);
+
     const base = new URL(request.url).origin;
-    const previewResponse = await fetch(`${base}/api/preview`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ understanding }),
-      cache: "no-store",
-    });
+    let previewImpression: any = null;
+    let previewError = "";
 
-    const previewText = await previewResponse.text();
-    let previewData: any;
     try {
-      previewData = JSON.parse(previewText);
-    } catch {
-      throw new Error(`Preview-route gaf geen JSON terug: ${previewText.slice(0, 180)}`);
-    }
+      const previewResponse = await fetch(`${base}/api/preview`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ understanding }),
+        cache: "no-store",
+      });
 
-    if (!previewResponse.ok || !previewData?.impression?.imageDataUrl) {
-      throw new Error(previewData?.error || "Adrie Preview kon niet worden gegenereerd.");
-    }
+      const previewText = await previewResponse.text();
+      let previewData: any;
+      try {
+        previewData = JSON.parse(previewText);
+      } catch {
+        throw new Error(`Preview-route gaf geen JSON terug: ${previewText.slice(0, 180)}`);
+      }
 
-    const artDirection = previewData.artDirection;
-    const siteDirection = previewData.siteDirection;
+      if (!previewResponse.ok || !previewData?.impression?.imageDataUrl) {
+        throw new Error(errorMessage(previewData?.error || "Adrie Preview kon niet worden gegenereerd."));
+      }
+
+      previewImpression = previewData.impression;
+    } catch (error) {
+      previewError = errorMessage(error);
+      console.error("Adrie preview substep error:", error);
+    }
 
     const evaluation = await evaluate({
       replay,
@@ -93,7 +125,9 @@ export async function POST(request: Request) {
       artDirection,
       siteDirection,
       sourceContexts,
-      previewRationale: previewData.impression.rationale,
+      previewAvailable: Boolean(previewImpression?.imageDataUrl),
+      previewRationale: previewImpression?.rationale || [],
+      previewError,
     });
 
     return NextResponse.json({
@@ -105,13 +139,14 @@ export async function POST(request: Request) {
       understanding,
       artDirection,
       siteDirection,
-      previewImpression: previewData.impression,
+      previewImpression,
+      previewError,
       evaluation,
     });
   } catch (error) {
     console.error("Adrie finalize error:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Adrie finalisatie kon niet worden uitgevoerd." },
+      { error: errorMessage(error), stage: "adrie-finalize" },
       { status: 500 }
     );
   }
