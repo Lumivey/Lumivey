@@ -301,7 +301,7 @@ export async function analyzeUploadedSource(
             {
               type: "input_image",
               image_url: file.dataUrl,
-              detail: "high",
+              detail: "low",
             },
           ],
         },
