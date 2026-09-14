@@ -1,1 +1,0 @@
-Temporary recovery note: implement personal+professional Preview balance in generator and stricter Adrie evaluator, then re-run Adrie before v0.
