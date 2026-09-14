@@ -24,6 +24,32 @@ function compactUnderstanding(understanding: LumiveyUnderstanding) {
   };
 }
 
+function compactSourceHighlights(understanding: LumiveyUnderstanding) {
+  const sources = Array.isArray((understanding as any).sources)
+    ? (understanding as any).sources
+    : [];
+
+  return sources.map((source: any) => ({
+    type: source?.type,
+    url: source?.url,
+    title: source?.title,
+    facts: Array.isArray(source?.facts)
+      ? source.facts.slice(0, 14).map((fact: any) => ({ statement: fact?.statement, evidence: fact?.evidence }))
+      : [],
+    goldCandidates: Array.isArray(source?.goldCandidates)
+      ? source.goldCandidates.slice(0, 10)
+      : [],
+    doors: Array.isArray(source?.doors)
+      ? source.doors.slice(0, 8).map((door: any) => ({
+          signal: door?.signal,
+          supportingFact: door?.supportingFact,
+          evidence: door?.evidence,
+          whyWorthExploring: door?.whyWorthExploring,
+        }))
+      : [],
+  })).slice(0, 12);
+}
+
 function collectUploadedReferenceImages(understanding: LumiveyUnderstanding): PreviewReferenceImage[] {
   const sources = Array.isArray((understanding as any).sources)
     ? (understanding as any).sources
@@ -96,6 +122,7 @@ export async function createLumiveyPreview(understanding: LumiveyUnderstanding) 
     .slice(0, 4);
 
   const referenceImages = collectUploadedReferenceImages(understanding);
+  const sourceHighlights = compactSourceHighlights(understanding);
 
   const prompt = `
 Create ONE polished visual artist impression of a future website for an entrepreneur.
@@ -110,6 +137,7 @@ IMPORTANT
 - Prioritize identity, atmosphere, visual hierarchy, image/story combination and entrepreneur-specific recognition.
 - Avoid generic template aesthetics.
 - Avoid excessive dashboard/card UI unless the business genuinely calls for it.
+- Avoid a monotonous stack of alternating dark/light rectangular sections when a more editorial, spatially varied composition can carry the story.
 - Use concise Dutch website copy where copy is visible.
 - The design should be strong enough that the entrepreneur can react: “Ja, dit ben ik.”
 
@@ -124,11 +152,16 @@ LUMIVEY HOMEPAGE BALANCE RULE
 
 HUMAN RECOGNITION RULE
 When HIGH-RELEVANCE HUMAN SIGNALS are provided below, use at least one of them meaningfully in the VISUAL COMPOSITION or IMAGE LANGUAGE, not only as copy, unless doing so would be inappropriate or technically unrealistic.
+If a high-relevance signal contains a SPECIFIC ritual, moment, origin story, phrase or way of observing the world, preserve enough specificity that the entrepreneur can recognize the source of the interpretation. A generic prop is not enough when the evidence contains a richer human scene.
 If a high-relevance signal concerns a personal ritual, hobby or way of observing the world, it may shape atmosphere, imagery, pacing or composition, but must never be presented as a service unless the evidence says it is one.
 Do not reduce a meaningful human signal to a decorative hobby card.
 Never extend the signal beyond its evidence.
 
-SOURCE-RICHNESS RULE
+SOURCE-RICHNESS RULE — MANDATORY
+- The source material below is not background noise. It is evidence that must survive the interpretation layer.
+- First identify the 3–5 most distinctive evidence-backed professional or biographical nuggets that materially differentiate this entrepreneur from a generic competitor.
+- At least TWO of those distinctive nuggets must be visibly represented on the homepage concept through concise copy, proof/context, section meaning, navigation/depth cue or a concrete story beat. Do not replace them with generic service slogans.
+- A homepage does not need to dump a CV. Curate. But if a rich source contains distinctive qualifications, experience, professional roles, cases, memberships, authored knowledge or other credibility evidence, the concept must signal that richness somewhere instead of flattening it into “ervaring”, “advies” or “maatwerk”.
 - Preserve relevant confirmed source-backed facts instead of silently dropping them.
 - If confirmed contact details are available, the concept may show them in a realistic contact/footer treatment; never invent missing values.
 - Use distinctive professional context from sources when it helps recognition, but treat the old website as evidence rather than a design blueprint.
@@ -141,15 +174,20 @@ REAL-IMAGE RULE
 - Do not change a real person's identity, facial features or apparent age.
 - Do not unintentionally crop off the head or face in prominent compositions.
 - A personal hobby image may support identity and atmosphere but must never be presented as a professional service unless confirmed.
+- A recurring hobby prop must not become the visual shorthand for the whole entrepreneur. Normally show the prop only ONCE on the homepage unless a second appearance serves a clearly different evidence-backed story beat. Prefer the actual human ritual or atmosphere over repeated object shots.
 
 RECOGNIZABILITY TEST
 Before finalizing the concept, ask yourself: if the company name and profession were covered, would this still feel recognizably like this entrepreneur? If not, strengthen the evidence-backed personal layer without inventing facts.
+Then ask a second question: if the personal photos were removed, would the remaining copy and proof still reveal why this entrepreneur is professionally distinctive? If not, strengthen source-backed professional specificity.
 
 HIGH-RELEVANCE HUMAN SIGNALS
 ${JSON.stringify(highHumanSignals, null, 2)}
 
 CURRENT LUMIVEY UNDERSTANDING
 ${JSON.stringify(compactUnderstanding(understanding), null, 2)}
+
+SOURCE HIGHLIGHTS / EVIDENCE
+${JSON.stringify(sourceHighlights, null, 2)}
 
 CREATIVE DIRECTION
 ${JSON.stringify(artDirection, null, 2)}
