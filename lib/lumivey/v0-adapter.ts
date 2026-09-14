@@ -92,6 +92,9 @@ ASSET MAP
 - A generated personal image may be used as an artistic element when marked as such. Do not silently present it as documentary truth.
 - When a real customer asset is supplied for the same role, prefer it over a generated substitute.
 - Keep real people recognizable. Do not crop off faces or heads in prominent imagery unless that crop is explicitly part of the approved Preview.
+- HUMAN IMAGE CREDIBILITY IS A HARD GATE: never create floating hands, arms, heads or disconnected body fragments. Every visible body part must have believable anatomical and spatial continuity.
+- If a supplied real photo already contains the needed human scene, crop/reuse that photo faithfully instead of reconstructing the person or body part with AI.
+- If a crop would make anatomy ambiguous or implausible, show less. Do not invent anatomy to fill the composition.
 - Do not repeatedly crop/reuse one real photo where dedicated mapped assets are supplied for other visual moments.
 - Uploaded photos form a SOURCE POOL, not a quota. Do not force every supplied image into the homepage.
 - A personal ritual, hobby or prop may carry identity, but it must remain secondary to the entrepreneur's professional proposition unless the approved Preview or brief explicitly says otherwise.
