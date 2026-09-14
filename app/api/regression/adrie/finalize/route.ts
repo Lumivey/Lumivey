@@ -69,10 +69,8 @@ function promptSafeSourceContexts(sourceContexts: SourceContext[]) {
   }));
 }
 
-async function evaluate(input: unknown) {
-  const response = await openai.responses.create({
-    model: "gpt-5.6-terra",
-    instructions: `
+async function evaluate(input: unknown, previewImageDataUrl = "") {
+  const instructions = `
 Je beoordeelt een Lumivey referentietest voor Adrie Pouwer / AssetPouwer.
 Dit is GEEN exacte transcript-replay van een historisch gesprek; het is een gecontroleerde reconstructie van de eerder vastgelegde referentie-inhoud. Beoordeel dus betekenisbehoud en kwaliteit, niet letterlijke formulering.
 
@@ -96,7 +94,14 @@ LUMIVEY PREVIEW-NORM
 - De ideale richting is een geloofwaardige combinatie van persoonlijke rust/observatie en technische assetmanagement-credibiliteit.
 - PASS op preview-specificity vereist dat de preview duidelijk meer is dan een goede website voor een ervaren assetmanagementconsultant.
 
-Als previewAvailable=false, beoordeel preview-specificity uitsluitend op de creatieve richting en zet in de reden expliciet dat de beeldpreview technisch niet beschikbaar was. Laat een technisch previewprobleem niet automatisch de Discovery/Understanding-beoordeling vervuilen.
+BEELDCURATIE-NORM
+- Aangeleverde foto's vormen een bronpool, geen quota.
+- Een homepage moet niet vol staan met herhaling van dezelfde persoon alleen omdat veel foto's beschikbaar zijn.
+- Voor deze Adrie-case is normaal één of twee zichtbare verschijningen van Adrie sterk; een derde alleen als die aantoonbaar een andere rol of verhaalfunctie vervult.
+- Na het persoonlijke hoofdbeeld mogen techniek, werkomgeving, detailbeelden en sfeer de identiteit verder dragen.
+- Straf onnodige persoonsherhaling, gezichtsvervorming, onherkenbare vervanging of ongunstige hoofd/face-crops af.
+
+Als previewAvailable=false, beoordeel preview-specificity en image-curation uitsluitend op de creatieve richting en zet expliciet dat de beeldpreview technisch niet beschikbaar was. Als previewAvailable=true en er is een beeld meegestuurd, beoordeel de GERENDERDE PREVIEW zelf en niet alleen de rationale.
 
 Geef uitsluitend JSON terug:
 {
@@ -110,11 +115,23 @@ Geef uitsluitend JSON terug:
     {"name":"source-not-design-truth","status":"PASS|WARN|FAIL","reason":""},
     {"name":"source-richness","status":"PASS|WARN|FAIL","reason":""},
     {"name":"personal-homepage-anchor","status":"PASS|WARN|FAIL","reason":""},
-    {"name":"preview-specificity","status":"PASS|WARN|FAIL","reason":""}
+    {"name":"preview-specificity","status":"PASS|WARN|FAIL","reason":""},
+    {"name":"image-curation","status":"PASS|WARN|FAIL","reason":""}
   ]
 }
-`,
-    input: JSON.stringify(input, null, 2),
+`;
+
+  const content: any[] = [
+    { type: "input_text", text: JSON.stringify(input, null, 2) },
+  ];
+  if (previewImageDataUrl.startsWith("data:image/")) {
+    content.push({ type: "input_image", image_url: previewImageDataUrl, detail: "low" });
+  }
+
+  const response = await openai.responses.create({
+    model: "gpt-5.6-terra",
+    instructions,
+    input: [{ role: "user", content }],
   });
   return parseJson(response.output_text);
 }
@@ -169,7 +186,7 @@ export async function POST(request: Request) {
       console.error("Adrie preview substep error:", error);
     }
 
-    const evaluation = await evaluate({
+    const evaluationInput = {
       replay,
       understanding: promptSafeUnderstanding(understanding),
       artDirection,
@@ -179,7 +196,12 @@ export async function POST(request: Request) {
       previewAvailable: Boolean(previewImpression?.imageDataUrl),
       previewRationale: previewImpression?.rationale || [],
       previewError,
-    });
+    };
+
+    const evaluation = await evaluate(
+      evaluationInput,
+      typeof previewImpression?.imageDataUrl === "string" ? previewImpression.imageDataUrl : ""
+    );
 
     return NextResponse.json({
       case: "Adrie Pouwer / AssetPouwer",

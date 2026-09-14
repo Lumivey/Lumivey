@@ -135,7 +135,9 @@ SOURCE-RICHNESS RULE
 
 REAL-IMAGE RULE
 - If entrepreneur-supplied photos are available, they are visual source authority and should be preferred over invented replacements.
-- You do not need to use every supplied image. Curate them.
+- Uploaded photos are a SOURCE POOL, never a quota. Curate hard; do not show an image merely because it was supplied.
+- Do not repeat the same person across the homepage just because several photos are available. Normally show that person only once or twice; use a third appearance only when it adds a clearly different, evidence-backed role or story beat.
+- Prefer variation after the main personal image: technical environment, meaningful detail, work context or atmosphere can carry identity without repeating the face.
 - Do not change a real person's identity, facial features or apparent age.
 - Do not unintentionally crop off the head or face in prominent compositions.
 - A personal hobby image may support identity and atmosphere but must never be presented as a professional service unless confirmed.
