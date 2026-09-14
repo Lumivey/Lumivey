@@ -21,6 +21,7 @@ type ArtistImpression = {
 
 const MAX_DIRECT_FILE_BYTES = 2_500_000;
 const MAX_IMAGE_EDGE = 1800;
+const MAX_ATTACHMENTS_PER_MESSAGE = 8;
 
 function blobToDataUrl(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -59,7 +60,11 @@ async function compressImage(file: File): Promise<Blob> {
 
   const toJpeg = (quality: number) =>
     new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("Afbeelding kon niet worden voorbereid."))), "image/jpeg", quality);
+      canvas.toBlob(
+        (blob) => (blob ? resolve(blob) : reject(new Error("Afbeelding kon niet worden voorbereid."))),
+        "image/jpeg",
+        quality
+      );
     });
 
   let blob = await toJpeg(0.84);
@@ -78,11 +83,11 @@ async function prepareAttachment(file: File): Promise<SelectedAttachment> {
   }
 
   if (uploadBlob.size > MAX_DIRECT_FILE_BYTES) {
-    throw new Error("Dit bestand is nog te groot voor deze bouwfase. Kies een bestand kleiner dan ongeveer 2,5 MB.");
+    throw new Error(`${file.name} is nog te groot voor deze bouwfase.`);
   }
 
   return {
-    id: `${Date.now()}-${file.name}-${file.size}`,
+    id: `${Date.now()}-${Math.random().toString(36).slice(2)}-${file.name}-${file.size}`,
     name: file.name,
     mimeType,
     dataUrl: await blobToDataUrl(uploadBlob),
@@ -95,7 +100,7 @@ export default function Home() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [understanding, setUnderstanding] = useState<UnderstandingState | null>(null);
-  const [attachment, setAttachment] = useState<SelectedAttachment | null>(null);
+  const [attachments, setAttachments] = useState<SelectedAttachment[]>([]);
   const [attachmentError, setAttachmentError] = useState("");
   const [previewLoading, setPreviewLoading] = useState(false);
   const [impression, setImpression] = useState<ArtistImpression | null>(null);
@@ -103,19 +108,39 @@ export default function Home() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(event.target.files ?? []);
+    if (!files.length) return;
+
     setAttachmentError("");
+    const room = Math.max(0, MAX_ATTACHMENTS_PER_MESSAGE - attachments.length);
+    const selected = files.slice(0, room);
+
+    if (!room) {
+      setAttachmentError(`Je kunt maximaal ${MAX_ATTACHMENTS_PER_MESSAGE} bestanden tegelijk delen.`);
+      event.target.value = "";
+      return;
+    }
+
     try {
-      setAttachment(await prepareAttachment(file));
+      const prepared = await Promise.all(selected.map(prepareAttachment));
+      setAttachments((current) => [...current, ...prepared].slice(0, MAX_ATTACHMENTS_PER_MESSAGE));
+      if (files.length > room) {
+        setAttachmentError(`Maximaal ${MAX_ATTACHMENTS_PER_MESSAGE} bestanden tegelijk; de overige zijn niet toegevoegd.`);
+      }
     } catch (error) {
-      setAttachment(null);
-      setAttachmentError(error instanceof Error ? error.message : "Bestand kon niet worden toegevoegd.");
+      setAttachmentError(error instanceof Error ? error.message : "Een of meer bestanden konden niet worden toegevoegd.");
+    } finally {
+      event.target.value = "";
     }
   }
 
-  function clearAttachment() {
-    setAttachment(null);
+  function removeAttachment(id: string) {
+    setAttachments((current) => current.filter((item) => item.id !== id));
+    setAttachmentError("");
+  }
+
+  function clearAttachments() {
+    setAttachments([]);
     setAttachmentError("");
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
@@ -123,11 +148,12 @@ export default function Home() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const trimmed = input.trim();
-    if ((!trimmed && !attachment) || loading) return;
+    if ((!trimmed && attachments.length === 0) || loading) return;
 
-    const userContent = attachment
-      ? `${trimmed || "Ik deel hierbij een bestand."}\n\nBijlage: ${attachment.name}`
-      : trimmed;
+    const attachmentLine = attachments.length
+      ? `\n\nBijlagen: ${attachments.map((item) => item.name).join(", ")}`
+      : "";
+    const userContent = `${trimmed || "Ik deel hierbij een paar bestanden."}${attachmentLine}`;
     const nextMessages = [...messages, { role: "user" as const, content: userContent }];
 
     setMessages(nextMessages);
@@ -141,14 +167,14 @@ export default function Home() {
         body: JSON.stringify({
           messages: nextMessages,
           sourceContexts: understanding?.sources ?? [],
-          attachment,
+          attachments,
         }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Er ging iets mis.");
       setMessages([...nextMessages, { role: "assistant", content: data.reply }]);
       setUnderstanding(data.understanding);
-      clearAttachment();
+      clearAttachments();
     } catch (error) {
       console.error(error);
       setMessages([...nextMessages, { role: "assistant", content: "Er ging iets mis. Probeer het nog eens." }]);
@@ -190,9 +216,7 @@ export default function Home() {
         <section className="intro" style={{ maxWidth: 760 }}>
           <p className="eyebrow">Lumivey</p>
           <h1>Mooi. Dan gaan we hem echt maken.</h1>
-          <p className="lead">
-            De richting staat. Vanaf hier bewaren we de case als echte klantcase, verifiëren we wat al uit gesprek, website en assets bekend is en vullen we alleen aan wat nog ontbreekt.
-          </p>
+          <p className="lead">De richting staat. Vanaf hier bewaren we de case als echte klantcase, verifiëren we wat al uit gesprek, website en assets bekend is en vullen we alleen aan wat nog ontbreekt.</p>
           <div className="preview-actions">
             <button onClick={() => { window.location.href = "/prepare"; }}>Account en gegevens controleren</button>
           </div>
@@ -209,21 +233,13 @@ export default function Home() {
           <p className="eyebrow">Eerste impressie</p>
           <h1>{impression.headline || "Dit is wat ik voor me zie."}</h1>
           <p className="lead">Geen definitieve website. Wel mijn beeld van wat ik tot nu toe van je bedrijf heb begrepen.</p>
-
           <div style={{ margin: "32px auto", maxWidth: 780 }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={impression.imageDataUrl}
-              alt="Lumivey artist impression"
-              style={{ width: "100%", height: "auto", borderRadius: 20, display: "block", boxShadow: "0 20px 70px rgba(0,0,0,.12)" }}
-            />
+            <img src={impression.imageDataUrl} alt="Lumivey artist impression" style={{ width: "100%", height: "auto", borderRadius: 20, display: "block", boxShadow: "0 20px 70px rgba(0,0,0,.12)" }} />
           </div>
-
           <div className="preview-buttons" style={{ justifyContent: "center" }}>
             <button onClick={approveImpression}>Deze klopt — ga door</button>
             <button onClick={() => setImpression(null)}>Dit wil ik aanpassen</button>
           </div>
-
           <p className="quiet">De vraag is niet of elk detail af is. De vraag is: heb ik je goed begrepen?</p>
         </section>
       </main>
@@ -264,6 +280,7 @@ export default function Home() {
             ref={fileInputRef}
             type="file"
             hidden
+            multiple
             accept="image/jpeg,image/png,image/webp,application/pdf,.doc,.docx,.txt,.md"
             onChange={handleFileChange}
           />
@@ -271,24 +288,24 @@ export default function Home() {
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             <button
               type="button"
-              aria-label="Bestand toevoegen"
-              title="Bestand toevoegen"
+              aria-label="Bestanden toevoegen"
+              title="Bestanden toevoegen"
               onClick={() => fileInputRef.current?.click()}
               disabled={loading}
               style={{ width: 38, height: 38, padding: 0, borderRadius: 999, fontSize: 24, lineHeight: 1 }}
             >
               +
             </button>
-            {attachment && (
-              <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14 }}>
+            {attachments.map((attachment) => (
+              <div key={attachment.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14 }}>
                 <span>{attachment.name}</span>
-                <button type="button" aria-label="Bestand verwijderen" onClick={clearAttachment} disabled={loading} style={{ padding: 0, background: "transparent", color: "inherit", border: 0, fontSize: 18 }}>×</button>
+                <button type="button" aria-label={`${attachment.name} verwijderen`} onClick={() => removeAttachment(attachment.id)} disabled={loading} style={{ padding: 0, background: "transparent", color: "inherit", border: 0, fontSize: 18 }}>×</button>
               </div>
-            )}
+            ))}
           </div>
 
           {attachmentError && <p className="quiet">{attachmentError}</p>}
-          <button type="submit" disabled={loading || (!input.trim() && !attachment)}>
+          <button type="submit" disabled={loading || (!input.trim() && attachments.length === 0)}>
             {loading ? "Even denken..." : "Verder"}
           </button>
         </form>
