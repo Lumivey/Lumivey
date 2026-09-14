@@ -24,6 +24,19 @@ Deze regels zijn harde kwaliteits- en gedragsgrenzen. Een nieuwe chat, tool, gen
 - Referentiepreviews zijn kwaliteitsnorm, niet vrijblijvende inspiratie.
 - Michael is de Golden Path voor gesprek → betekenis → Preview → v0 → website.
 
+### Persoonlijk anker op de homepage
+
+- Een Lumivey-preview bevat op de homepage in principe zowel een **professioneel anker** als een **persoonlijk herkenningsanker**.
+- Het professionele anker maakt duidelijk wat de ondernemer kan, doet en voor welk soort vraagstuk hij of zij relevant is.
+- Het persoonlijke anker maakt voelbaar wie de mens achter de onderneming is en waarom deze onderneming niet uitwisselbaar is met een concurrent.
+- Het persoonlijke anker is standaard gewenst omdat dit de kans op herkenning en WoW vergroot, **tenzij de ondernemer in Discovery expliciet aangeeft dit niet te willen of er een duidelijke inhoudelijke/ethische reden tegen is**.
+- Een persoonlijk anker hoeft niet altijd een portret te zijn. Het kan bijvoorbeeld bestaan uit: voornamen, een persoonlijke uitspraak, een betekenisvol object, een kleine scène, een subtiel verhaal, een herkenbare handtekening, een hobby/ritueel dat echt iets zegt over de persoon, of een sfeerbeeld dat aantoonbaar uit Discovery voortkomt.
+- De vorm moet passen bij de ondernemer. Geen standaardtruc herhalen: wat bij Michael werkt (bijvoorbeeld een handtekening) kan bij Adrie te nadrukkelijk zijn; bij De Hippe Knip kunnen juist de voornamen van de twee dames logisch op de homepage staan.
+- Een persoonlijke hobby of privé-interesse mag alleen als persoonlijk herkenningsanker worden gebruikt als Discovery daar voldoende betekenis voor geeft. Nooit presenteren als dienst of zakelijke claim wanneer dat niet klopt.
+- De persoonlijke laag mag de professionele geloofwaardigheid niet verdringen. De ideale Preview combineert **mens + vakwereld + Lumivey-interpretatie**.
+- Preview-check vóór goedkeuring: als bedrijfsnaam en beroep worden afgedekt, blijft de ondernemer dan nog herkenbaar als deze specifieke ondernemer? Zo niet, dan is de persoonlijke vertaling waarschijnlijk te generiek.
+- Bij twijfel: toon de persoonlijke interpretatie in de Preview als hypothese. De ondernemer mag die na de Preview corrigeren of afwijzen; een eerder expliciet uitgesproken grens wordt echter nooit genegeerd.
+
 ## Beeldgebruik
 
 - Echte beelden gaan vóór AI-vervangers wanneer ze geschikt en beschikbaar zijn.
