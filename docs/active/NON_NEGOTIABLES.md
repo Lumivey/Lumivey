@@ -37,6 +37,18 @@ Deze regels zijn harde kwaliteits- en gedragsgrenzen. Een nieuwe chat, tool, gen
 - Preview-check vóór goedkeuring: als bedrijfsnaam en beroep worden afgedekt, blijft de ondernemer dan nog herkenbaar als deze specifieke ondernemer? Zo niet, dan is de persoonlijke vertaling waarschijnlijk te generiek.
 - Bij twijfel: toon de persoonlijke interpretatie in de Preview als hypothese. De ondernemer mag die na de Preview corrigeren of afwijzen; een eerder expliciet uitgesproken grens wordt echter nooit genegeerd.
 
+### Kalibratie van de persoonlijke laag
+
+- **Niet iedere ondernemer krijgt evenveel persoonlijke ruimte.** De intensiteit hangt af van de rol van het persoonlijke goudklompje in identiteit, aanbod en onderscheid.
+- **Dominant persoonlijk** wanneer het persoonlijke element direct onderdeel is van aanbod, oorsprong of positionering. Referentie: Michael.
+- **Subtiel persoonlijk** wanneer het persoonlijke element niet het aanbod is, maar wel veel zegt over karakter of werkwijze. Eén klein betekenisvol moment kan genoeg zijn. Referentie: Adrie.
+- **Geen extra privélaag forceren** wanneer de onderneming zelf al sterk karakter en menselijkheid uitstraalt. Referentie: De Hippe Knip.
+- Persoonlijkheid is niet hetzelfde als hobby. Een hobby is alleen relevant als hij aantoonbaar iets betekenisvols zegt over de ondernemer.
+- Kies altijd het **kleinste effectieve persoonlijke gebaar**: één sterke zin, scène of sfeeranker is beter dan meerdere decoratieve herhalingen.
+- Een persoonlijk motief mag nooit vaker of dominanter worden gebruikt dan inhoudelijk nodig is; een hobbyprop die de professionele propositie begint te overheersen is een kwaliteitsfout.
+- De homepage hoeft niet alle persoonlijke diepte te dragen; verdieping kan naar een Over-pagina.
+- Vaste interne richtlijn: `docs/active/PERSONAL_LAYER.md`.
+
 ## Beeldgebruik
 
 - Echte beelden gaan vóór AI-vervangers wanneer ze geschikt en beschikbaar zijn.
