@@ -57,7 +57,11 @@ function pageFromPayload(item: any, fallbackUrl: string): WebsiteResearchPage | 
   };
 }
 
-async function scrapePage(url: string, apiKey: string): Promise<WebsiteResearchPage> {
+async function scrapePage(
+  url: string,
+  apiKey: string,
+  onlyMainContent = true
+): Promise<WebsiteResearchPage> {
   const endpoint = process.env.FIRECRAWL_API_URL || "https://api.firecrawl.dev/v2/scrape";
   const response = await fetch(endpoint, {
     method: "POST",
@@ -68,7 +72,7 @@ async function scrapePage(url: string, apiKey: string): Promise<WebsiteResearchP
     body: JSON.stringify({
       url,
       formats: ["markdown", "links", "images", "branding"],
-      onlyMainContent: true,
+      onlyMainContent,
     }),
     cache: "no-store",
   });
@@ -114,7 +118,7 @@ function resultFromPages(
 
 function rankFallbackLinks(rootUrl: string, links: string[]): string[] {
   const root = new URL(rootUrl);
-  const priority = /(adrie|over|about|contact|kennis|referent|artikel|nieuws|magazine|diploma|certif|iso|assetmanager|service|dienst)/i;
+  const priority = /(adrie|over|about|contact|kennis|referent|artikel|nieuws|magazine|diploma|certif|iso|assetmanager|service|dienst|team|profiel|profile)/i;
   const sameSite = uniqueStrings(links)
     .map((link) => {
       try {
@@ -136,7 +140,48 @@ function rankFallbackLinks(rootUrl: string, links: string[]): string[] {
     .sort((a, b) => b.priority - a.priority || a.index - b.index)
     .map((item) => item.url)
     .filter((url) => url !== rootUrl)
-    .slice(0, 10);
+    .slice(0, 12);
+}
+
+async function enrichCriticalPages(
+  rootUrl: string,
+  pages: WebsiteResearchPage[],
+  apiKey: string
+): Promise<WebsiteResearchPage[]> {
+  const existingUrls = new Set(pages.map((page) => page.url.replace(/\/$/, "")));
+  const discoveredLinks = uniqueStrings(pages.flatMap((page) => page.links));
+  const targets = rankFallbackLinks(rootUrl, discoveredLinks)
+    .filter((target) => !existingUrls.has(target.replace(/\/$/, "")))
+    .slice(0, 6);
+
+  const extras = (
+    await Promise.all(
+      targets.map(async (target) => {
+        try {
+          return await scrapePage(target, apiKey, true);
+        } catch (error) {
+          console.warn(`Verrijkingsscrape mislukt voor ${target}:`, error);
+          return null;
+        }
+      })
+    )
+  ).filter((page): page is WebsiteResearchPage => Boolean(page));
+
+  // Firecrawl's onlyMainContent intentionally strips repeated chrome/footer content.
+  // Run one site-shell scrape so contact details and other site-wide facts are not lost.
+  let shellPage: WebsiteResearchPage | null = null;
+  try {
+    const shell = await scrapePage(rootUrl, apiKey, false);
+    shellPage = {
+      ...shell,
+      title: `${shell.title || rootUrl} — sitebrede bronlaag`,
+      url: `${rootUrl.replace(/\/$/, "")}/#site-shell`,
+    };
+  } catch (error) {
+    console.warn("Sitebrede bronlaag kon niet worden opgehaald:", error);
+  }
+
+  return [...pages, ...extras, ...(shellPage ? [shellPage] : [])];
 }
 
 async function targetedFallback(
@@ -159,8 +204,13 @@ async function targetedFallback(
     )
   ).filter((page): page is WebsiteResearchPage => Boolean(page));
 
-  const pages = [homepage, ...extraPages];
-  return resultFromPages(url, pages, pages.length > 1 ? "targeted-fallback" : "single-page-fallback", fallbackReason);
+  const enriched = await enrichCriticalPages(url, [homepage, ...extraPages], apiKey);
+  return resultFromPages(
+    url,
+    enriched,
+    enriched.length > 1 ? "targeted-fallback" : "single-page-fallback",
+    fallbackReason
+  );
 }
 
 async function crawlWebsite(url: string, apiKey: string): Promise<WebsiteResearchResult> {
@@ -228,7 +278,8 @@ async function crawlWebsite(url: string, apiKey: string): Promise<WebsiteResearc
     throw new Error("Firecrawl crawl leverde geen bruikbare websitepagina's op.");
   }
 
-  return resultFromPages(url, pages, "full-crawl", undefined, jobId);
+  const enrichedPages = await enrichCriticalPages(url, pages, apiKey);
+  return resultFromPages(url, enrichedPages, "full-crawl", undefined, jobId);
 }
 
 export async function researchWebsite(inputUrl: string): Promise<WebsiteResearchResult> {
