@@ -12,7 +12,8 @@ type Result = {
   purpose: string;
   note: string;
   evaluation: { overall: Status; diagnosis: string; checks: Check[] };
-  previewImpression: { imageDataUrl: string; headline?: string; rationale?: string[] };
+  previewImpression?: { imageDataUrl: string; headline?: string; rationale?: string[] } | null;
+  previewError?: string;
   replay: Turn[];
   sourceContexts: unknown[];
   understanding: unknown;
@@ -28,6 +29,22 @@ const ADRIE_TURNS = [
   "Een voorbeeld: bij een grote change heb ik de directie laten zien wat de echte impact was op mensen en budgetten. Daardoor hebben ze besloten de verandering over meerdere jaren te spreiden in plaats van in één keer door te drukken.",
   "Ik wil vooral benaderd worden voor strategische assetmanagementvraagstukken. Mail, telefoon en LinkedIn zijn prima, maar het liefst gewoon eerst een persoonlijk gesprek of koffie.",
 ];
+
+function errorMessage(value: unknown): string {
+  if (value instanceof Error) return value.message;
+  if (typeof value === "string") return value;
+  if (value && typeof value === "object") {
+    const object = value as Record<string, unknown>;
+    if (typeof object.message === "string") return object.message;
+    if (typeof object.error === "string") return object.error;
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(value);
+    }
+  }
+  return String(value || "Onbekende fout");
+}
 
 async function readJsonResponse(response: Response) {
   const text = await response.text();
@@ -68,7 +85,7 @@ export default function AdrieRegressionPage() {
             cache: "no-store",
           });
           const data = await readJsonResponse(response);
-          if (!response.ok) throw new Error(data?.error || `Adrie replay stopte bij beurt ${index + 1}.`);
+          if (!response.ok) throw new Error(errorMessage(data?.error || `Adrie replay stopte bij beurt ${index + 1}.`));
 
           const assistant = String(data.reply || "");
           messages.push({ role: "assistant", content: assistant });
@@ -89,14 +106,17 @@ export default function AdrieRegressionPage() {
           cache: "no-store",
         });
         const finalData = await readJsonResponse(finalizeResponse);
-        if (!finalizeResponse.ok) throw new Error(finalData?.error || "Adrie-finalisatie kon niet worden uitgevoerd.");
+        if (!finalizeResponse.ok) {
+          const stage = finalData?.stage ? ` (${finalData.stage})` : "";
+          throw new Error(`${errorMessage(finalData?.error || "Adrie-finalisatie kon niet worden uitgevoerd.")}${stage}`);
+        }
 
         if (!cancelled) {
           setResult(finalData);
           setProgress("Gereed");
         }
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : "Adrie-regressietest kon niet worden uitgevoerd.");
+        if (!cancelled) setError(errorMessage(e));
       }
     }
 
@@ -112,7 +132,12 @@ export default function AdrieRegressionPage() {
         <p className="lead">Bestaande website als bron + vastgelegde referentie-inhoud → Discovery → Understanding → creatieve richting → Preview. Foto&apos;s volgen als aparte visuele laag.</p>
 
         {!result && !error && <p>{progress}</p>}
-        {error && <p>{error}</p>}
+        {error && (
+          <div style={{ marginTop: 24, padding: 18, border: "1px solid #b8b8b0", borderRadius: 14 }}>
+            <p className="eyebrow">Test stopte</p>
+            <p>{error}</p>
+          </div>
+        )}
 
         {result && (
           <>
@@ -125,15 +150,25 @@ export default function AdrieRegressionPage() {
               ))}
             </div>
 
-            <div style={{ margin: "32px 0" }}>
-              <p className="eyebrow">Artist impression — nog zonder aangeleverde Adrie-foto&apos;s</p>
-              <p>Hier beoordelen we eerst of het systeem Adrie inhoudelijk en creatief onderscheidend begrijpt. Zodra de echte foto&apos;s er zijn, worden die de volgende visuele bronlaag.</p>
-              <img
-                src={result.previewImpression.imageDataUrl}
-                alt="Adrie AssetPouwer artist impression"
-                style={{ width: "100%", height: "auto", display: "block", borderRadius: 18, border: "1px solid #d8d8d2" }}
-              />
-            </div>
+            {result.previewError && (
+              <div style={{ margin: "28px 0", padding: 18, border: "1px solid #b8b8b0", borderRadius: 14 }}>
+                <p className="eyebrow">Preview-substap</p>
+                <p>Discovery, Understanding en creatieve richting zijn wel beoordeeld. Alleen de beeldpreview is technisch niet voltooid:</p>
+                <p>{result.previewError}</p>
+              </div>
+            )}
+
+            {result.previewImpression?.imageDataUrl && (
+              <div style={{ margin: "32px 0" }}>
+                <p className="eyebrow">Artist impression — nog zonder aangeleverde Adrie-foto&apos;s</p>
+                <p>Hier beoordelen we eerst of het systeem Adrie inhoudelijk en creatief onderscheidend begrijpt. Zodra de echte foto&apos;s er zijn, worden die de volgende visuele bronlaag.</p>
+                <img
+                  src={result.previewImpression.imageDataUrl}
+                  alt="Adrie AssetPouwer artist impression"
+                  style={{ width: "100%", height: "auto", display: "block", borderRadius: 18, border: "1px solid #d8d8d2" }}
+                />
+              </div>
+            )}
 
             {result.replay.map((turn) => (
               <article key={turn.turn} style={{ margin: "30px 0", paddingBottom: 28, borderBottom: "1px solid #deded8" }}>
