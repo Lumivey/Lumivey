@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { researchWebsite } from "@/lib/lumivey/research-website";
 import { analyzeWebsiteSource } from "@/lib/lumivey/analyze-website-source";
 import { extractUnderstanding } from "@/lib/lumivey/extract-understanding";
-import { SourceContext } from "@/lib/lumivey/source-context";
+import { SourceContext, UploadedSourceInput } from "@/lib/lumivey/source-context";
 import { ArtistImpression, WebsiteAsset, WebsiteBrief, WebsiteFact, checkBuildReadiness } from "@/lib/lumivey/primary-flow";
 import { createV0Build } from "@/lib/lumivey/v0-adapter";
 import { LumiveyUnderstanding, SourceBackedCandidate } from "@/lib/lumivey/understanding";
@@ -13,6 +13,29 @@ const TARGET_URL = "https://www.assetpouwer.nl";
 
 function unique(values: string[]): string[] {
   return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
+}
+
+function uploadedPhotoSources(attachments: UploadedSourceInput[]): SourceContext[] {
+  return attachments.map((attachment, index) => ({
+    type: "image",
+    sourceId: attachment.id || `adrie-build-photo-${index + 1}`,
+    name: attachment.name || `Adrie foto ${index + 1}`,
+    mimeType: attachment.mimeType || "image/jpeg",
+    facts: [],
+    goldCandidates: [],
+    doors: [],
+    uncertainties: [],
+    assets: [
+      {
+        kind: "image",
+        name: attachment.name || `Adrie foto ${index + 1}`,
+        dataUrl: attachment.dataUrl,
+        origin: "uploaded",
+        status: "source-only",
+        evidence: "Door Adrie aangeleverde echte foto; opnieuw gecomprimeerd voor de technische v0-overdracht.",
+      },
+    ],
+  }));
 }
 
 function sourceAssets(sources: SourceContext[]): WebsiteAsset[] {
@@ -31,7 +54,7 @@ function sourceAssets(sources: SourceContext[]): WebsiteAsset[] {
       validationStatus: asset.origin === "uploaded" ? "approved" : "needs-owner-validation",
       productionInstruction:
         asset.origin === "uploaded"
-          ? "Gebruik dit echte beeld alleen waar het de goedgekeurde Preview versterkt. De aangeleverde foto's zijn een bronpool, geen quota. Houd Adrie herkenbaar en crop hoofd/gezicht niet onbedoeld af. Fotografie/camera is persoonlijk en geen dienst."
+          ? "Gebruik dit echte beeld alleen waar het de goedgekeurde Preview versterkt. De aangeleverde foto's zijn een bronpool, geen quota. Houd Adrie herkenbaar en crop hoofd/gezicht niet onbedoeld af. Fotografie/camera is persoonlijk en geen dienst. Gebruik een geloofwaardige crop van het echte beeld; reconstrueer geen losse handen, armen of andere lichaamsdelen met AI."
           : "Dit beeld komt uit de bestaande website en is bronmateriaal. Niet als productiebeeld gebruiken zonder expliciete validatie.",
     }));
 
@@ -84,7 +107,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const replay = Array.isArray(body?.replay) ? body.replay : [];
-    const priorSources: SourceContext[] = Array.isArray(body?.sourceContexts) ? body.sourceContexts : [];
+    const attachments: UploadedSourceInput[] = Array.isArray(body?.attachments) ? body.attachments : [];
     const approvedPreview = body?.previewImpression as ArtistImpression | undefined;
     const evaluation = body?.evaluation;
 
@@ -94,23 +117,27 @@ export async function POST(request: Request) {
     if (evaluation?.overall !== "PASS") {
       return NextResponse.json({ error: "Adrie Preview is niet als PASS goedgekeurd." }, { status: 409 });
     }
+    if (attachments.length === 0) {
+      return NextResponse.json({ error: "De echte aangeleverde Adrie-foto's ontbreken in de v0-overdracht." }, { status: 400 });
+    }
 
     // Re-crawl at build time so the Website Brief uses the repaired, richer source layer.
+    // The browser intentionally sends only compact image attachments; the full previous
+    // SourceContext/Understanding is not posted again because that made the serverless
+    // request exceed the platform payload limit.
     const research = await researchWebsite(TARGET_URL);
     const websiteContext = await analyzeWebsiteSource(research);
-    const nonWebsiteSources = priorSources.filter((source) => source.type !== "website");
-    const sources = [websiteContext, ...nonWebsiteSources];
+    const photoSources = uploadedPhotoSources(attachments);
+    const sources = [websiteContext, ...photoSources];
 
     const messages = replay.flatMap((turn: any) => [
       { role: "user" as const, content: String(turn?.user || "") },
       { role: "assistant" as const, content: String(turn?.assistant || "") },
     ]);
-    if (nonWebsiteSources.some((source) => source.type === "image")) {
-      messages.push({
-        role: "user" as const,
-        content: "De aangeleverde foto's zijn echte foto's van mij en vormen een bronpool. Kies alleen wat echt nodig is. Fotografie is persoonlijk en geen dienst.",
-      });
-    }
+    messages.push({
+      role: "user" as const,
+      content: "De aangeleverde foto's zijn echte foto's van mij en vormen een bronpool. Kies alleen wat echt nodig is. Fotografie is persoonlijk en geen dienst. Gebruik echte foto's geloofwaardig: geen losse of gegenereerde lichaamsdelen wanneer de bronfoto goed te croppen is.",
+    });
 
     const understanding = await extractUnderstanding(messages, sources);
     const sourceFacts = websiteContext.facts.map((fact) => fact.statement);
@@ -140,9 +167,10 @@ export async function POST(request: Request) {
         "De goedgekeurde Preview is design authority. Benader de compositie, sfeer, hiërarchie en emotionele richting zo dicht mogelijk.",
         "Behoud de mix van rustige Adrie en technische geloofwaardigheid; maak er geen generieke consultantsite van.",
         "Gebruik bronrijkdom uit de bestaande site selectief: relevante professionele goudklompjes mogen niet verdwijnen, maar de oude site is geen ontwerpblauwdruk.",
-        "Fotografie/camera is een persoonlijk herkenningsanker, geen dienst. Laat dit motief niet domineren; normaal maximaal één of twee homepage-momenten.",
+        "Fotografie/camera is een persoonlijk herkenningsanker, geen dienst. Laat dit motief niet domineren; normaal maximaal één betekenisvol homepage-moment.",
         "Aangeleverde foto's zijn een bronpool, geen quota. Gebruik niet automatisch alle beelden.",
         "Echte Adrie-foto's gaan vóór AI-vervangers. Verander zijn gezicht niet en crop hoofd/gezicht niet onbedoeld af.",
+        "Geen zwevende handen, armen of andere losse lichaamsdelen. Als een aangeleverde echte foto de gewenste scène bevat, crop die foto geloofwaardig in plaats van menselijke anatomie met AI te reconstrueren.",
         "Gebruik alleen geverifieerde contactgegevens. Als e-mail niet betrouwbaar uit de bron komt, laat die weg in plaats van te verzinnen.",
         "Het change-voorbeeld moet herkenbaar maken dat impact op mensen en budgetten zichtbaar werd en dat fasering over meerdere jaren mogelijk werd.",
         "Vermijd mechanisch donker/licht/donker/licht stapelen wanneer een natuurlijker ritme de Preview beter benadert.",
@@ -164,7 +192,7 @@ export async function POST(request: Request) {
         pageCount: research.pages?.length || 0,
         websiteFacts: websiteContext.facts.length,
         goldCandidates: websiteContext.goldCandidates.length,
-        uploadedRealImages: nonWebsiteSources.flatMap((source) => source.assets || []).filter((asset) => asset.origin === "uploaded").length,
+        uploadedRealImages: attachments.length,
       },
     });
   } catch (error) {
