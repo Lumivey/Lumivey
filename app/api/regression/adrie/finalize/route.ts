@@ -47,11 +47,20 @@ Kern die niet mag verdampen:
 - Adrie is geen generieke consultant; hij verbindt strategie met operatie.
 - Zijn technische bedding is elektrotechniek, industriële automatisering en meet- en regeltechniek, vooral in industrie en infra.
 - "Poten in de klei" is belangrijk: buiten gewerkt, fabrieken opgestart, dus uitvoerbaarheid telt.
-- Hij is rustig en luistert eerst; fotografie/compositie is een menselijke herkenningslaag die hij zelf verbindt aan zijn manier van werken.
+- Hij is rustig en luistert eerst; fotografie/compositie en zijn rustige zondagochtend in de natuur zijn een menselijke herkenningslaag die hij zelf verbindt aan zijn manier van werken.
 - Het voorbeeld van de grote change laat zien dat hij consequenties voor mensen en budgetten zichtbaar maakt en besluitvorming helpt faseren.
 - De website moet vertrouwen, rust, overzicht en senioriteit voelen, zonder corporate consultant-clichés.
 - De bestaande website is bronmateriaal, niet de ontwerpwaarheid.
+- Relevante bevestigde broninformatie, zoals contactgegevens en onderscheidende professionele context, mag niet zonder reden verdwijnen.
 - Geen nieuwe feiten verzinnen.
+
+LUMIVEY PREVIEW-NORM
+- Een technisch nette of sectorspecifieke consultant-site is NIET automatisch PASS.
+- De homepage hoort normaal zowel een professioneel anker als een persoonlijk herkenningsanker te bevatten, tenzij Discovery expliciet zegt dat Adrie dat niet wil.
+- Voor Adrie moet zijn rustige observerende/fotografische kant zichtbaar invloed hebben op beeldtaal, sfeer of compositie; alleen een technische installatie in rustig licht is onvoldoende als de persoonlijke laag verder ontbreekt.
+- Fotografie/natuur mag niet als dienstverlening worden gepresenteerd.
+- De ideale richting is een geloofwaardige combinatie van persoonlijke rust/observatie en technische assetmanagement-credibiliteit.
+- PASS op preview-specificity vereist dat de preview duidelijk meer is dan een goede website voor een ervaren assetmanagementconsultant.
 
 Als previewAvailable=false, beoordeel preview-specificity uitsluitend op de creatieve richting en zet in de reden expliciet dat de beeldpreview technisch niet beschikbaar was. Laat een technisch previewprobleem niet automatisch de Discovery/Understanding-beoordeling vervuilen.
 
@@ -65,6 +74,8 @@ Geef uitsluitend JSON terug:
     {"name":"calm-observer-photography","status":"PASS|WARN|FAIL","reason":""},
     {"name":"decision-impact-example","status":"PASS|WARN|FAIL","reason":""},
     {"name":"source-not-design-truth","status":"PASS|WARN|FAIL","reason":""},
+    {"name":"source-richness","status":"PASS|WARN|FAIL","reason":""},
+    {"name":"personal-homepage-anchor","status":"PASS|WARN|FAIL","reason":""},
     {"name":"preview-specificity","status":"PASS|WARN|FAIL","reason":""}
   ]
 }
@@ -114,8 +125,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       case: "Adrie Pouwer / AssetPouwer",
-      purpose: "Nieuwe contrastcase na Michael: broninterpretatie, menselijke diepte en creatieve richting voor een zakelijke B2B-adviseur.",
-      note: "Deze test gebruikt een gecontroleerde reconstructie van de eerder vastgelegde Adrie-referentie-inhoud plus de bestaande website als bron. Foto-assets worden in een volgende laag toegevoegd zodra beschikbaar.",
+      purpose: "Contrastcase na Michael: broninterpretatie, menselijke diepte en creatieve richting voor een zakelijke B2B-adviseur.",
+      note: "Deze test gebruikt een gecontroleerde reconstructie van de eerder vastgelegde Adrie-referentie-inhoud plus de bestaande website als bron. De Preview moet professionele technische geloofwaardigheid combineren met een persoonlijke herkenningslaag.",
       replay,
       sourceContexts,
       understanding,
