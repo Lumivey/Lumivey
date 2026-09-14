@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import { NextResponse } from "next/server";
 import { createArtDirection } from "@/lib/lumivey/art-direction";
 import { createSiteDescription } from "@/lib/lumivey/site-description";
+import { createLumiveyPreview } from "@/lib/lumivey/create-preview";
 
 export const maxDuration = 300;
 
@@ -89,30 +90,11 @@ export async function POST(request: Request) {
       createSiteDescription(understanding),
     ]);
 
-    const base = new URL(request.url).origin;
     let previewImpression: any = null;
     let previewError = "";
 
     try {
-      const previewResponse = await fetch(`${base}/api/preview`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ understanding }),
-        cache: "no-store",
-      });
-
-      const previewText = await previewResponse.text();
-      let previewData: any;
-      try {
-        previewData = JSON.parse(previewText);
-      } catch {
-        throw new Error(`Preview-route gaf geen JSON terug: ${previewText.slice(0, 180)}`);
-      }
-
-      if (!previewResponse.ok || !previewData?.impression?.imageDataUrl) {
-        throw new Error(errorMessage(previewData?.error || "Adrie Preview kon niet worden gegenereerd."));
-      }
-
+      const previewData = await createLumiveyPreview(understanding);
       previewImpression = previewData.impression;
     } catch (error) {
       previewError = errorMessage(error);
