@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 type Audit = {
   source: string;
-  mode: "full-crawl" | "single-page-fallback";
+  mode: "full-crawl" | "targeted-fallback" | "single-page-fallback";
   crawlJobId?: string | null;
   fallbackReason?: string | null;
   pageCount: number;
@@ -12,6 +12,12 @@ type Audit = {
   signals: Array<{ key: string; label: string; found: boolean; pages: string[] }>;
   summary: { found: number; total: number; missing: string[] };
 };
+
+function modeLabel(mode: Audit["mode"]) {
+  if (mode === "full-crawl") return "VOLLEDIGE CRAWL";
+  if (mode === "targeted-fallback") return "GERICHTE FALLBACK OP INTERNE PAGINA'S";
+  return "ALLEEN HOMEPAGE-FALLBACK";
+}
 
 export default function AdrieSourceAuditPage() {
   const [audit, setAudit] = useState<Audit | null>(null);
@@ -38,13 +44,13 @@ export default function AdrieSourceAuditPage() {
         <h1>AssetPouwer — wat heeft Firecrawl werkelijk gezien?</h1>
         <p className="lead">Deze pagina test alleen de bronlaag. Geen Discovery, geen Preview en geen v0.</p>
 
-        {!audit && !error && <p>Volledige AssetPouwer-site wordt nu opnieuw onderzocht…</p>}
+        {!audit && !error && <p>AssetPouwer-site wordt nu opnieuw onderzocht…</p>}
         {error && <div style={{ padding: 18, border: "1px solid #b8b8b0", borderRadius: 14 }}><strong>Audit stopte:</strong> {error}</div>}
 
         {audit && (
           <>
             <div style={{ margin: "28px 0", padding: 22, border: "1px solid #d8d8d2", borderRadius: 18 }}>
-              <p><strong>Firecrawl-modus:</strong> {audit.mode === "full-crawl" ? "VOLLEDIGE CRAWL" : "ALLEEN HOMEPAGE-FALLBACK"}</p>
+              <p><strong>Firecrawl-modus:</strong> {modeLabel(audit.mode)}</p>
               <p><strong>Aantal opgehaalde pagina's:</strong> {audit.pageCount}</p>
               <p><strong>Gezochte Adrie-signalen gevonden:</strong> {audit.summary.found}/{audit.summary.total}</p>
               {audit.fallbackReason && <p><strong>Waarom fallback:</strong> {audit.fallbackReason}</p>}
