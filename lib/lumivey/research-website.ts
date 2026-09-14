@@ -7,7 +7,7 @@ export type WebsiteResearchPage = {
   branding?: unknown;
 };
 
-export type WebsiteResearchMode = "full-crawl" | "single-page-fallback";
+export type WebsiteResearchMode = "full-crawl" | "targeted-fallback" | "single-page-fallback";
 
 export type WebsiteResearchResult = {
   url: string;
@@ -57,11 +57,7 @@ function pageFromPayload(item: any, fallbackUrl: string): WebsiteResearchPage | 
   };
 }
 
-async function scrapeSinglePage(
-  url: string,
-  apiKey: string,
-  fallbackReason?: string
-): Promise<WebsiteResearchResult> {
+async function scrapePage(url: string, apiKey: string): Promise<WebsiteResearchPage> {
   const endpoint = process.env.FIRECRAWL_API_URL || "https://api.firecrawl.dev/v2/scrape";
   const response = await fetch(endpoint, {
     method: "POST",
@@ -87,18 +83,84 @@ async function scrapeSinglePage(
   if (!page) {
     throw new Error("Firecrawl leverde geen bruikbare website-inhoud op.");
   }
+  return page;
+}
+
+function resultFromPages(
+  rootUrl: string,
+  pages: WebsiteResearchPage[],
+  mode: WebsiteResearchMode,
+  fallbackReason?: string,
+  crawlJobId?: string
+): WebsiteResearchResult {
+  const markdown = pages
+    .map((page, index) => `\n\n===== PAGINA ${index + 1}: ${page.title || page.url} =====\nURL: ${page.url}\n\n${page.markdown}`)
+    .join("")
+    .trim();
 
   return {
-    url,
-    title: page.title,
-    markdown: page.markdown,
-    links: page.links,
-    images: page.images,
-    branding: page.branding,
-    pages: [page],
-    mode: "single-page-fallback",
+    url: rootUrl,
+    title: pages[0]?.title,
+    markdown,
+    links: uniqueStrings(pages.flatMap((page) => page.links)),
+    images: uniqueStrings(pages.flatMap((page) => page.images)),
+    branding: pages.find((page) => page.branding)?.branding,
+    pages,
+    mode,
     fallbackReason,
+    crawlJobId,
   };
+}
+
+function rankFallbackLinks(rootUrl: string, links: string[]): string[] {
+  const root = new URL(rootUrl);
+  const priority = /(adrie|over|about|contact|kennis|referent|artikel|nieuws|magazine|diploma|certif|iso|assetmanager|service|dienst)/i;
+  const sameSite = uniqueStrings(links)
+    .map((link) => {
+      try {
+        return new URL(link, rootUrl);
+      } catch {
+        return null;
+      }
+    })
+    .filter((url): url is URL => Boolean(url))
+    .filter((url) => url.hostname.replace(/^www\./, "") === root.hostname.replace(/^www\./, ""))
+    .filter((url) => /^https?:$/.test(url.protocol))
+    .map((url) => {
+      url.hash = "";
+      return url.toString();
+    });
+
+  return sameSite
+    .map((url, index) => ({ url, index, priority: priority.test(url) ? 1 : 0 }))
+    .sort((a, b) => b.priority - a.priority || a.index - b.index)
+    .map((item) => item.url)
+    .filter((url) => url !== rootUrl)
+    .slice(0, 10);
+}
+
+async function targetedFallback(
+  url: string,
+  apiKey: string,
+  fallbackReason: string
+): Promise<WebsiteResearchResult> {
+  const homepage = await scrapePage(url, apiKey);
+  const targets = rankFallbackLinks(url, homepage.links);
+  const extraPages = (
+    await Promise.all(
+      targets.map(async (target) => {
+        try {
+          return await scrapePage(target, apiKey);
+        } catch (error) {
+          console.warn(`Gerichte fallback scrape mislukt voor ${target}:`, error);
+          return null;
+        }
+      })
+    )
+  ).filter((page): page is WebsiteResearchPage => Boolean(page));
+
+  const pages = [homepage, ...extraPages];
+  return resultFromPages(url, pages, pages.length > 1 ? "targeted-fallback" : "single-page-fallback", fallbackReason);
 }
 
 async function crawlWebsite(url: string, apiKey: string): Promise<WebsiteResearchResult> {
@@ -131,11 +193,11 @@ async function crawlWebsite(url: string, apiKey: string): Promise<WebsiteResearc
     throw new Error("Firecrawl crawl gaf geen job-id terug.");
   }
 
-  const deadline = Date.now() + 75_000;
+  const deadline = Date.now() + 120_000;
   let payload: any = null;
 
   while (Date.now() < deadline) {
-    await new Promise((resolve) => setTimeout(resolve, 1200));
+    await new Promise((resolve) => setTimeout(resolve, 1500));
 
     const statusResponse = await fetch(`${crawlEndpoint}/${jobId}`, {
       headers: { Authorization: `Bearer ${apiKey}` },
@@ -166,22 +228,7 @@ async function crawlWebsite(url: string, apiKey: string): Promise<WebsiteResearc
     throw new Error("Firecrawl crawl leverde geen bruikbare websitepagina's op.");
   }
 
-  const markdown = pages
-    .map((page: WebsiteResearchPage, index: number) => `\n\n===== PAGINA ${index + 1}: ${page.title || page.url} =====\nURL: ${page.url}\n\n${page.markdown}`)
-    .join("")
-    .trim();
-
-  return {
-    url,
-    title: pages[0]?.title,
-    markdown,
-    links: uniqueStrings(pages.flatMap((page: WebsiteResearchPage) => page.links)),
-    images: uniqueStrings(pages.flatMap((page: WebsiteResearchPage) => page.images)),
-    branding: pages.find((page: WebsiteResearchPage) => page.branding)?.branding,
-    pages,
-    mode: "full-crawl",
-    crawlJobId: jobId,
-  };
+  return resultFromPages(url, pages, "full-crawl", undefined, jobId);
 }
 
 export async function researchWebsite(inputUrl: string): Promise<WebsiteResearchResult> {
@@ -196,7 +243,7 @@ export async function researchWebsite(inputUrl: string): Promise<WebsiteResearch
     return await crawlWebsite(url, apiKey);
   } catch (crawlError) {
     const fallbackReason = crawlError instanceof Error ? crawlError.message : String(crawlError);
-    console.error("Volledige Firecrawl crawl mislukt; val terug op homepage scrape:", crawlError);
-    return scrapeSinglePage(url, apiKey, fallbackReason);
+    console.error("Volledige Firecrawl crawl mislukt; start gerichte fallback:", crawlError);
+    return targetedFallback(url, apiKey, fallbackReason);
   }
 }
