@@ -1,12 +1,12 @@
 import OpenAI from "openai";
-import { SourceContext } from "@/lib/lumivey/source-context";
+import { SourceContext, SourceFact } from "@/lib/lumivey/source-context";
 import { WebsiteResearchResult } from "@/lib/lumivey/research-website";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-const MAX_SOURCE_CHARS = 24000;
+const MAX_SOURCE_CHARS = 48000;
 
 type ParsedFact = {
   statement: string;
@@ -25,10 +25,75 @@ type ParsedDoor = {
   whyWorthExploring: string;
 };
 
+function uniqueStrings(values: string[]): string[] {
+  return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
+}
+
+function buildPrioritizedSourceText(research: WebsiteResearchResult): string {
+  const pages = research.pages ?? [];
+  if (!pages.length) return research.markdown.slice(0, MAX_SOURCE_CHARS);
+
+  const priorityPattern = /(contact|over[-_/ ]?ons|over[-_/ ]?mij|about|team|wie[-_/ ]?zijn|dienst|service|expert|project)/i;
+  const ranked = pages
+    .map((page, index) => ({
+      page,
+      index,
+      priority: priorityPattern.test(`${page.url} ${page.title || ""}`) ? 1 : 0,
+    }))
+    .sort((a, b) => b.priority - a.priority || a.index - b.index);
+
+  return ranked
+    .map(({ page }, index) => `\n\n===== BRONPAGINA ${index + 1}: ${page.title || page.url} =====\nURL: ${page.url}\n\n${page.markdown}`)
+    .join("")
+    .slice(0, MAX_SOURCE_CHARS);
+}
+
+function extractDeterministicContactFacts(research: WebsiteResearchResult): SourceFact[] {
+  const text = research.markdown;
+  const facts: SourceFact[] = [];
+
+  const emails = uniqueStrings(text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi) ?? []);
+  for (const email of emails.slice(0, 10)) {
+    facts.push({
+      statement: `Contact e-mail: ${email}`,
+      evidence: email,
+      status: "source-only",
+    });
+  }
+
+  const rawPhones = text.match(/(?:\+31|0)[0-9() .-]{8,20}[0-9]/g) ?? [];
+  const phones = uniqueStrings(
+    rawPhones.filter((value) => {
+      const digits = value.replace(/\D/g, "");
+      return digits.length >= 9 && digits.length <= 14;
+    })
+  );
+  for (const phone of phones.slice(0, 10)) {
+    facts.push({
+      statement: `Contact telefoon: ${phone}`,
+      evidence: phone,
+      status: "source-only",
+    });
+  }
+
+  const contactLinks = uniqueStrings(
+    research.links.filter((link) => /linkedin\.com|instagram\.com|facebook\.com|mailto:|tel:/i.test(link))
+  );
+  for (const link of contactLinks.slice(0, 12)) {
+    facts.push({
+      statement: `Contact/link: ${link}`,
+      evidence: link,
+      status: "source-only",
+    });
+  }
+
+  return facts;
+}
+
 export async function analyzeWebsiteSource(
   research: WebsiteResearchResult
 ): Promise<SourceContext> {
-  const sourceText = research.markdown.slice(0, MAX_SOURCE_CHARS);
+  const sourceText = buildPrioritizedSourceText(research);
   const brandingText = research.branding
     ? JSON.stringify(research.branding, null, 2)
     : "geen branding-data";
@@ -142,7 +207,7 @@ Houd het compact en relevant voor Discovery en preview.
     ? parsedObject.facts
     : [];
 
-  const facts = rawFacts
+  const aiFacts = rawFacts
     .filter((item: unknown): item is ParsedFact => {
       return (
         typeof item === "object" &&
@@ -158,6 +223,16 @@ Houd het compact en relevant voor Discovery en preview.
           : undefined,
       status: "source-only" as const,
     }));
+
+  const deterministicContactFacts = extractDeterministicContactFacts(research);
+  const facts = Array.from(
+    new Map(
+      [...deterministicContactFacts, ...aiFacts].map((fact) => [
+        `${fact.statement.toLowerCase()}|${fact.evidence || ""}`,
+        fact,
+      ])
+    ).values()
+  );
 
   const rawGoldCandidates = Array.isArray(
     parsedObject.goldCandidates
@@ -202,6 +277,16 @@ Houd het compact en relevant voor Discovery en preview.
     (item: unknown): item is string => typeof item === "string"
   );
 
+  const assets = uniqueStrings(research.images)
+    .slice(0, 20)
+    .map((url) => ({
+      kind: "image" as const,
+      url,
+      origin: "website" as const,
+      status: "source-only" as const,
+      evidence: `Afbeeldings-URL gevonden door Firecrawl vanaf ${research.url}`,
+    }));
+
   return {
     type: "website",
     url: research.url,
@@ -210,5 +295,6 @@ Houd het compact en relevant voor Discovery en preview.
     goldCandidates,
     doors,
     uncertainties,
+    assets,
   };
 }
