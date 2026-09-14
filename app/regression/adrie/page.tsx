@@ -7,6 +7,7 @@ type Check = { name: string; status: Status; reason: string };
 type Turn = { turn: number; user: string; assistant: string };
 type ChatMessage = { role: "user" | "assistant"; content: string };
 type SelectedAttachment = { id: string; name: string; mimeType: string; dataUrl: string; size: number };
+type BuildResult = { chatId: string; webUrl?: string; previewUrl?: string };
 
 type Result = {
   case: string;
@@ -14,7 +15,7 @@ type Result = {
   note: string;
   uploadedPhotoCount?: number;
   evaluation: { overall: Status; diagnosis: string; checks: Check[] };
-  previewImpression?: { imageDataUrl: string; headline?: string; rationale?: string[] } | null;
+  previewImpression?: { id?: string; imageDataUrl: string; headline?: string; rationale?: string[]; createdAt?: string } | null;
   previewError?: string;
   replay: Turn[];
   sourceContexts: unknown[];
@@ -137,6 +138,10 @@ export default function AdrieRegressionPage() {
   const [photos, setPhotos] = useState<SelectedAttachment[]>([]);
   const [photoError, setPhotoError] = useState("");
   const [run2Loading, setRun2Loading] = useState(false);
+  const [buildLoading, setBuildLoading] = useState(false);
+  const [buildError, setBuildError] = useState("");
+  const [build, setBuild] = useState<BuildResult | null>(null);
+  const [sourceSummary, setSourceSummary] = useState<{ crawlMode?: string; pageCount?: number; websiteFacts?: number; goldCandidates?: number; uploadedRealImages?: number } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -168,9 +173,7 @@ export default function AdrieRegressionPage() {
           understanding = data.understanding;
           sourceContexts = Array.isArray(data?.understanding?.sources) ? data.understanding.sources : sourceContexts;
 
-          if (index < ADRIE_TURNS.length - 1) {
-            await sleep(2500);
-          }
+          if (index < ADRIE_TURNS.length - 1) await sleep(2500);
         }
 
         if (cancelled) return;
@@ -221,6 +224,7 @@ export default function AdrieRegressionPage() {
     if (!result || photos.length === 0 || run2Loading) return;
     setRun2Loading(true);
     setPhotoError("");
+    setBuild(null);
     try {
       const response = await fetch("/api/regression/adrie/finalize", {
         method: "POST",
@@ -246,7 +250,44 @@ export default function AdrieRegressionPage() {
     }
   }
 
+  async function buildApprovedPreview() {
+    if (!result || !result.previewImpression?.imageDataUrl || result.evaluation.overall !== "PASS" || buildLoading) return;
+    setBuildLoading(true);
+    setBuildError("");
+    setBuild(null);
+    setSourceSummary(null);
+    try {
+      const response = await fetch("/api/regression/adrie/build-v0", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          replay: result.replay,
+          sourceContexts: result.sourceContexts,
+          understanding: result.understanding,
+          previewImpression: {
+            id: result.previewImpression.id || "adrie-approved-preview",
+            imageDataUrl: result.previewImpression.imageDataUrl,
+            headline: result.previewImpression.headline || "AssetPouwer — goedgekeurde Adrie Preview",
+            rationale: result.previewImpression.rationale || [],
+            createdAt: result.previewImpression.createdAt || new Date().toISOString(),
+          },
+          evaluation: result.evaluation,
+        }),
+        cache: "no-store",
+      });
+      const data = await readJsonResponse(response);
+      if (!response.ok) throw new Error(errorMessage(data?.error || "Website Brief → v0 kon niet worden uitgevoerd."));
+      setBuild(data.build as BuildResult);
+      setSourceSummary(data.sourceSummary || null);
+    } catch (e) {
+      setBuildError(errorMessage(e));
+    } finally {
+      setBuildLoading(false);
+    }
+  }
+
   const hasRun2 = Boolean(result?.uploadedPhotoCount);
+  const canBuildApproved = Boolean(hasRun2 && result?.evaluation.overall === "PASS" && result?.previewImpression?.imageDataUrl);
 
   return (
     <main className="home">
@@ -298,6 +339,29 @@ export default function AdrieRegressionPage() {
                 <p className="eyebrow">Artist impression {hasRun2 ? `— met ${result.uploadedPhotoCount} aangeleverde foto’s als bronpool` : "— nog zonder aangeleverde Adrie-foto's"}</p>
                 <p>{hasRun2 ? "De foto’s zijn vóór de Preview als echte visuele bron verwerkt; Lumivey hoeft ze niet allemaal te tonen." : "Run 1 test eerst de interpretatielaag zonder aangeleverde foto’s."}</p>
                 <img src={result.previewImpression.imageDataUrl} alt="Adrie AssetPouwer artist impression" style={{ width: "100%", height: "auto", display: "block", borderRadius: 18, border: "1px solid #d8d8d2" }} />
+              </div>
+            )}
+
+            {canBuildApproved && (
+              <div style={{ margin: "32px 0", padding: 22, border: "1px solid #d8d8d2", borderRadius: 18 }}>
+                <p className="eyebrow">Volgende gate — Website Brief → v0</p>
+                <p>Deze PASS-preview wordt als design authority gebruikt. Lumivey crawlt AssetPouwer opnieuw met de herstelde bronlaag, verrijkt de Website Brief en geeft v0 alleen gevalideerde echte klantbeelden als productie-assets.</p>
+                <button onClick={buildApprovedPreview} disabled={buildLoading}>
+                  {buildLoading ? "Bronlaag verversen, Website Brief maken en v0 bouwen…" : "Bouw website vanuit deze goedgekeurde Preview"}
+                </button>
+                {buildError && <p className="quiet" style={{ marginTop: 16 }}>{buildError}</p>}
+                {sourceSummary && (
+                  <p className="quiet" style={{ marginTop: 16 }}>
+                    Bronlaag: {sourceSummary.crawlMode || "onbekend"} · {sourceSummary.pageCount ?? 0} pagina&apos;s · {sourceSummary.websiteFacts ?? 0} bronfeiten · {sourceSummary.goldCandidates ?? 0} goudkandidaten · {sourceSummary.uploadedRealImages ?? 0} echte geüploade beelden.
+                  </p>
+                )}
+                {build && (
+                  <div style={{ marginTop: 18 }}>
+                    <p><strong>v0-build gestart.</strong> Chat-id: {build.chatId}</p>
+                    {build.previewUrl && <p><a href={build.previewUrl} target="_blank" rel="noreferrer">Open de technische preview</a></p>}
+                    {build.webUrl && <p><a href={build.webUrl} target="_blank" rel="noreferrer">Open de v0-build</a></p>}
+                  </div>
+                )}
               </div>
             )}
 
