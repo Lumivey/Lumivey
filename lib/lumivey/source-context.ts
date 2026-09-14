@@ -22,6 +22,16 @@ export type DiscoveredUrl = {
   confidence: "high";
 };
 
+export type SourceAsset = {
+  kind: "image";
+  name?: string;
+  url?: string;
+  dataUrl?: string;
+  origin: "uploaded" | "website";
+  status: "source-only";
+  evidence?: string;
+};
+
 export type SourceContext = {
   type: "website" | "image" | "document";
   sourceId?: string;
@@ -34,6 +44,7 @@ export type SourceContext = {
   doors: SourceDoor[];
   uncertainties: string[];
   discoveredUrls?: DiscoveredUrl[];
+  assets?: SourceAsset[];
 };
 
 export type UploadedSourceInput = {
@@ -141,6 +152,13 @@ export function formatSourceContextsForPrompt(
         )
         .join("\n");
 
+      const assets = (source.assets ?? [])
+        .map((asset) => {
+          const locator = asset.url || asset.name || "ingesloten afbeelding";
+          return `- ${locator} | herkomst: ${asset.origin} | status: ${asset.status}`;
+        })
+        .join("\n");
+
       const identity = source.url
         ? `URL: ${source.url}`
         : `Bestand: ${source.name || "onbekend"}`;
@@ -160,6 +178,9 @@ ${gold || "- geen"}
 
 MOGELIJKE DEUREN — alleen gebruiken als steunfeit en bewijs werkelijk uit de bron komen
 ${doors || "- geen"}
+
+BESCHIKBARE BRONBEELDEN — context/asset, geen automatische betekenis
+${assets || "- geen"}
 
 DUIDELIJK LEESBARE WEBSITE-URLS IN DEZE BRON
 ${discoveredUrls || "- geen"}
