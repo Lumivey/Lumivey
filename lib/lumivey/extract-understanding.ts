@@ -17,6 +17,20 @@ type ChatMessage = {
   content: string;
 };
 
+function parseJson(text: string): LumiveyUnderstanding {
+  const clean = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
+  try {
+    return JSON.parse(clean) as LumiveyUnderstanding;
+  } catch {
+    const start = clean.indexOf("{");
+    const end = clean.lastIndexOf("}");
+    if (start >= 0 && end > start) {
+      return JSON.parse(clean.slice(start, end + 1)) as LumiveyUnderstanding;
+    }
+    throw new Error("Understanding-model gaf geen geldige JSON terug.");
+  }
+}
+
 export async function extractUnderstanding(
   messages: ChatMessage[],
   sourceContexts: SourceContext[] = []
@@ -166,7 +180,7 @@ Verwijder lege voorbeelditems.
     `,
   });
 
-  const parsed = JSON.parse(response.output_text) as LumiveyUnderstanding;
+  const parsed = parseJson(response.output_text);
 
   return {
     ...parsed,
