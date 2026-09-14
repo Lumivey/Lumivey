@@ -51,6 +51,10 @@ Deze regels zijn harde kwaliteits- en gedragsgrenzen. Een nieuwe chat, tool, gen
 - Bronherkomst/evidence moet waar relevant behouden blijven.
 - Firecrawl-contactdata en andere relevante feitelijke gegevens mogen niet verdwijnen tussen bronanalyse en Website Brief.
 - Gebruikerscorrecties moeten doorwerken in Preview, copy, beeldkeuze, Website Brief, v0 en latere sessies.
+- **Firecrawl is vervangbare infrastructuur. Broncompleetheid is Lumivey-verantwoordelijkheid.**
+- Een technisch geslaagde crawl is niet automatisch inhoudelijk compleet. Lumivey moet voldoende bronrijkdom aantoonbaar hebben gezien voordat relevante selectie/compressie plaatsvindt.
+- Selecteren uit bronmateriaal mag; relevante informatie onbewust verliezen door crawl-limieten, time-outs, `onlyMainContent`, paginaselectie of samenvatting mag niet stilzwijgend gebeuren.
+- Als de huidige crawler structureel onvoldoende broncompleetheid levert, moet Lumivey alternatieven benchmarken en zo nodig vervangen. Toolloyaliteit is geen productprincipe.
 
 ## v0 / websiteproductie
 
