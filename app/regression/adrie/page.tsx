@@ -36,6 +36,10 @@ const ADRIE_TURNS = [
 const MAX_PHOTOS = 5;
 const MAX_EDGE = 1400;
 const MAX_BYTES = 1_400_000;
+const BUILD_PHOTO_EDGE = 1100;
+const BUILD_PHOTO_BYTES = 300_000;
+const BUILD_PREVIEW_EDGE = 1500;
+const BUILD_PREVIEW_BYTES = 650_000;
 
 function errorMessage(value: unknown): string {
   if (value instanceof Error) return value.message;
@@ -95,12 +99,27 @@ function loadImage(file: File): Promise<HTMLImageElement> {
   });
 }
 
+function loadDataUrlImage(dataUrl: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Beeld kon niet worden voorbereid voor de v0-overdracht."));
+    image.src = dataUrl;
+  });
+}
+
 function blobToDataUrl(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result));
     reader.onerror = () => reject(new Error("Foto kon niet worden gelezen."));
     reader.readAsDataURL(blob);
+  });
+}
+
+async function canvasToJpeg(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("Beeld kon niet worden gecomprimeerd.")), "image/jpeg", quality);
   });
 }
 
@@ -114,12 +133,8 @@ async function preparePhoto(file: File): Promise<SelectedAttachment> {
   if (!context) throw new Error("Foto kon niet worden voorbereid.");
   context.drawImage(image, 0, 0, canvas.width, canvas.height);
 
-  const makeJpeg = (quality: number) => new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("Foto kon niet worden voorbereid.")), "image/jpeg", quality);
-  });
-
-  let blob = await makeJpeg(0.78);
-  if (blob.size > MAX_BYTES) blob = await makeJpeg(0.62);
+  let blob = await canvasToJpeg(canvas, 0.78);
+  if (blob.size > MAX_BYTES) blob = await canvasToJpeg(canvas, 0.62);
   if (blob.size > MAX_BYTES) throw new Error(`${file.name} blijft te groot na verkleinen.`);
 
   return {
@@ -128,6 +143,51 @@ async function preparePhoto(file: File): Promise<SelectedAttachment> {
     mimeType: "image/jpeg",
     dataUrl: await blobToDataUrl(blob),
     size: blob.size,
+  };
+}
+
+async function compressDataUrlForBuild(
+  dataUrl: string,
+  name: string,
+  maxEdge: number,
+  maxBytes: number
+): Promise<SelectedAttachment> {
+  const image = await loadDataUrlImage(dataUrl);
+  let scale = Math.min(1, maxEdge / Math.max(image.naturalWidth, image.naturalHeight));
+  let lastBlob: Blob | null = null;
+
+  for (let resizeAttempt = 0; resizeAttempt < 3; resizeAttempt += 1) {
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Beeld kon niet worden voorbereid voor de v0-overdracht.");
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+    for (const quality of [0.76, 0.64, 0.54, 0.44]) {
+      const blob = await canvasToJpeg(canvas, quality);
+      lastBlob = blob;
+      if (blob.size <= maxBytes) {
+        return {
+          id: `v0-${Date.now()}-${Math.random().toString(36).slice(2)}-${name}`,
+          name,
+          mimeType: "image/jpeg",
+          dataUrl: await blobToDataUrl(blob),
+          size: blob.size,
+        };
+      }
+    }
+
+    scale *= 0.78;
+  }
+
+  if (!lastBlob) throw new Error(`${name} kon niet worden voorbereid voor de v0-overdracht.`);
+  return {
+    id: `v0-${Date.now()}-${Math.random().toString(36).slice(2)}-${name}`,
+    name,
+    mimeType: "image/jpeg",
+    dataUrl: await blobToDataUrl(lastBlob),
+    size: lastBlob.size,
   };
 }
 
@@ -252,21 +312,35 @@ export default function AdrieRegressionPage() {
 
   async function buildApprovedPreview() {
     if (!result || !result.previewImpression?.imageDataUrl || result.evaluation.overall !== "PASS" || buildLoading) return;
+    if (photos.length === 0) {
+      setBuildError("De vijf aangeleverde foto's staan niet meer in deze browsersessie. Selecteer ze opnieuw via Run 2 voordat je v0 bouwt.");
+      return;
+    }
+
     setBuildLoading(true);
     setBuildError("");
     setBuild(null);
     setSourceSummary(null);
     try {
+      const compactPreview = await compressDataUrlForBuild(
+        result.previewImpression.imageDataUrl,
+        "adrie-approved-preview.jpg",
+        BUILD_PREVIEW_EDGE,
+        BUILD_PREVIEW_BYTES
+      );
+      const compactPhotos = await Promise.all(
+        photos.map((photo) => compressDataUrlForBuild(photo.dataUrl, photo.name, BUILD_PHOTO_EDGE, BUILD_PHOTO_BYTES))
+      );
+
       const response = await fetch("/api/regression/adrie/build-v0", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           replay: result.replay,
-          sourceContexts: result.sourceContexts,
-          understanding: result.understanding,
+          attachments: compactPhotos,
           previewImpression: {
             id: result.previewImpression.id || "adrie-approved-preview",
-            imageDataUrl: result.previewImpression.imageDataUrl,
+            imageDataUrl: compactPreview.dataUrl,
             headline: result.previewImpression.headline || "AssetPouwer — goedgekeurde Adrie Preview",
             rationale: result.previewImpression.rationale || [],
             createdAt: result.previewImpression.createdAt || new Date().toISOString(),
@@ -347,7 +421,7 @@ export default function AdrieRegressionPage() {
                 <p className="eyebrow">Volgende gate — Website Brief → v0</p>
                 <p>Deze PASS-preview wordt als design authority gebruikt. Lumivey crawlt AssetPouwer opnieuw met de herstelde bronlaag, verrijkt de Website Brief en geeft v0 alleen gevalideerde echte klantbeelden als productie-assets.</p>
                 <button onClick={buildApprovedPreview} disabled={buildLoading}>
-                  {buildLoading ? "Bronlaag verversen, Website Brief maken en v0 bouwen…" : "Bouw website vanuit deze goedgekeurde Preview"}
+                  {buildLoading ? "Beelden compact voorbereiden, bronlaag verversen en v0 bouwen…" : "Bouw website vanuit deze goedgekeurde Preview"}
                 </button>
                 {buildError && <p className="quiet" style={{ marginTop: 16 }}>{buildError}</p>}
                 {sourceSummary && (
