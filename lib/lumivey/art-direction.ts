@@ -18,6 +18,20 @@ export type ArtDirection = {
   avoid: string[];
 };
 
+function promptSafeUnderstanding(understanding: LumiveyUnderstanding) {
+  return {
+    entrepreneur: understanding.entrepreneur,
+    identity: understanding.identity,
+    humanSignals: understanding.humanSignals,
+    business: understanding.business,
+    website: understanding.website,
+    sourceBacked: understanding.sourceBacked,
+    facts: understanding.facts,
+    interpretations: understanding.interpretations,
+    unknowns: understanding.unknowns,
+  };
+}
+
 export async function createArtDirection(
   understanding: LumiveyUnderstanding
 ): Promise<ArtDirection> {
@@ -52,7 +66,7 @@ Geef uitsluitend geldige JSON terug. Geen markdown of uitleg.
     input: `
 Dit is Lumiveys actuele begrip:
 
-${JSON.stringify(understanding, null, 2)}
+${JSON.stringify(promptSafeUnderstanding(understanding), null, 2)}
 
 Geef exact dit JSON-formaat terug:
 {
