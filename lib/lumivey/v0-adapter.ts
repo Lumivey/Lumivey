@@ -93,6 +93,10 @@ ASSET MAP
 - When a real customer asset is supplied for the same role, prefer it over a generated substitute.
 - Keep real people recognizable. Do not crop off faces or heads in prominent imagery unless that crop is explicitly part of the approved Preview.
 - Do not repeatedly crop/reuse one real photo where dedicated mapped assets are supplied for other visual moments.
+- Uploaded photos form a SOURCE POOL, not a quota. Do not force every supplied image into the homepage.
+- A personal ritual, hobby or prop may carry identity, but it must remain secondary to the entrepreneur's professional proposition unless the approved Preview or brief explicitly says otherwise.
+- If the same hobby/prop appears in many source photos, normally use it in no more than one or two distinct homepage moments. Do not let repetition make the business look like it sells the hobby.
+- Do not infer a service from a personal hobby or recurring prop.
 - Do not leave an important supplied approved asset unused unless using it would conflict with the approved Preview or truth guardrails.
 
 TRUTH & FUNCTION GUARDRAILS
