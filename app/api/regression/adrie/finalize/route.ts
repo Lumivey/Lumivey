@@ -48,12 +48,33 @@ function isUploadedSourceInput(value: unknown): value is UploadedSourceInput {
   );
 }
 
+function promptSafeUnderstanding(understanding: any) {
+  if (!understanding || typeof understanding !== "object") return understanding;
+  const { sources: _sources, ...rest } = understanding;
+  return rest;
+}
+
+function promptSafeSourceContexts(sourceContexts: SourceContext[]) {
+  return sourceContexts.map((source) => ({
+    ...source,
+    assets: (source.assets ?? []).map((asset) => ({
+      kind: asset.kind,
+      name: asset.name,
+      url: asset.url,
+      origin: asset.origin,
+      status: asset.status,
+      evidence: asset.evidence,
+      hasEmbeddedImage: Boolean(asset.dataUrl),
+    })),
+  }));
+}
+
 async function evaluate(input: unknown) {
   const response = await openai.responses.create({
     model: "gpt-5.6-terra",
     instructions: `
 Je beoordeelt een Lumivey referentietest voor Adrie Pouwer / AssetPouwer.
-Dit is GEEN exacte transcript-replay van een historisch gesprek; het is een gecontroleerde reconstructie van de eerder vastgelegde referentie-inhoud. Beoordeel betekenisbehoud en kwaliteit, niet letterlijke formulering.
+Dit is GEEN exacte transcript-replay van een historisch gesprek; het is een gecontroleerde reconstructie van de eerder vastgelegde referentie-inhoud. Beoordeel dus betekenisbehoud en kwaliteit, niet letterlijke formulering.
 
 Kern die niet mag verdampen:
 - Adrie is geen generieke consultant; hij verbindt strategie met operatie.
@@ -150,10 +171,10 @@ export async function POST(request: Request) {
 
     const evaluation = await evaluate({
       replay,
-      understanding,
+      understanding: promptSafeUnderstanding(understanding),
       artDirection,
       siteDirection,
-      sourceContexts,
+      sourceContexts: promptSafeSourceContexts(sourceContexts),
       uploadedPhotoCount: attachments.length,
       previewAvailable: Boolean(previewImpression?.imageDataUrl),
       previewRationale: previewImpression?.rationale || [],
