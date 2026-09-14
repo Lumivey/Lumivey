@@ -54,6 +54,36 @@ async function readJsonResponse(response: Response) {
   catch { throw new Error(`Route gaf geen JSON terug: ${text.slice(0, 180)}`); }
 }
 
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function postChatWithRetry(payload: unknown, attempts = 3): Promise<{ response: Response; data: any }> {
+  let lastResponse: Response | null = null;
+  let lastData: any = null;
+
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...(payload as object), diagnostic: true }),
+      cache: "no-store",
+    });
+    const data = await readJsonResponse(response);
+    lastResponse = response;
+    lastData = data;
+
+    if (response.status !== 429 || attempt === attempts - 1) {
+      return { response, data };
+    }
+
+    const retryAfterSeconds = Number(response.headers.get("Retry-After") || "60");
+    await sleep(Math.max(10, retryAfterSeconds) * 1000);
+  }
+
+  return { response: lastResponse as Response, data: lastData };
+}
+
 function loadImage(file: File): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const image = new Image();
@@ -126,20 +156,21 @@ export default function AdrieRegressionPage() {
             ? "Stap 1/7 — volledige AssetPouwer-site crawlen en eerste Discovery-reactie…"
             : `Stap ${index + 1}/7 — Discovery-beurt ${index + 1} van 6…`);
 
-          const response = await fetch("/api/chat", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ messages, sourceContexts }),
-            cache: "no-store",
-          });
-          const data = await readJsonResponse(response);
-          if (!response.ok) throw new Error(errorMessage(data?.error || `Adrie replay stopte bij beurt ${index + 1}.`));
+          const { response, data } = await postChatWithRetry({ messages, sourceContexts });
+          if (!response.ok) {
+            const stage = data?.stage ? ` (${data.stage})` : "";
+            throw new Error(`${errorMessage(data?.error || `Adrie replay stopte bij beurt ${index + 1}.`)}${stage}`);
+          }
 
           const assistant = String(data.reply || "");
           messages.push({ role: "assistant", content: assistant });
           replay.push({ turn: index + 1, user, assistant });
           understanding = data.understanding;
           sourceContexts = Array.isArray(data?.understanding?.sources) ? data.understanding.sources : sourceContexts;
+
+          if (index < ADRIE_TURNS.length - 1) {
+            await sleep(2500);
+          }
         }
 
         if (cancelled) return;
@@ -203,7 +234,10 @@ export default function AdrieRegressionPage() {
         cache: "no-store",
       });
       const data = await readJsonResponse(response);
-      if (!response.ok) throw new Error(errorMessage(data?.error || "Run 2 kon niet worden uitgevoerd."));
+      if (!response.ok) {
+        const stage = data?.stage ? ` (${data.stage})` : "";
+        throw new Error(`${errorMessage(data?.error || "Run 2 kon niet worden uitgevoerd.")}${stage}`);
+      }
       setResult(data);
     } catch (e) {
       setPhotoError(errorMessage(e));
@@ -233,7 +267,7 @@ export default function AdrieRegressionPage() {
             {!hasRun2 && (
               <div style={{ margin: "28px 0", padding: 22, border: "1px solid #d8d8d2", borderRadius: 18 }}>
                 <p className="eyebrow">Run 2 — aangeleverde Adrie-foto&apos;s</p>
-                <p>Selecteer in één keer maximaal vijf foto&apos;s. Lumivey analyseert ze, kiest zelf welke beelden passen en maakt daarna opnieuw de Preview.</p>
+                <p>Selecteer in één keer maximaal vijf foto&apos;s. Lumivey analyseert ze als bronpool, kiest zelf slechts de sterkste passende beelden en maakt daarna opnieuw de Preview.</p>
                 <input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={handlePhotoSelection} disabled={run2Loading} />
                 {photos.length > 0 && <p>{photos.length} foto&apos;s klaar voor Run 2: {photos.map((photo) => photo.name).join(", ")}</p>}
                 {photoError && <p className="quiet">{photoError}</p>}
@@ -261,8 +295,8 @@ export default function AdrieRegressionPage() {
 
             {result.previewImpression?.imageDataUrl && (
               <div style={{ margin: "32px 0" }}>
-                <p className="eyebrow">Artist impression {hasRun2 ? `— met ${result.uploadedPhotoCount} aangeleverde foto’s` : "— nog zonder aangeleverde Adrie-foto's"}</p>
-                <p>{hasRun2 ? "De foto’s zijn vóór de Preview als echte visuele bron verwerkt." : "Run 1 test eerst de interpretatielaag zonder aangeleverde foto’s."}</p>
+                <p className="eyebrow">Artist impression {hasRun2 ? `— met ${result.uploadedPhotoCount} aangeleverde foto’s als bronpool` : "— nog zonder aangeleverde Adrie-foto's"}</p>
+                <p>{hasRun2 ? "De foto’s zijn vóór de Preview als echte visuele bron verwerkt; Lumivey hoeft ze niet allemaal te tonen." : "Run 1 test eerst de interpretatielaag zonder aangeleverde foto’s."}</p>
                 <img src={result.previewImpression.imageDataUrl} alt="Adrie AssetPouwer artist impression" style={{ width: "100%", height: "auto", display: "block", borderRadius: 18, border: "1px solid #d8d8d2" }} />
               </div>
             )}
