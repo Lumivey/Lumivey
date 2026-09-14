@@ -89,17 +89,32 @@ LUMIVEY PREVIEW-NORM
 - Een technisch nette of sectorspecifieke consultant-site is NIET automatisch PASS.
 - De homepage hoort normaal zowel een professioneel anker als een persoonlijk herkenningsanker te bevatten, tenzij Discovery expliciet zegt dat Adrie dat niet wil.
 - Voor Adrie moet zijn rustige observerende/fotografische kant zichtbaar invloed hebben op beeldtaal, sfeer of compositie; alleen een technische installatie in rustig licht is onvoldoende als de persoonlijke laag verder ontbreekt.
+- Een camera als los object is GEEN volwaardige vervanging voor het specifieke goudklompje: zondagochtend, natuur, kijken naar compositie, en de expliciete koppeling met zijn manier van werken. Als dit goudklompje alleen tot een generieke camera-prop of algemeen natuurbeeld is gereduceerd, is calm-observer-photography maximaal WARN.
 - Fotografie/natuur mag niet als dienstverlening worden gepresenteerd.
 - Als door Adrie aangeleverde foto's beschikbaar zijn, moeten die zichtbaar als primaire visuele bron worden gebruikt en mag een AI-vervanger zijn gezicht niet stilzwijgend overnemen.
 - De ideale richting is een geloofwaardige combinatie van persoonlijke rust/observatie en technische assetmanagement-credibiliteit.
 - PASS op preview-specificity vereist dat de preview duidelijk meer is dan een goede website voor een ervaren assetmanagementconsultant.
+
+BRONRIJKDOM-NORM — GATE-KRITISCH
+- Kijk niet alleen of de broncontext ergens in de input aanwezig is. Beoordeel of de GERENDERDE homepage aantoonbaar profiteert van de onderscheidende bronrijkdom.
+- Als de bron rijke, onderscheidende professionele informatie bevat — bijvoorbeeld opleiding/diploma, lange en brede ervaring, relevante organisaties/rollen, professionele normering, aantoonbare kennisartikelen, concrete cases of andere geloofwaardigheidsankers — mag de Preview dat niet reduceren tot algemene termen als “ervaring”, “maatwerk”, “advies” of “impact”.
+- Niet alles hoeft op de homepage, maar minstens twee concrete onderscheidende professionele goudklompjes of geloofwaardigheidsankers moeten zichtbaar of duidelijk als verdieping gepositioneerd zijn.
+- Als relevante bronrijkdom aantoonbaar beschikbaar is maar de Preview nauwelijks meer laat zien dan generieke diensten/kreten, zet source-richness op WARN of FAIL.
+- source-richness is gate-kritisch: overall PASS is NIET toegestaan wanneer source-richness WARN of FAIL is.
 
 BEELDCURATIE-NORM
 - Aangeleverde foto's vormen een bronpool, geen quota.
 - Een homepage moet niet vol staan met herhaling van dezelfde persoon alleen omdat veel foto's beschikbaar zijn.
 - Voor deze Adrie-case is normaal één of twee zichtbare verschijningen van Adrie sterk; een derde alleen als die aantoonbaar een andere rol of verhaalfunctie vervult.
 - Na het persoonlijke hoofdbeeld mogen techniek, werkomgeving, detailbeelden en sfeer de identiteit verder dragen.
+- Een hobbyprop zoals de camera mag niet door herhaling zwaarder gaan wegen dan de professionele propositie. Twee cameramomenten zijn alleen acceptabel als ze duidelijk verschillende, betekenisvolle functies hebben; anders image-curation maximaal WARN.
 - Straf onnodige persoonsherhaling, gezichtsvervorming, onherkenbare vervanging of ongunstige hoofd/face-crops af.
+
+OVERALL-GATE
+- overall PASS mag alleen wanneer ALLE gate-kritische checks PASS zijn: source-richness, personal-homepage-anchor, preview-specificity en image-curation.
+- Een sterke sfeer of mooie fotografie mag een inhoudelijke WARN niet maskeren.
+- Als één gate-kritische check WARN is, is overall maximaal WARN.
+- Als één gate-kritische check FAIL is, is overall FAIL.
 
 Als previewAvailable=false, beoordeel preview-specificity en image-curation uitsluitend op de creatieve richting en zet expliciet dat de beeldpreview technisch niet beschikbaar was. Als previewAvailable=true en er is een beeld meegestuurd, beoordeel de GERENDERDE PREVIEW zelf en niet alleen de rationale.
 
