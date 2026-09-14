@@ -3,6 +3,9 @@ import { NextResponse } from "next/server";
 import { createArtDirection } from "@/lib/lumivey/art-direction";
 import { createSiteDescription } from "@/lib/lumivey/site-description";
 import { createLumiveyPreview } from "@/lib/lumivey/create-preview";
+import { analyzeUploadedSource } from "@/lib/lumivey/analyze-uploaded-source";
+import { extractUnderstanding } from "@/lib/lumivey/extract-understanding";
+import { SourceContext, UploadedSourceInput } from "@/lib/lumivey/source-context";
 
 export const maxDuration = 300;
 
@@ -27,13 +30,22 @@ function errorMessage(value: unknown): string {
     const object = value as Record<string, unknown>;
     if (typeof object.message === "string") return object.message;
     if (typeof object.error === "string") return object.error;
-    try {
-      return JSON.stringify(value);
-    } catch {
-      return String(value);
-    }
+    try { return JSON.stringify(value); } catch { return String(value); }
   }
   return String(value || "Onbekende fout");
+}
+
+function isUploadedSourceInput(value: unknown): value is UploadedSourceInput {
+  if (typeof value !== "object" || value === null) return false;
+  const candidate = value as Partial<UploadedSourceInput>;
+  return (
+    typeof candidate.id === "string" &&
+    typeof candidate.name === "string" &&
+    typeof candidate.mimeType === "string" &&
+    typeof candidate.dataUrl === "string" &&
+    candidate.dataUrl.startsWith("data:image/") &&
+    typeof candidate.size === "number"
+  );
 }
 
 async function evaluate(input: unknown) {
@@ -41,7 +53,7 @@ async function evaluate(input: unknown) {
     model: "gpt-5.6-terra",
     instructions: `
 Je beoordeelt een Lumivey referentietest voor Adrie Pouwer / AssetPouwer.
-Dit is GEEN exacte transcript-replay van een historisch gesprek; het is een gecontroleerde reconstructie van de eerder vastgelegde referentie-inhoud. Beoordeel dus betekenisbehoud en kwaliteit, niet letterlijke formulering.
+Dit is GEEN exacte transcript-replay van een historisch gesprek; het is een gecontroleerde reconstructie van de eerder vastgelegde referentie-inhoud. Beoordeel betekenisbehoud en kwaliteit, niet letterlijke formulering.
 
 Kern die niet mag verdampen:
 - Adrie is geen generieke consultant; hij verbindt strategie met operatie.
@@ -59,6 +71,7 @@ LUMIVEY PREVIEW-NORM
 - De homepage hoort normaal zowel een professioneel anker als een persoonlijk herkenningsanker te bevatten, tenzij Discovery expliciet zegt dat Adrie dat niet wil.
 - Voor Adrie moet zijn rustige observerende/fotografische kant zichtbaar invloed hebben op beeldtaal, sfeer of compositie; alleen een technische installatie in rustig licht is onvoldoende als de persoonlijke laag verder ontbreekt.
 - Fotografie/natuur mag niet als dienstverlening worden gepresenteerd.
+- Als door Adrie aangeleverde foto's beschikbaar zijn, moeten die zichtbaar als primaire visuele bron worden gebruikt en mag een AI-vervanger zijn gezicht niet stilzwijgend overnemen.
 - De ideale richting is een geloofwaardige combinatie van persoonlijke rust/observatie en technische assetmanagement-credibiliteit.
 - PASS op preview-specificity vereist dat de preview duidelijk meer is dan een goede website voor een ervaren assetmanagementconsultant.
 
@@ -88,12 +101,35 @@ Geef uitsluitend JSON terug:
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const understanding = body?.understanding;
+    let understanding = body?.understanding;
     const replay = Array.isArray(body?.replay) ? body.replay : [];
-    const sourceContexts = Array.isArray(body?.sourceContexts) ? body.sourceContexts : [];
+    let sourceContexts: SourceContext[] = Array.isArray(body?.sourceContexts) ? body.sourceContexts : [];
+    const attachments = Array.isArray(body?.attachments)
+      ? body.attachments.filter(isUploadedSourceInput).slice(0, 5)
+      : [];
 
     if (!understanding) {
       return NextResponse.json({ error: "Geen Adrie Understanding ontvangen." }, { status: 400 });
+    }
+
+    if (attachments.length > 0) {
+      const knownIds = new Set(sourceContexts.map((source) => source.sourceId).filter(Boolean));
+      for (const attachment of attachments) {
+        if (knownIds.has(attachment.id)) continue;
+        const context = await analyzeUploadedSource(attachment);
+        sourceContexts = [...sourceContexts, context];
+        knownIds.add(attachment.id);
+      }
+
+      const messages = replay.flatMap((turn: any) => [
+        { role: "user" as const, content: String(turn?.user || "") },
+        { role: "assistant" as const, content: String(turn?.assistant || "") },
+      ]);
+      messages.push({
+        role: "user" as const,
+        content: `Ik heb ${attachments.length} foto's aangeleverd. Kies zelf welke het beste passen. Gebruik ze als echte beelden van mij; fotografie is persoonlijk en geen dienst.`,
+      });
+      understanding = await extractUnderstanding(messages, sourceContexts);
     }
 
     const [artDirection, siteDirection] = await Promise.all([
@@ -118,6 +154,7 @@ export async function POST(request: Request) {
       artDirection,
       siteDirection,
       sourceContexts,
+      uploadedPhotoCount: attachments.length,
       previewAvailable: Boolean(previewImpression?.imageDataUrl),
       previewRationale: previewImpression?.rationale || [],
       previewError,
@@ -126,7 +163,9 @@ export async function POST(request: Request) {
     return NextResponse.json({
       case: "Adrie Pouwer / AssetPouwer",
       purpose: "Contrastcase na Michael: broninterpretatie, menselijke diepte en creatieve richting voor een zakelijke B2B-adviseur.",
-      note: "Deze test gebruikt een gecontroleerde reconstructie van de eerder vastgelegde Adrie-referentie-inhoud plus de bestaande website als bron. De Preview moet professionele technische geloofwaardigheid combineren met een persoonlijke herkenningslaag.",
+      note: attachments.length
+        ? `Run 2 gebruikt ${attachments.length} door Adrie aangeleverde foto's als visuele bron vóór de Preview.`
+        : "Run 1 zonder aangeleverde Adrie-foto's.",
       replay,
       sourceContexts,
       understanding,
@@ -134,13 +173,11 @@ export async function POST(request: Request) {
       siteDirection,
       previewImpression,
       previewError,
+      uploadedPhotoCount: attachments.length,
       evaluation,
     });
   } catch (error) {
     console.error("Adrie finalize error:", error);
-    return NextResponse.json(
-      { error: errorMessage(error), stage: "adrie-finalize" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: errorMessage(error), stage: "adrie-finalize" }, { status: 500 });
   }
 }
