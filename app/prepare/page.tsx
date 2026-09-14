@@ -1,7 +1,8 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import type { ArtistImpression, WebsiteBrief, WebsiteFact } from "@/lib/lumivey/primary-flow";
+import type { ArtistImpression, WebsiteAsset, WebsiteBrief, WebsiteFact } from "@/lib/lumivey/primary-flow";
+import type { SourceContext } from "@/lib/lumivey/source-context";
 import type { LumiveyUnderstanding, SourceBackedCandidate } from "@/lib/lumivey/understanding";
 
 type BuildResult = {
@@ -48,6 +49,47 @@ function findContactCandidate(
       return digits.length >= 8 && !value.includes("@");
     }) || ""
   );
+}
+
+function sourceContextAssets(sources: SourceContext[] | undefined): WebsiteAsset[] {
+  return (sources || []).flatMap((source, sourceIndex) => {
+    const sourceLabel = source.url || source.name || `Bron ${sourceIndex + 1}`;
+
+    const visualAssets: WebsiteAsset[] = (source.assets || []).map((asset, assetIndex) => ({
+      name: asset.name || `Bronbeeld ${sourceIndex + 1}.${assetIndex + 1}`,
+      kind: "image",
+      source: asset.evidence || sourceLabel,
+      url: asset.url,
+      dataUrl: asset.dataUrl,
+      purpose: "supporting",
+      aiStatus: "real",
+      role: asset.origin === "uploaded" ? "Door ondernemer aangeleverd echt beeld" : "Beeld uit bestaande websitebron",
+      origin: asset.origin === "uploaded" ? "customer" : "external",
+      validationStatus: asset.origin === "uploaded" ? "approved" : "needs-owner-validation",
+      productionInstruction:
+        asset.origin === "uploaded"
+          ? "Gebruik dit echte klantbeeld waar het past bij de goedgekeurde Preview. Houd personen herkenbaar en crop gezichten/hoofden niet onbedoeld af."
+          : "Dit beeld komt uit een bestaande websitebron. Gebruik het alleen wanneer het inhoudelijk past en geen gebruikerscorrectie tegenspreekt; verzin geen betekenis.",
+    }));
+
+    const sourceReference: WebsiteAsset = {
+      name: `Bron ${sourceIndex + 1}`,
+      kind: source.type === "website" ? "website" : source.type === "document" ? "document" : "other",
+      source: JSON.stringify({
+        type: source.type,
+        url: source.url,
+        name: source.name,
+        title: source.title,
+        facts: source.facts,
+        goldCandidates: source.goldCandidates,
+        uncertainties: source.uncertainties,
+      }),
+      origin: source.type === "website" ? "external" : "customer",
+      validationStatus: "reference-only",
+    };
+
+    return [...visualAssets, sourceReference];
+  });
 }
 
 export default function PreparePage() {
@@ -148,11 +190,7 @@ export default function PreparePage() {
       },
       artistImpression: impression,
       facts,
-      assets: (understanding.sources || []).map((source, index) => ({
-        name: `Bron ${index + 1}`,
-        kind: "other" as const,
-        source: typeof source === "object" ? JSON.stringify(source) : String(source),
-      })),
+      assets: sourceContextAssets(understanding.sources),
       pages: splitLines(pages).map((page) => ({
         name: page,
         purpose: page.toLowerCase().includes("contact") ? "Contact en kennismaking" : "Onderdeel van de gevalideerde website",
@@ -163,6 +201,7 @@ export default function PreparePage() {
         "Gebruik geen onbevestigde feiten als waarheid.",
         "Behoud de creatieve richting en herkenning van de goedgekeurde artist impression.",
         "Gebruik echte assets wanneer beschikbaar vóór generieke alternatieven.",
+        "Crop bij echte personen geen gezichten of hoofden onbedoeld af en maak de persoon niet onherkenbaar.",
         notes.trim() ? `Aanvullende productienotitie: ${notes.trim()}` : "",
       ].filter(Boolean),
       unknowns: [],
