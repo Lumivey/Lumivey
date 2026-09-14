@@ -21,53 +21,53 @@ Dit bestand is de actuele projectwaarheid voor een bouwsessie. Chats zijn tijdel
 3. De primaire technische keten bestaat: Discovery/bronnen → Understanding → creatieve richting → Preview → goedkeuring → Website Brief → Build Readiness → v0.
 4. Michael-regressie bestaat inmiddels voor gesprek, Understanding, creatieve richting en Preview.
 5. Firecrawl is geïntegreerd en kan een volledige website crawl uitvoeren met fallback naar homepage scrape.
+6. Recovery datapad-fix is op `main` gemerged en Vercel-build is geslaagd: bronbeelden worden nu first-class bewaard, deterministische contactsignalen uit de volledige crawl worden toegevoegd, door ondernemer geüploade echte beelden gaan als image-assets naar Website Brief, en niet-gevalideerde websitebeelden worden niet stilzwijgend naar v0 gestuurd.
 
 ## Wat nu NIET betrouwbaar genoeg is
 
 - Dezelfde kwaliteit is nog niet reproduceerbaar voor iedere case.
-- Broninformatie en betekenis kunnen onderweg verdwijnen.
-- Externe afbeeldingen uit Firecrawl worden wel gevonden maar niet betrouwbaar door het normale productiepad als echte image-assets naar v0 gedragen.
-- Contactinformatie kan verdwijnen vóór of tijdens bronanalyse; volledige crawl-output wordt voor analyse afgekapt.
 - Correcties van de ondernemer zijn nog geen first-class state en hebben geen harde override/propagation-logica.
 - Preview-feedback (“dit klopt niet omdat…”) vloeit nog niet terug naar Discovery/Understanding.
 - De normale flow heeft nog geen generieke >85%-QA gate tegen de goedgekeurde Preview.
-- De normale prepare-flow en de speciaal gebouwde Michael-regressie/productie-assets zijn nog niet gelijkwaardig; Michael profiteert van explicietere asset mapping.
+- Adrie moet opnieuw door de herstelde datapad-flow worden getest om te bewijzen dat contactdata en echte beelden in de praktijk behouden blijven.
+- Websitebeelden uit oude/externe bronnen zijn nu bewust `needs-owner-validation`; er is nog geen expliciete UI/flow om zulke beelden goed te keuren voor productie.
 
-## Belangrijke codebevindingen
+## Belangrijke codebevindingen / herstelde punten
 
-- `lib/lumivey/source-context.ts` bewaart bronfeiten, evidence, goudkandidaten, deuren en onzekerheden, maar geen first-class correcties/besluiten.
-- `lib/lumivey/understanding.ts` scheidt bevestigde data, humanSignals, sourceBacked, facts, interpretations en unknowns. Basis voor typed state is dus aanwezig.
-- `lib/lumivey/analyze-website-source.ts` krijgt Firecrawl image-URLs te zien maar geeft ze niet terug in `SourceContext`.
-- `app/prepare/page.tsx` zet bronnen momenteel als `kind: "other"` in Website Brief assets.
-- `lib/lumivey/v0-adapter.ts` verstuurt alleen assets met `kind === "image"` als beeldattachment. Hierdoor kunnen beschikbare echte beelden in de normale flow verdwijnen vóór v0.
-- `analyze-website-source.ts` analyseert maximaal 24.000 tekens van de gecombineerde crawl-output. Contactdata op latere pagina's kan daardoor buiten analyse vallen.
-- Preview-afkeur reset momenteel alleen de impression in de UI; feedback wordt niet als Discovery-data opgeslagen.
+- `lib/lumivey/source-context.ts` bewaart bronfeiten, evidence, goudkandidaten, deuren, onzekerheden én source image assets. First-class correcties/besluiten ontbreken nog.
+- `lib/lumivey/understanding.ts` scheidt bevestigde data, humanSignals, sourceBacked, facts, interpretations en unknowns. Basis voor typed state is aanwezig.
+- `lib/lumivey/analyze-website-source.ts` prioriteert relevante pagina's, analyseert een ruimer bronvenster en haalt e-mail/telefoon/social links deterministisch uit de volledige crawl zodat contactdata niet alleen van AI-samenvatting afhangt.
+- `lib/lumivey/analyze-uploaded-source.ts` bewaart geüploade echte afbeeldingen als source assets met provenance.
+- `app/prepare/page.tsx` zet source image assets nu om naar echte Website Brief image-assets; door ondernemer geüploade beelden worden als approved customer assets gemarkeerd, websitebeelden als needs-owner-validation.
+- `lib/lumivey/v0-adapter.ts` verstuurt alleen goedgekeurde image-assets, respecteert validationStatus en bevat een expliciete regel om echte personen herkenbaar te houden en gezichten/hoofden niet onbedoeld af te snijden.
+- Preview-afkeur reset momenteel nog alleen de impression in de UI; feedback wordt niet als Discovery-data opgeslagen.
 
 ## Huidige recovery-doel
 
 Niet opnieuw Lumivey uitvinden. Niet nieuwe tooling toevoegen. Eerst beide recente bouwsporen inhoudelijk en technisch reconciliëren en de bewezen keten beschermen.
 
 Prioriteit:
-1. Geen dataverlies van feiten, contactdata en echte beelden.
-2. Correcties first-class maken en laten doorwerken.
-3. Previewfeedback terug laten vloeien naar Discovery/Understanding.
-4. Adrie opnieuw end-to-end testen tegen harde gates.
+1. Hersteld: datapad voor contactdata en echte beelden.
+2. Nu bewijzen met Adrie-regressie/acceptantietest.
+3. Correcties first-class maken en laten doorwerken.
+4. Previewfeedback terug laten vloeien naar Discovery/Understanding.
 5. Daarna generieke website-QA (>85% t.o.v. goedgekeurde Preview) invoeren.
 
 ## Huidige Git-situatie
 
-- `main` bevat de huidige lineaire bouwgeschiedenis.
+- `main` bevat de huidige lineaire bouwgeschiedenis plus de recovery/anti-drift documenten.
 - Veilige snapshot vóór reconciliation: `recovery-2026-09-14-before-reconcile`.
-- Niet blind terugrollen: wijzigingen na Michael bevatten waardevolle verbeteringen (regressie, volledige Firecrawl-crawl, asset mapping). Per wijziging beoordelen of hij behouden, aangepast of verwijderd moet worden.
+- Datapad recovery is via PR #7 gemerged na succesvolle Vercel-check.
+- Niet blind terugrollen: wijzigingen na Michael bevatten waardevolle verbeteringen. Per wijziging beoordelen of hij behouden, aangepast of verwijderd moet worden.
 
 ## Eerstvolgende technische sessie
 
-Doel: één gecontroleerde recovery-branch maken waarop eerst datapad en kwaliteitsgates worden hersteld. Geen nieuwe productfeatures.
+Doel: Adrie als acceptantietest draaien op de herstelde datapad-flow en per poort zichtbaar maken of contactdata, echte beelden, betekenis en Preview-handoff behouden blijven. Pas na die bewijsstap naar correction propagation.
 
 Definition of Done voor recovery:
 - bron → Understanding → Preview → Website Brief → v0 is traceerbaar;
 - relevante contactdata gaat niet verloren;
-- echte beelden gaan niet verloren;
+- echte geüploade beelden gaan niet verloren;
 - correcties kunnen eerdere aannames overschrijven;
 - Preview-feedback verandert Understanding;
 - Adrie kan opnieuw worden getest zonder handmatig vergeten informatie terug te plakken;
