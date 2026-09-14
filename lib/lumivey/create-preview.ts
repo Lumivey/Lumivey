@@ -5,6 +5,11 @@ import { LumiveyUnderstanding } from "@/lib/lumivey/understanding";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+type PreviewReferenceImage = {
+  name: string;
+  dataUrl: string;
+};
+
 function compactUnderstanding(understanding: LumiveyUnderstanding) {
   return {
     entrepreneur: understanding.entrepreneur,
@@ -19,6 +24,67 @@ function compactUnderstanding(understanding: LumiveyUnderstanding) {
   };
 }
 
+function collectUploadedReferenceImages(understanding: LumiveyUnderstanding): PreviewReferenceImage[] {
+  const sources = Array.isArray((understanding as any).sources)
+    ? (understanding as any).sources
+    : [];
+
+  const images: PreviewReferenceImage[] = [];
+
+  for (const source of sources) {
+    const assets = Array.isArray(source?.assets) ? source.assets : [];
+    for (const asset of assets) {
+      if (
+        asset?.kind === "image" &&
+        asset?.origin === "uploaded" &&
+        typeof asset?.dataUrl === "string" &&
+        asset.dataUrl.startsWith("data:image/")
+      ) {
+        images.push({
+          name: typeof asset.name === "string" ? asset.name : "Aangeleverde foto",
+          dataUrl: asset.dataUrl,
+        });
+      }
+    }
+  }
+
+  return images.slice(0, 5);
+}
+
+async function generateWithReferenceImages(prompt: string, images: PreviewReferenceImage[]) {
+  const content: any[] = [
+    {
+      type: "input_text",
+      text: `${prompt}\n\nAANGELEVERDE FOTO'S\nDe onderstaande beelden zijn door de ondernemer aangeleverd als visuele bron. Gebruik ze als echte referentiebeelden. Behoud de persoon herkenbaar en verander zijn identiteit niet. Kies zelf welke beelden de compositie het beste ondersteunen; je hoeft ze niet allemaal te gebruiken. Genereer nu één Lumivey Preview met de image_generation tool.`,
+    },
+    ...images.map((image) => ({
+      type: "input_image",
+      image_url: image.dataUrl,
+      detail: "high",
+    })),
+  ];
+
+  const response: any = await openai.responses.create({
+    model: "gpt-5.6-terra",
+    input: [{ role: "user", content }],
+    tools: [
+      {
+        type: "image_generation",
+        model: "gpt-image-2",
+        size: "1024x1536",
+        quality: "medium",
+        action: "auto",
+      },
+    ] as any,
+  } as any);
+
+  const imageCall = Array.isArray(response.output)
+    ? response.output.find((item: any) => item?.type === "image_generation_call" && typeof item?.result === "string")
+    : null;
+
+  return imageCall?.result || "";
+}
+
 export async function createLumiveyPreview(understanding: LumiveyUnderstanding) {
   const [site, artDirection] = await Promise.all([
     createSiteDescription(understanding),
@@ -28,6 +94,8 @@ export async function createLumiveyPreview(understanding: LumiveyUnderstanding) 
   const highHumanSignals = (understanding.humanSignals || [])
     .filter((item) => item.previewRelevance === "high")
     .slice(0, 4);
+
+  const referenceImages = collectUploadedReferenceImages(understanding);
 
   const prompt = `
 Create ONE polished visual artist impression of a future website for an entrepreneur.
@@ -65,6 +133,13 @@ SOURCE-RICHNESS RULE
 - If confirmed contact details are available, the concept may show them in a realistic contact/footer treatment; never invent missing values.
 - Use distinctive professional context from sources when it helps recognition, but treat the old website as evidence rather than a design blueprint.
 
+REAL-IMAGE RULE
+- If entrepreneur-supplied photos are available, they are visual source authority and should be preferred over invented replacements.
+- You do not need to use every supplied image. Curate them.
+- Do not change a real person's identity, facial features or apparent age.
+- Do not unintentionally crop off the head or face in prominent compositions.
+- A personal hobby image may support identity and atmosphere but must never be presented as a professional service unless confirmed.
+
 RECOGNIZABILITY TEST
 Before finalizing the concept, ask yourself: if the company name and profession were covered, would this still feel recognizably like this entrepreneur? If not, strengthen the evidence-backed personal layer without inventing facts.
 
@@ -84,14 +159,19 @@ MAKEABILITY RULE
 Do not show visual or interaction ideas that a modern production engine such as v0/Vercel could not reasonably reproduce in a responsive website. Prefer strong composition, typography, photography, spacing and color over impossible effects.
 `;
 
-  const result = await openai.images.generate({
-    model: "gpt-image-2",
-    prompt,
-    size: "1024x1536",
-    quality: "medium",
-  });
+  let imageBase64 = "";
 
-  const imageBase64 = result.data?.[0]?.b64_json;
+  if (referenceImages.length > 0) {
+    imageBase64 = await generateWithReferenceImages(prompt, referenceImages);
+  } else {
+    const result = await openai.images.generate({
+      model: "gpt-image-2",
+      prompt,
+      size: "1024x1536",
+      quality: "medium",
+    });
+    imageBase64 = result.data?.[0]?.b64_json || "";
+  }
 
   if (!imageBase64) {
     throw new Error("Geen artist impression ontvangen.");
@@ -111,5 +191,6 @@ Do not show visual or interaction ideas that a modern production engine such as 
     },
     artDirection,
     siteDirection: site,
+    referenceImageCount: referenceImages.length,
   };
 }
