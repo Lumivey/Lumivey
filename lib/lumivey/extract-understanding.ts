@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import {
   EMPTY_UNDERSTANDING,
   LumiveyUnderstanding,
+  SourceBackedCandidate,
 } from "@/lib/lumivey/understanding";
 import {
   formatSourceContextsForPrompt,
@@ -31,6 +32,44 @@ function parseJson(text: string): LumiveyUnderstanding {
   }
 }
 
+function deterministicContactCandidates(sourceContexts: SourceContext[]): SourceBackedCandidate[] {
+  const candidates: SourceBackedCandidate[] = [];
+
+  for (const source of sourceContexts) {
+    const sourceLabel = source.url || source.title || source.name || source.type;
+
+    for (const fact of source.facts || []) {
+      const match = fact.statement.match(/^Contact (?:e-mail|telefoon|link):\s*(.+)$/i);
+      if (!match?.[1]?.trim()) continue;
+
+      const value = match[1].trim();
+      candidates.push({
+        value,
+        evidence: fact.evidence || fact.statement,
+        sourceLabel,
+        status: "source-backed-unconfirmed",
+      });
+    }
+  }
+
+  return Array.from(
+    new Map(candidates.map((candidate) => [candidate.value.toLowerCase(), candidate])).values()
+  );
+}
+
+function mergeSourceBackedCandidates(
+  primary: SourceBackedCandidate[] = [],
+  additional: SourceBackedCandidate[] = []
+): SourceBackedCandidate[] {
+  return Array.from(
+    new Map(
+      [...primary, ...additional]
+        .filter((candidate) => candidate?.value?.trim())
+        .map((candidate) => [candidate.value.trim().toLowerCase(), candidate])
+    ).values()
+  );
+}
+
 export async function extractUnderstanding(
   messages: ChatMessage[],
   sourceContexts: SourceContext[] = []
@@ -38,6 +77,10 @@ export async function extractUnderstanding(
   if (!messages.length) {
     return {
       ...EMPTY_UNDERSTANDING,
+      sourceBacked: {
+        ...EMPTY_UNDERSTANDING.sourceBacked,
+        contactDetails: deterministicContactCandidates(sourceContexts),
+      },
       sources: sourceContexts,
     };
   }
@@ -181,11 +224,20 @@ Verwijder lege voorbeelditems.
   });
 
   const parsed = parseJson(response.output_text);
+  const sourceBacked = parsed.sourceBacked ?? EMPTY_UNDERSTANDING.sourceBacked;
+  const deterministicContacts = deterministicContactCandidates(sourceContexts);
 
   return {
     ...parsed,
     humanSignals: parsed.humanSignals ?? [],
-    sourceBacked: parsed.sourceBacked ?? EMPTY_UNDERSTANDING.sourceBacked,
+    sourceBacked: {
+      ...EMPTY_UNDERSTANDING.sourceBacked,
+      ...sourceBacked,
+      contactDetails: mergeSourceBackedCandidates(
+        sourceBacked.contactDetails,
+        deterministicContacts
+      ),
+    },
     sources: sourceContexts,
   };
 }
