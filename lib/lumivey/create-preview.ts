@@ -45,10 +45,28 @@ IMPORTANT
 - Use concise Dutch website copy where copy is visible.
 - The design should be strong enough that the entrepreneur can react: “Ja, dit ben ik.”
 
+LUMIVEY HOMEPAGE BALANCE RULE
+- The homepage should normally combine BOTH a professional anchor and a personal recognition anchor when the evidence supports both.
+- The professional anchor must make the entrepreneur's real work/domain credible and concrete.
+- The personal anchor must make the homepage feel like this specific human, not merely a website for this profession.
+- A personal anchor can be a person, first name(s), meaningful object, scene, phrase, story cue, ritual, atmosphere or visual motif.
+- Do NOT use the same device for every entrepreneur. A handwritten signature may fit one person and be wrong for another.
+- If the current understanding explicitly says the entrepreneur does not want personal material on the homepage, respect that and do not force it.
+- Personal meaning must not erase professional credibility; professional content must not flatten the entrepreneur into a generic sector template.
+
 HUMAN RECOGNITION RULE
-When HIGH-RELEVANCE HUMAN SIGNALS are provided below, use at least one of them meaningfully in the image, copy, atmosphere or composition, unless doing so would be inappropriate or technically unrealistic.
-Do not reduce it to a decorative hobby card. Let it help make this the website of this specific entrepreneur rather than a generic website for the profession.
+When HIGH-RELEVANCE HUMAN SIGNALS are provided below, use at least one of them meaningfully in the VISUAL COMPOSITION or IMAGE LANGUAGE, not only as copy, unless doing so would be inappropriate or technically unrealistic.
+If a high-relevance signal concerns a personal ritual, hobby or way of observing the world, it may shape atmosphere, imagery, pacing or composition, but must never be presented as a service unless the evidence says it is one.
+Do not reduce a meaningful human signal to a decorative hobby card.
 Never extend the signal beyond its evidence.
+
+SOURCE-RICHNESS RULE
+- Preserve relevant confirmed source-backed facts instead of silently dropping them.
+- If confirmed contact details are available, the concept may show them in a realistic contact/footer treatment; never invent missing values.
+- Use distinctive professional context from sources when it helps recognition, but treat the old website as evidence rather than a design blueprint.
+
+RECOGNIZABILITY TEST
+Before finalizing the concept, ask yourself: if the company name and profession were covered, would this still feel recognizably like this entrepreneur? If not, strengthen the evidence-backed personal layer without inventing facts.
 
 HIGH-RELEVANCE HUMAN SIGNALS
 ${JSON.stringify(highHumanSignals, null, 2)}
