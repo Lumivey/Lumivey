@@ -158,6 +158,9 @@ export async function createV0Build(brief: WebsiteBrief): Promise<V0BuildResult>
     throw new Error("V0_API_KEY ontbreekt.");
   }
 
+  // v0 generation can take longer than a Vercel function invocation. Start the
+  // chat asynchronously so Lumivey's own request returns immediately while v0
+  // continues building in its own environment.
   const response = await fetch("https://api.v0.dev/v1/chats", {
     method: "POST",
     headers: {
@@ -167,7 +170,7 @@ export async function createV0Build(brief: WebsiteBrief): Promise<V0BuildResult>
     body: JSON.stringify({
       message: buildV0Prompt(brief),
       attachments: buildV0Attachments(brief),
-      responseMode: "sync",
+      responseMode: "async",
       chatPrivacy: "private",
     }),
   });
@@ -181,11 +184,16 @@ export async function createV0Build(brief: WebsiteBrief): Promise<V0BuildResult>
 
   const chatId = data?.id || data?.chat?.id || data?.data?.chat?.id;
   const previewUrl = data?.demo || data?.preview?.url || data?.data?.preview?.url;
-  const webUrl = data?.url || data?.webUrl || data?.data?.chat?.webUrl;
+  const returnedWebUrl = data?.url || data?.webUrl || data?.data?.chat?.webUrl;
 
   if (!chatId) {
     throw new Error("v0 gaf geen chat-id terug.");
   }
+
+  // Async mode may not have a rendered demo yet. The v0 chat URL is available
+  // immediately and will show generation progress/results without keeping the
+  // Lumivey serverless function open.
+  const webUrl = returnedWebUrl || `https://v0.dev/chat/${chatId}`;
 
   return { chatId, previewUrl, webUrl, raw: data };
 }
