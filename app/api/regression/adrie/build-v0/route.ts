@@ -11,8 +11,21 @@ export const maxDuration = 300;
 
 const TARGET_URL = "https://www.assetpouwer.nl";
 
+function safeText(value: unknown): string | null {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed || null;
+  }
+
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+
+  return null;
+}
+
 function unique(values: string[]): string[] {
-  return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
+  return Array.from(new Set(values.map((value) => safeText(value)).filter((value): value is string => Boolean(value))));
 }
 
 function uploadedPhotoSources(attachments: UploadedSourceInput[]): SourceContext[] {
@@ -79,7 +92,10 @@ function sourceAssets(sources: SourceContext[]): WebsiteAsset[] {
 }
 
 function contactValue(candidates: SourceBackedCandidate[] | undefined, kind: "email" | "phone" | "link"): string | null {
-  const values = (candidates || []).map((item) => item.value?.trim()).filter(Boolean) as string[];
+  const values = (candidates || [])
+    .map((item) => safeText((item as SourceBackedCandidate | undefined)?.value))
+    .filter((value): value is string => Boolean(value));
+
   if (kind === "email") return values.find((value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/i.test(value)) || null;
   if (kind === "link") return values.find((value) => /linkedin\.com|instagram\.com|facebook\.com|https?:\/\//i.test(value)) || null;
   return values.find((value) => {
@@ -95,8 +111,8 @@ function buildFacts(understanding: LumiveyUnderstanding): WebsiteFact[] {
   const link = contactValue(sourceBacked?.contactDetails, "link");
 
   return [
-    { key: "entrepreneur.name", value: understanding.entrepreneur?.name || "Adrie Pouwer", status: "confirmed", source: "Discovery" },
-    { key: "business.name", value: understanding.entrepreneur?.businessName || "AssetPouwer", status: "confirmed", source: "Discovery" },
+    { key: "entrepreneur.name", value: safeText(understanding.entrepreneur?.name) || "Adrie Pouwer", status: "confirmed", source: "Discovery" },
+    { key: "business.name", value: safeText(understanding.entrepreneur?.businessName) || "AssetPouwer", status: "confirmed", source: "Discovery" },
     { key: "contact.email", value: email, status: email ? "source-found" : "missing", source: email ? "website-source" : "not-found" },
     { key: "contact.phone", value: phone, status: phone ? "source-found" : "missing", source: phone ? "website-source" : "not-found" },
     { key: "contact.linkedin", value: link, status: link ? "source-found" : "missing", source: link ? "website-source" : "not-found" },
@@ -121,10 +137,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "De echte aangeleverde Adrie-foto's ontbreken in de v0-overdracht." }, { status: 400 });
     }
 
-    // Re-crawl at build time so the Website Brief uses the repaired, richer source layer.
-    // The browser intentionally sends only compact image attachments; the full previous
-    // SourceContext/Understanding is not posted again because that made the serverless
-    // request exceed the platform payload limit.
     const research = await researchWebsite(TARGET_URL);
     const websiteContext = await analyzeWebsiteSource(research);
     const photoSources = uploadedPhotoSources(attachments);
@@ -155,7 +167,7 @@ export async function POST(request: Request) {
         { name: "Expertise & werkvelden", purpose: "Strategisch assetmanagement, techniek, industrie en infrastructuur helder maken.", knownContent: unique([...(understanding.business?.services || []), ...sourceGold]).slice(0, 12) },
         { name: "Praktijk & werkwijze", purpose: "De brug strategie-operatie, uitvoerbaarheid en het change-voorbeeld zichtbaar maken.", knownContent: unique([...(understanding.identity?.craftsmanship || []), ...(understanding.identity?.story || []), ...understanding.facts]).slice(0, 12) },
         { name: "Kennis", purpose: "Relevante artikelen, vakcontext en bewezen inhoud benutten zonder de oude site te kopiëren.", knownContent: unique(sourceFacts.filter((item) => /artikel|publicat|iso|nen|iam|kennis|magazine|certific/i.test(item))).slice(0, 12) },
-        { name: "Contact", purpose: "Persoonlijke kennismaking laagdrempelig maken met alleen geverifieerde contactdata.", knownContent: understanding.sourceBacked?.contactDetails?.map((item) => item.value).slice(0, 8) || [] },
+        { name: "Contact", purpose: "Persoonlijke kennismaking laagdrempelig maken met alleen geverifieerde contactdata.", knownContent: (understanding.sourceBacked?.contactDetails || []).map((item) => safeText((item as SourceBackedCandidate | undefined)?.value)).filter((value): value is string => Boolean(value)).slice(0, 8) },
       ],
       functionalRequirements: [
         "Responsive desktop en mobiel",
