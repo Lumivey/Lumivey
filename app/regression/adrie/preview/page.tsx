@@ -161,14 +161,7 @@ async function storeForV0(asset: SelectedAttachment, slot: string): Promise<Stor
     handleUploadUrl: "/api/uploads/v0-assets",
     clientPayload: JSON.stringify({ case: "adrie", slot }),
   });
-
-  return {
-    id: asset.id,
-    name: asset.name,
-    mimeType: asset.mimeType,
-    url: stored.url,
-    size: asset.size,
-  };
+  return { id: asset.id, name: asset.name, mimeType: asset.mimeType, url: stored.url, size: asset.size };
 }
 
 export default function AdriePreviewOnlyPage() {
@@ -181,6 +174,7 @@ export default function AdriePreviewOnlyPage() {
   const [buildStage, setBuildStage] = useState("");
   const [buildError, setBuildError] = useState("");
   const [build, setBuild] = useState<BuildResult | null>(null);
+  const [humanApproved, setHumanApproved] = useState(false);
 
   async function loadCheckpoint() {
     if (loading) return;
@@ -192,6 +186,7 @@ export default function AdriePreviewOnlyPage() {
       if (!response.ok) throw new Error(errorMessage(data?.error || "Checkpoint kon niet worden geladen."));
       setCheckpoint(data);
       setResult(null);
+      setHumanApproved(false);
     } catch (e) {
       setError(errorMessage(e));
     } finally {
@@ -223,6 +218,7 @@ export default function AdriePreviewOnlyPage() {
     setError("");
     setBuild(null);
     setBuildError("");
+    setHumanApproved(false);
     try {
       const previewPhotos = await Promise.all(
         photos.map((photo) => compressDataUrl(photo.dataUrl, photo.name, PREVIEW_PHOTO_EDGE, PREVIEW_PHOTO_BYTES))
@@ -230,12 +226,7 @@ export default function AdriePreviewOnlyPage() {
       const response = await fetch("/api/regression/adrie/finalize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          replay: base.replay,
-          sourceContexts: base.sourceContexts,
-          understanding: base.understanding,
-          attachments: previewPhotos,
-        }),
+        body: JSON.stringify({ replay: base.replay, sourceContexts: base.sourceContexts, understanding: base.understanding, attachments: previewPhotos }),
         cache: "no-store",
       });
       const data = await readJsonResponse(response);
@@ -249,7 +240,9 @@ export default function AdriePreviewOnlyPage() {
   }
 
   async function buildWebsite() {
-    if (!result?.previewImpression?.imageDataUrl || result.evaluation.overall !== "PASS" || buildLoading) return;
+    const status = result?.evaluation.overall;
+    const approved = status === "PASS" || (status === "WARN" && humanApproved);
+    if (!result?.previewImpression?.imageDataUrl || !approved || buildLoading) return;
     setBuildLoading(true);
     setBuildStage("Beelden voorbereiden…");
     setBuildError("");
@@ -259,13 +252,11 @@ export default function AdriePreviewOnlyPage() {
       const compactPhotos = await Promise.all(
         photos.map((photo) => compressDataUrl(photo.dataUrl, photo.name, BUILD_PHOTO_EDGE, BUILD_PHOTO_BYTES))
       );
-
       setBuildStage("Preview en foto’s rechtstreeks opslaan…");
       const [storedPreview, ...storedPhotos] = await Promise.all([
         storeForV0(compactPreview, "approved-preview"),
         ...compactPhotos.map((photo, index) => storeForV0(photo, `photo-${index + 1}`)),
       ]);
-
       setBuildStage("Compacte Website Brief naar v0 sturen…");
       const response = await fetch("/api/regression/adrie/build-v0", {
         method: "POST",
@@ -281,6 +272,7 @@ export default function AdriePreviewOnlyPage() {
             createdAt: result.previewImpression.createdAt || new Date().toISOString(),
           },
           evaluation: result.evaluation,
+          humanApproved: status === "WARN" && humanApproved,
         }),
         cache: "no-store",
       });
@@ -290,18 +282,17 @@ export default function AdriePreviewOnlyPage() {
       setBuildStage("v0-build gestart.");
     } catch (e) {
       const message = errorMessage(e);
-      setBuildError(
-        /blob|token|upload/i.test(message)
-          ? `${message} Controleer of een Vercel Blob store aan het Lumivey-project is gekoppeld.`
-          : message
-      );
+      setBuildError(/blob|token|upload/i.test(message) ? `${message} Controleer of een Vercel Blob store aan het Lumivey-project is gekoppeld.` : message);
       setBuildStage("");
     } finally {
       setBuildLoading(false);
     }
   }
 
-  const canBuild = Boolean(result?.evaluation.overall === "PASS" && result?.previewImpression?.imageDataUrl);
+  const status = result?.evaluation.overall;
+  const machinePass = status === "PASS";
+  const warnCanBeApproved = status === "WARN" && Boolean(result?.previewImpression?.imageDataUrl);
+  const canBuild = Boolean(result?.previewImpression?.imageDataUrl && (machinePass || (warnCanBeApproved && humanApproved)));
 
   return (
     <main className="home">
@@ -322,9 +313,7 @@ export default function AdriePreviewOnlyPage() {
             <p><strong>Stap 2.</strong> Selecteer dezelfde vijf echte Adrie-foto&apos;s als bronpool. Dat is het enige wat opnieuw nodig is.</p>
             <input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={handlePhotoSelection} disabled={loading} />
             {photos.length > 0 && <p>{photos.length} foto&apos;s klaar: {photos.map((photo) => photo.name).join(", ")}</p>}
-            <button onClick={generatePreview} disabled={photos.length === 0 || loading}>
-              {loading ? "Alleen Preview maken…" : result ? "Maak Preview opnieuw met dezelfde state" : "Maak Preview met bestaande state"}
-            </button>
+            <button onClick={generatePreview} disabled={photos.length === 0 || loading}>{loading ? "Alleen Preview maken…" : result ? "Maak Preview opnieuw met dezelfde state" : "Maak Preview met bestaande state"}</button>
           </div>
         )}
 
@@ -336,9 +325,7 @@ export default function AdriePreviewOnlyPage() {
               <p className="eyebrow">Beoordeling — Preview met bestaande state</p>
               <p><strong>Uitkomst:</strong> {result.evaluation.overall}</p>
               <p><strong>Diagnose:</strong> {result.evaluation.diagnosis}</p>
-              {result.evaluation.checks.map((check) => (
-                <p key={check.name}><strong>{check.name} — {check.status}:</strong> {check.reason}</p>
-              ))}
+              {result.evaluation.checks.map((check) => <p key={check.name}><strong>{check.name} — {check.status}:</strong> {check.reason}</p>)}
             </div>
 
             {result.previewImpression?.imageDataUrl && (
@@ -347,9 +334,16 @@ export default function AdriePreviewOnlyPage() {
               </div>
             )}
 
-            {!canBuild && (
-              <p className="quiet">Nog geen PASS. Klik hierboven alleen opnieuw op “Maak Preview opnieuw met dezelfde state”. Discovery en Firecrawl blijven ongemoeid.</p>
+            {status === "FAIL" && <p className="quiet">FAIL blokkeert de websitebouw. Verbeter eerst de Preview met dezelfde state.</p>}
+
+            {warnCanBeApproved && !humanApproved && (
+              <div style={{ margin: "32px 0", padding: 22, border: "1px solid #d8d8d2", borderRadius: 18 }}>
+                <p><strong>Menselijke gate.</strong> De evaluator geeft WARN, maar als jij de Preview inhoudelijk goed genoeg vindt, mag je hem expliciet goedkeuren. De WARN blijft zichtbaar in het dossier.</p>
+                <button onClick={() => setHumanApproved(true)}>Ik keur deze Preview goed</button>
+              </div>
             )}
+
+            {status === "WARN" && humanApproved && <p className="quiet">Preview handmatig goedgekeurd. De WARN blijft geregistreerd; websitebouw is nu toegestaan.</p>}
 
             {canBuild && (
               <div style={{ margin: "32px 0", padding: 22, border: "1px solid #d8d8d2", borderRadius: 18 }}>
