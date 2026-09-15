@@ -3,6 +3,9 @@
   "functions": {
     "app/api/regression/michael/build-clean/route.ts": {
       "maxDuration": 300
+    },
+    "app/api/regression/adrie/build-v0/route.ts": {
+      "maxDuration": 800
     }
   }
 }
