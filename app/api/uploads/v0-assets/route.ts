@@ -35,7 +35,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       {
         error: message,
         hint: message.toLowerCase().includes("token")
-          ? "Koppel eerst een Vercel Blob store aan het Lumivey-project."
+          ? "De Blob store moet aan het Lumivey-project gekoppeld zijn en de deployment moet na die koppeling opnieuw zijn uitgerold. Nieuwe Vercel Blob-koppelingen gebruiken OIDC; een losse BLOB_READ_WRITE_TOKEN is niet vereist."
           : undefined,
       },
       { status: 400 },
