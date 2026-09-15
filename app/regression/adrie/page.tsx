@@ -8,7 +8,6 @@ type Turn = { turn: number; user: string; assistant: string };
 type ChatMessage = { role: "user" | "assistant"; content: string };
 type SelectedAttachment = { id: string; name: string; mimeType: string; dataUrl: string; size: number };
 type BuildResult = { chatId: string; webUrl?: string; previewUrl?: string };
-
 type Result = {
   case: string;
   purpose: string;
@@ -66,7 +65,6 @@ function sleep(ms: number) {
 async function postChatWithRetry(payload: unknown, attempts = 3): Promise<{ response: Response; data: any }> {
   let lastResponse: Response | null = null;
   let lastData: any = null;
-
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     const response = await fetch("/api/chat", {
       method: "POST",
@@ -77,15 +75,10 @@ async function postChatWithRetry(payload: unknown, attempts = 3): Promise<{ resp
     const data = await readJsonResponse(response);
     lastResponse = response;
     lastData = data;
-
-    if (response.status !== 429 || attempt === attempts - 1) {
-      return { response, data };
-    }
-
+    if (response.status !== 429 || attempt === attempts - 1) return { response, data };
     const retryAfterSeconds = Number(response.headers.get("Retry-After") || "60");
     await sleep(Math.max(10, retryAfterSeconds) * 1000);
   }
-
   return { response: lastResponse as Response, data: lastData };
 }
 
@@ -117,7 +110,7 @@ function blobToDataUrl(blob: Blob): Promise<string> {
   });
 }
 
-async function canvasToJpeg(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
+function canvasToJpeg(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
   return new Promise((resolve, reject) => {
     canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("Beeld kon niet worden gecomprimeerd.")), "image/jpeg", quality);
   });
@@ -132,11 +125,9 @@ async function preparePhoto(file: File): Promise<SelectedAttachment> {
   const context = canvas.getContext("2d");
   if (!context) throw new Error("Foto kon niet worden voorbereid.");
   context.drawImage(image, 0, 0, canvas.width, canvas.height);
-
   let blob = await canvasToJpeg(canvas, 0.78);
   if (blob.size > MAX_BYTES) blob = await canvasToJpeg(canvas, 0.62);
   if (blob.size > MAX_BYTES) throw new Error(`${file.name} blijft te groot na verkleinen.`);
-
   return {
     id: `adrie-${Date.now()}-${Math.random().toString(36).slice(2)}-${file.name}`,
     name: file.name,
@@ -146,16 +137,10 @@ async function preparePhoto(file: File): Promise<SelectedAttachment> {
   };
 }
 
-async function compressDataUrlForBuild(
-  dataUrl: string,
-  name: string,
-  maxEdge: number,
-  maxBytes: number
-): Promise<SelectedAttachment> {
+async function compressDataUrlForBuild(dataUrl: string, name: string, maxEdge: number, maxBytes: number): Promise<SelectedAttachment> {
   const image = await loadDataUrlImage(dataUrl);
   let scale = Math.min(1, maxEdge / Math.max(image.naturalWidth, image.naturalHeight));
   let lastBlob: Blob | null = null;
-
   for (let resizeAttempt = 0; resizeAttempt < 3; resizeAttempt += 1) {
     const canvas = document.createElement("canvas");
     canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
@@ -163,7 +148,6 @@ async function compressDataUrlForBuild(
     const context = canvas.getContext("2d");
     if (!context) throw new Error("Beeld kon niet worden voorbereid voor de v0-overdracht.");
     context.drawImage(image, 0, 0, canvas.width, canvas.height);
-
     for (const quality of [0.76, 0.64, 0.54, 0.44]) {
       const blob = await canvasToJpeg(canvas, quality);
       lastBlob = blob;
@@ -177,10 +161,8 @@ async function compressDataUrlForBuild(
         };
       }
     }
-
     scale *= 0.78;
   }
-
   if (!lastBlob) throw new Error(`${name} kon niet worden voorbereid voor de v0-overdracht.`);
   return {
     id: `v0-${Date.now()}-${Math.random().toString(36).slice(2)}-${name}`,
@@ -205,14 +187,12 @@ export default function AdrieRegressionPage() {
 
   useEffect(() => {
     let cancelled = false;
-
     async function run() {
       try {
         const messages: ChatMessage[] = [];
         const replay: Turn[] = [];
         let sourceContexts: unknown[] = [];
         let understanding: unknown = null;
-
         for (let index = 0; index < ADRIE_TURNS.length; index += 1) {
           if (cancelled) return;
           const user = ADRIE_TURNS[index];
@@ -220,22 +200,18 @@ export default function AdrieRegressionPage() {
           setProgress(index === 0
             ? "Stap 1/7 — volledige AssetPouwer-site crawlen en eerste Discovery-reactie…"
             : `Stap ${index + 1}/7 — Discovery-beurt ${index + 1} van 6…`);
-
           const { response, data } = await postChatWithRetry({ messages, sourceContexts });
           if (!response.ok) {
             const stage = data?.stage ? ` (${data.stage})` : "";
             throw new Error(`${errorMessage(data?.error || `Adrie replay stopte bij beurt ${index + 1}.`)}${stage}`);
           }
-
           const assistant = String(data.reply || "");
           messages.push({ role: "assistant", content: assistant });
           replay.push({ turn: index + 1, user, assistant });
           understanding = data.understanding;
           sourceContexts = Array.isArray(data?.understanding?.sources) ? data.understanding.sources : sourceContexts;
-
           if (index < ADRIE_TURNS.length - 1) await sleep(2500);
         }
-
         if (cancelled) return;
         setProgress("Stap 7/7 — creatieve richting, Preview en beoordeling…");
         const finalizeResponse = await fetch("/api/regression/adrie/finalize", {
@@ -249,7 +225,6 @@ export default function AdrieRegressionPage() {
           const stage = finalData?.stage ? ` (${finalData.stage})` : "";
           throw new Error(`${errorMessage(finalData?.error || "Adrie-finalisatie kon niet worden uitgevoerd.")}${stage}`);
         }
-
         if (!cancelled) {
           setResult(finalData);
           setProgress("Gereed");
@@ -258,7 +233,6 @@ export default function AdrieRegressionPage() {
         if (!cancelled) setError(errorMessage(e));
       }
     }
-
     run();
     return () => { cancelled = true; };
   }, []);
@@ -269,7 +243,7 @@ export default function AdrieRegressionPage() {
     setPhotoError("");
     if (!files.length) return;
     if (files.length > MAX_PHOTOS) {
-      setPhotoError(`Kies maximaal ${MAX_PHOTOS} foto's voor deze Run 2.`);
+      setPhotoError(`Kies maximaal ${MAX_PHOTOS} foto's.`);
       return;
     }
     try {
@@ -280,11 +254,12 @@ export default function AdrieRegressionPage() {
     }
   }
 
-  async function runWithPhotos() {
+  async function regeneratePreviewWithCurrentState() {
     if (!result || photos.length === 0 || run2Loading) return;
     setRun2Loading(true);
     setPhotoError("");
     setBuild(null);
+    setBuildError("");
     try {
       const response = await fetch("/api/regression/adrie/finalize", {
         method: "POST",
@@ -300,7 +275,7 @@ export default function AdrieRegressionPage() {
       const data = await readJsonResponse(response);
       if (!response.ok) {
         const stage = data?.stage ? ` (${data.stage})` : "";
-        throw new Error(`${errorMessage(data?.error || "Run 2 kon niet worden uitgevoerd.")}${stage}`);
+        throw new Error(`${errorMessage(data?.error || "Preview kon niet opnieuw worden gemaakt.")}${stage}`);
       }
       setResult(data);
     } catch (e) {
@@ -313,10 +288,9 @@ export default function AdrieRegressionPage() {
   async function buildApprovedPreview() {
     if (!result || !result.previewImpression?.imageDataUrl || result.evaluation.overall !== "PASS" || buildLoading) return;
     if (photos.length === 0) {
-      setBuildError("De vijf aangeleverde foto's staan niet meer in deze browsersessie. Selecteer ze opnieuw via Run 2 voordat je v0 bouwt.");
+      setBuildError("De aangeleverde foto's staan niet meer in deze browsersessie. Selecteer ze opnieuw; Discovery en Firecrawl hoeven niet opnieuw.");
       return;
     }
-
     setBuildLoading(true);
     setBuildError("");
     setBuild(null);
@@ -331,7 +305,6 @@ export default function AdrieRegressionPage() {
       const compactPhotos = await Promise.all(
         photos.map((photo) => compressDataUrlForBuild(photo.dataUrl, photo.name, BUILD_PHOTO_EDGE, BUILD_PHOTO_BYTES))
       );
-
       const response = await fetch("/api/regression/adrie/build-v0", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -362,6 +335,7 @@ export default function AdrieRegressionPage() {
 
   const hasRun2 = Boolean(result?.uploadedPhotoCount);
   const canBuildApproved = Boolean(hasRun2 && result?.evaluation.overall === "PASS" && result?.previewImpression?.imageDataUrl);
+  const needsPreviewRetry = Boolean(hasRun2 && result?.evaluation.overall !== "PASS");
 
   return (
     <main className="home">
@@ -382,12 +356,12 @@ export default function AdrieRegressionPage() {
             {!hasRun2 && (
               <div style={{ margin: "28px 0", padding: 22, border: "1px solid #d8d8d2", borderRadius: 18 }}>
                 <p className="eyebrow">Run 2 — aangeleverde Adrie-foto&apos;s</p>
-                <p>Selecteer in één keer maximaal vijf foto&apos;s. Lumivey analyseert ze als bronpool, kiest zelf slechts de sterkste passende beelden en maakt daarna opnieuw de Preview.</p>
+                <p>Selecteer in één keer maximaal vijf foto&apos;s. Lumivey gebruikt ze als bronpool en maakt daarna de Preview.</p>
                 <input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={handlePhotoSelection} disabled={run2Loading} />
-                {photos.length > 0 && <p>{photos.length} foto&apos;s klaar voor Run 2: {photos.map((photo) => photo.name).join(", ")}</p>}
+                {photos.length > 0 && <p>{photos.length} foto&apos;s klaar: {photos.map((photo) => photo.name).join(", ")}</p>}
                 {photoError && <p className="quiet">{photoError}</p>}
-                <button onClick={runWithPhotos} disabled={photos.length === 0 || run2Loading}>
-                  {run2Loading ? "Foto's verwerken en nieuwe Preview maken…" : "Run 2 met deze foto's"}
+                <button onClick={regeneratePreviewWithCurrentState} disabled={photos.length === 0 || run2Loading}>
+                  {run2Loading ? "Foto's verwerken en Preview maken…" : "Run 2 met deze foto's"}
                 </button>
               </div>
             )}
@@ -401,17 +375,34 @@ export default function AdrieRegressionPage() {
               ))}
             </div>
 
+            {needsPreviewRetry && (
+              <div style={{ margin: "28px 0", padding: 22, border: "1px solid #d8d8d2", borderRadius: 18 }}>
+                <p className="eyebrow">Preview verbeteren — Discovery blijft staan</p>
+                <p>Deze Preview is nog geen PASS. Het gesprek, de broncontext en het opgebouwde Understanding worden hergebruikt. Er wordt dus géén nieuwe Discovery en géén nieuwe Firecrawl-run gestart; alleen de creatieve Preview en beoordeling worden opnieuw gemaakt.</p>
+                {photos.length === 0 && (
+                  <>
+                    <p className="quiet">De foto&apos;s zijn niet meer in deze browsersessie. Selecteer alleen dezelfde bronpool opnieuw.</p>
+                    <input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={handlePhotoSelection} disabled={run2Loading} />
+                  </>
+                )}
+                {photos.length > 0 && <p className="quiet">Bronpool behouden: {photos.length} foto&apos;s. Discovery en Firecrawl worden niet herhaald.</p>}
+                {photoError && <p className="quiet">{photoError}</p>}
+                <button onClick={regeneratePreviewWithCurrentState} disabled={photos.length === 0 || run2Loading}>
+                  {run2Loading ? "Alleen Preview opnieuw maken…" : "Maak Preview opnieuw met dezelfde Discovery en foto's"}
+                </button>
+              </div>
+            )}
+
             {result.previewError && (
               <div style={{ margin: "28px 0", padding: 18, border: "1px solid #b8b8b0", borderRadius: 14 }}>
-                <p className="eyebrow">Preview-substap</p>
-                <p>{result.previewError}</p>
+                <p className="eyebrow">Preview-substap</p><p>{result.previewError}</p>
               </div>
             )}
 
             {result.previewImpression?.imageDataUrl && (
               <div style={{ margin: "32px 0" }}>
                 <p className="eyebrow">Artist impression {hasRun2 ? `— met ${result.uploadedPhotoCount} aangeleverde foto’s als bronpool` : "— nog zonder aangeleverde Adrie-foto's"}</p>
-                <p>{hasRun2 ? "De foto’s zijn vóór de Preview als echte visuele bron verwerkt; Lumivey hoeft ze niet allemaal te tonen." : "Run 1 test eerst de interpretatielaag zonder aangeleverde foto’s."}</p>
+                <p>{hasRun2 ? "De foto’s zijn als echte visuele bron verwerkt; Lumivey hoeft ze niet allemaal te tonen." : "Run 1 test eerst de interpretatielaag zonder aangeleverde foto’s."}</p>
                 <img src={result.previewImpression.imageDataUrl} alt="Adrie AssetPouwer artist impression" style={{ width: "100%", height: "auto", display: "block", borderRadius: 18, border: "1px solid #d8d8d2" }} />
               </div>
             )}
@@ -419,9 +410,9 @@ export default function AdrieRegressionPage() {
             {canBuildApproved && (
               <div style={{ margin: "32px 0", padding: 22, border: "1px solid #d8d8d2", borderRadius: 18 }}>
                 <p className="eyebrow">Volgende gate — Website Brief → v0</p>
-                <p>Deze PASS-preview wordt als design authority gebruikt. Lumivey crawlt AssetPouwer opnieuw met de herstelde bronlaag, verrijkt de Website Brief en geeft v0 alleen gevalideerde echte klantbeelden als productie-assets.</p>
+                <p>Deze PASS-preview wordt als design authority gebruikt. Lumivey ververst de bronlaag voor de Website Brief en geeft v0 alleen gevalideerde echte klantbeelden als productie-assets.</p>
                 <button onClick={buildApprovedPreview} disabled={buildLoading}>
-                  {buildLoading ? "Beelden compact voorbereiden, bronlaag verversen en v0 bouwen…" : "Bouw website vanuit deze goedgekeurde Preview"}
+                  {buildLoading ? "Preview en bronlaag voorbereiden en v0 bouwen…" : "Bouw website vanuit deze goedgekeurde Preview"}
                 </button>
                 {buildError && <p className="quiet" style={{ marginTop: 16 }}>{buildError}</p>}
                 {sourceSummary && (
