@@ -1,26 +1,19 @@
 import { NextResponse } from "next/server";
-import { researchWebsite } from "@/lib/lumivey/research-website";
-import { analyzeWebsiteSource } from "@/lib/lumivey/analyze-website-source";
-import { extractUnderstanding } from "@/lib/lumivey/extract-understanding";
 import { SourceContext, UploadedSourceInput } from "@/lib/lumivey/source-context";
 import { ArtistImpression, WebsiteAsset, WebsiteBrief, WebsiteFact, checkBuildReadiness } from "@/lib/lumivey/primary-flow";
 import { createV0Build } from "@/lib/lumivey/v0-adapter";
 import { LumiveyUnderstanding, SourceBackedCandidate } from "@/lib/lumivey/understanding";
+import { ADRIE_REGRESSION_SOURCE_CONTEXTS } from "@/lib/lumivey/regression/adrie-checkpoint";
+import { ADRIE_CHECKPOINT_UNDERSTANDING } from "@/lib/lumivey/regression/adrie-understanding";
 
 export const maxDuration = 300;
-
-const TARGET_URL = "https://www.assetpouwer.nl";
 
 function safeText(value: unknown): string | null {
   if (typeof value === "string") {
     const trimmed = value.trim();
     return trimmed || null;
   }
-
-  if (typeof value === "number" || typeof value === "boolean") {
-    return String(value);
-  }
-
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
   return null;
 }
 
@@ -119,10 +112,16 @@ function buildFacts(understanding: LumiveyUnderstanding): WebsiteFact[] {
   ];
 }
 
+function sourceFactsAndGold(sources: SourceContext[]) {
+  return {
+    facts: unique(sources.flatMap((source) => (source.facts || []).map((fact) => fact.statement))),
+    gold: unique(sources.flatMap((source) => (source.goldCandidates || []).map((item) => item.signal))),
+  };
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const replay = Array.isArray(body?.replay) ? body.replay : [];
     const attachments: UploadedSourceInput[] = Array.isArray(body?.attachments) ? body.attachments : [];
     const approvedPreview = body?.previewImpression as ArtistImpression | undefined;
     const evaluation = body?.evaluation;
@@ -137,23 +136,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "De echte aangeleverde Adrie-foto's ontbreken in de v0-overdracht." }, { status: 400 });
     }
 
-    const research = await researchWebsite(TARGET_URL);
-    const websiteContext = await analyzeWebsiteSource(research);
+    // Discovery en brononderzoek zijn al afgerond. Gebruik exact dezelfde checkpoint-state
+    // als de goedgekeurde Preview in plaats van opnieuw te crawlen en opnieuw Understanding
+    // te laten extraheren. Dit voorkomt drift, time-outs en onnodige wachttijd.
+    const understanding = ADRIE_CHECKPOINT_UNDERSTANDING;
     const photoSources = uploadedPhotoSources(attachments);
-    const sources = [websiteContext, ...photoSources];
-
-    const messages = replay.flatMap((turn: any) => [
-      { role: "user" as const, content: String(turn?.user || "") },
-      { role: "assistant" as const, content: String(turn?.assistant || "") },
-    ]);
-    messages.push({
-      role: "user" as const,
-      content: "De aangeleverde foto's zijn echte foto's van mij en vormen een bronpool. Kies alleen wat echt nodig is. Fotografie is persoonlijk en geen dienst. Gebruik echte foto's geloofwaardig: geen losse of gegenereerde lichaamsdelen wanneer de bronfoto goed te croppen is.",
-    });
-
-    const understanding = await extractUnderstanding(messages, sources);
-    const sourceFacts = websiteContext.facts.map((fact) => fact.statement);
-    const sourceGold = websiteContext.goldCandidates.map((item) => item.signal);
+    const sources = [...ADRIE_REGRESSION_SOURCE_CONTEXTS, ...photoSources];
+    const { facts: sourceFacts, gold: sourceGold } = sourceFactsAndGold(ADRIE_REGRESSION_SOURCE_CONTEXTS);
 
     const brief: WebsiteBrief = {
       version: 1,
@@ -184,6 +173,7 @@ export async function POST(request: Request) {
         "Echte Adrie-foto's gaan vóór AI-vervangers. Verander zijn gezicht niet en crop hoofd/gezicht niet onbedoeld af.",
         "Geen zwevende handen, armen of andere losse lichaamsdelen. Als een aangeleverde echte foto de gewenste scène bevat, crop die foto geloofwaardig in plaats van menselijke anatomie met AI te reconstrueren.",
         "Gebruik alleen geverifieerde contactgegevens. Als e-mail niet betrouwbaar uit de bron komt, laat die weg in plaats van te verzinnen.",
+        "Het bestaande AssetPouwer-logo/woordmerk is een merkasset en mag niet stilzwijgend worden vervangen door een nieuw verzonnen logo. Als het logo nog niet als productieasset beschikbaar is, behoud ruimte en identiteit zonder een fictief alternatief te ontwerpen.",
         "Het change-voorbeeld moet herkenbaar maken dat impact op mensen en budgetten zichtbaar werd en dat fasering over meerdere jaren mogelijk werd.",
         "Vermijd mechanisch donker/licht/donker/licht stapelen wanneer een natuurlijker ritme de Preview beter benadert.",
       ],
@@ -200,10 +190,10 @@ export async function POST(request: Request) {
       build,
       brief,
       sourceSummary: {
-        crawlMode: research.mode,
-        pageCount: research.pages?.length || 0,
-        websiteFacts: websiteContext.facts.length,
-        goldCandidates: websiteContext.goldCandidates.length,
+        crawlMode: "checkpoint-reuse",
+        pageCount: ADRIE_REGRESSION_SOURCE_CONTEXTS.length,
+        websiteFacts: sourceFacts.length,
+        goldCandidates: sourceGold.length,
         uploadedRealImages: attachments.length,
       },
     });
