@@ -152,7 +152,9 @@ LUMIVEY HOMEPAGE BALANCE RULE
 
 PROFESSIONAL-SERVICE CALIBRATION
 - If the entrepreneur is primarily a consultant, adviser, interim professional, coach, specialist or other knowledge/trust service provider, do NOT assume that repeated portraits create more personality.
-- For this category, when the personal material is NOT itself the offer, default to ONE strong visible appearance of the entrepreneur on the homepage unless the evidence clearly justifies another distinct role or story beat.
+- If this is a SOLO, NAMED professional and genuine supplied photos of that person are available, and Discovery contains no explicit objection to appearing on the homepage, the default is EXACTLY ONE clearly recognizable visible appearance of that entrepreneur on the homepage.
+- ZERO visible appearances is not a valid interpretation of “do not repeat the person”. A forest, camera, coffee cup, technical installation or other indirect cue may support personality, but it does not replace the one human appearance when trustworthy real photos are available.
+- More than one visible appearance should happen only when Discovery or the story clearly requires a second, meaningfully different role; otherwise keep it to one.
 - Additional humanity should preferably come from tone, wording, atmosphere, a meaningful detail, work context, a subtle ritual/hobby cue or an invitation to talk — not repeated face shots.
 - A small scene such as nature, a meaningful object, a coffee-table detail or one short personal line can humanize the page more effectively than another portrait.
 - Use the Over/About page for deeper biography, hobby, motivation and personal story when that material would otherwise crowd the homepage.
@@ -178,8 +180,9 @@ SOURCE-RICHNESS RULE — MANDATORY
 REAL-IMAGE RULE
 - If entrepreneur-supplied photos are available, they are visual source authority and should be preferred over invented replacements.
 - Uploaded photos are a SOURCE POOL, never a quota. Curate hard; do not show an image merely because it was supplied.
-- Do not repeat the same person across the homepage just because several photos are available. Normally show that person only once or twice; use a third appearance only when it adds a clearly different, evidence-backed role or story beat.
-- Prefer variation after the main personal image: technical environment, meaningful detail, work context or atmosphere can carry identity without repeating the face.
+- For a solo named professional under the calibration rule above, use one recognizable supplied entrepreneur image on the homepage unless Discovery explicitly rules that out. Do not accidentally curate the person away completely.
+- After that one main human appearance, prefer variation: technical environment, meaningful detail, work context or atmosphere can carry identity without repeating the face.
+- For other business types, do not repeat the same person across the homepage merely because several photos are available; let Discovery determine whether people, team dynamics, work or product should dominate.
 - Do not change a real person's identity, facial features or apparent age.
 - Do not unintentionally crop off the head or face in prominent compositions.
 - NEVER create a floating hand, isolated arm, partial body or other anatomical fragment that implies a person without a physically credible visible or clearly continuous body/context.
@@ -194,6 +197,7 @@ RECOGNIZABILITY TEST
 Before finalizing the concept, ask yourself: if the company name and profession were covered, would this still feel recognizably like this entrepreneur? If not, strengthen the evidence-backed personal layer without inventing facts.
 Then ask a second question: if the personal photos were removed, would the remaining copy and proof still reveal why this entrepreneur is professionally distinctive? If not, strengthen source-backed professional specificity.
 Before finalizing any image crop containing a person, ask a third question: could a real photograph physically look like this? If not, reject that crop or composition and use the supplied photo more faithfully.
+For a solo named knowledge/trust professional with supplied real photos, ask a fourth question: is the entrepreneur himself visibly present exactly once, unless Discovery explicitly says otherwise? If not, correct the composition before finalizing.
 
 HIGH-RELEVANCE HUMAN SIGNALS
 ${JSON.stringify(highHumanSignals, null, 2)}
