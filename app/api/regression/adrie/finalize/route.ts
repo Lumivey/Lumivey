@@ -88,6 +88,8 @@ Kern die niet mag verdampen:
 LUMIVEY PREVIEW-NORM
 - Een technisch nette of sectorspecifieke consultant-site is NIET automatisch PASS.
 - De homepage hoort normaal zowel een professioneel anker als een persoonlijk herkenningsanker te bevatten, tenzij Discovery expliciet zegt dat Adrie dat niet wil.
+- Voor deze SOLO consultant-case geldt: als echte door Adrie aangeleverde foto's beschikbaar zijn en er geen expliciet bezwaar tegen zichtbaarheid is, moet Adrie zelf EXACT ÉÉN KEER herkenbaar op de homepage zichtbaar zijn. Nul keer is een curatiefout; twee of meer keer is alleen acceptabel met een aantoonbaar andere, noodzakelijke verhaalfunctie.
+- Een bos, camera, koffiekop, technische installatie of andere indirecte cue is ondersteunend en mag nooit als vervanging gelden voor die ene zichtbare menselijke aanwezigheid.
 - Voor Adrie moet zijn rustige observerende/fotografische kant zichtbaar invloed hebben op beeldtaal, sfeer of compositie; alleen een technische installatie in rustig licht is onvoldoende als de persoonlijke laag verder ontbreekt.
 - Een camera als los object is GEEN volwaardige vervanging voor het specifieke goudklompje: zondagochtend, natuur, kijken naar compositie, en de expliciete koppeling met zijn manier van werken. Als dit goudklompje alleen tot een generieke camera-prop of algemeen natuurbeeld is gereduceerd, is calm-observer-photography maximaal WARN.
 - Fotografie/natuur mag niet als dienstverlening worden gepresenteerd.
@@ -105,13 +107,14 @@ BRONRIJKDOM-NORM — GATE-KRITISCH
 BEELDCURATIE-NORM
 - Aangeleverde foto's vormen een bronpool, geen quota.
 - Een homepage moet niet vol staan met herhaling van dezelfde persoon alleen omdat veel foto's beschikbaar zijn.
-- Voor deze Adrie-case is normaal één of twee zichtbare verschijningen van Adrie sterk; een derde alleen als die aantoonbaar een andere rol of verhaalfunctie vervult.
-- Na het persoonlijke hoofdbeeld mogen techniek, werkomgeving, detailbeelden en sfeer de identiteit verder dragen.
+- Voor deze Adrie-case is EXACT ÉÉN herkenbare zichtbare verschijning van Adrie op de homepage de standaard wanneer echte foto's beschikbaar zijn. Nul zichtbare verschijningen is minimaal WARN op image-curation én personal-homepage-anchor; meer dan één is eveneens minimaal WARN tenzij een tweede beeld een duidelijke, noodzakelijke andere verhaalfunctie heeft.
+- Na dat ene persoonlijke hoofdbeeld mogen techniek, werkomgeving, detailbeelden en sfeer de identiteit verder dragen.
 - Een hobbyprop zoals de camera mag niet door herhaling zwaarder gaan wegen dan de professionele propositie. Twee cameramomenten zijn alleen acceptabel als ze duidelijk verschillende, betekenisvolle functies hebben; anders image-curation maximaal WARN.
-- Straf onnodige persoonsherhaling, gezichtsvervorming, onherkenbare vervanging of ongunstige hoofd/face-crops af.
+- Straf onnodige persoonsherhaling, volledige afwezigheid ondanks bruikbare echte foto's, gezichtsvervorming, onherkenbare vervanging of ongunstige hoofd/face-crops af.
 
 OVERALL-GATE
 - overall PASS mag alleen wanneer ALLE gate-kritische checks PASS zijn: source-richness, personal-homepage-anchor, preview-specificity en image-curation.
+- personal-homepage-anchor mag in deze Adrie-case NIET PASS zijn wanneer Adrie zelf niet herkenbaar zichtbaar is terwijl bruikbare echte foto's aanwezig zijn.
 - Een sterke sfeer of mooie fotografie mag een inhoudelijke WARN niet maskeren.
 - Als één gate-kritische check WARN is, is overall maximaal WARN.
 - Als één gate-kritische check FAIL is, is overall FAIL.
