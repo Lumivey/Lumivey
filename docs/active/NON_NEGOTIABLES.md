@@ -61,6 +61,17 @@ Deze regels zijn harde kwaliteits- en gedragsgrenzen. Een nieuwe chat, tool, gen
 - Bij twijfel: toon minder van de foto, niet méér AI. Een veilige crop is beter dan een creatieve reconstructie.
 - Een beeld mag alleen als dienst/positionering worden gebruikt als dat inhoudelijk klopt; persoonlijke hobby’s worden niet als dienstverlening gepresenteerd.
 
+## Bestaande merkassets
+
+- **Bestaande merkassets worden behouden tenzij de ondernemer expliciet kiest voor rebranding of vervanging.**
+- Logo, woordmerk en favicon/app-icon moeten apart van gewone bronbeelden worden herkend en geclassificeerd.
+- Een bestaande website is geen ontwerpblauwdruk, maar een bestaand logo is wel merkbezit en mag niet stilzwijgend worden vervangen door een nieuw AI-logo of een willekeurige typografische variant.
+- Als een logo aantoonbaar op meerdere dragers wordt gebruikt — bijvoorbeeld website, visitekaartjes, briefpapier, voertuigen of kleding — geldt dat als sterk bewijs dat het een te behouden primaire merkasset is.
+- Favicon/app-icon is ondersteunend bewijs van de bestaande identiteit en moet meegenomen worden in de merkassetcontrole.
+- Preview, Website Brief en v0 moeten een gevonden primaire merkasset behouden of expliciet signaleren waarom dat niet kan.
+- Rebranding is een apart besluit; websitevernieuwing impliceert nooit automatisch een nieuw logo of nieuwe merkidentiteit.
+- Vaste interne richtlijn: `docs/active/BRAND_ASSETS.md`.
+
 ## Feiten en bronnen
 
 - Geen verzonnen contactgegevens, adressen, prijzen, certificaten, klanten, projecten, openingstijden of biografie.
