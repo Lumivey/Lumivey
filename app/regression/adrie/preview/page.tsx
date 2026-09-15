@@ -1,10 +1,12 @@
 "use client";
 
 import { ChangeEvent, useState } from "react";
+import { upload } from "@vercel/blob/client";
 
 type Status = "PASS" | "WARN" | "FAIL";
 type Check = { name: string; status: Status; reason: string };
 type SelectedAttachment = { id: string; name: string; mimeType: string; dataUrl: string; size: number };
+type StoredAttachment = { id: string; name: string; mimeType: string; url: string; size: number };
 type BuildResult = { chatId: string; webUrl?: string; previewUrl?: string };
 type Result = {
   case: string;
@@ -77,6 +79,16 @@ function blobToDataUrl(blob: Blob): Promise<string> {
   });
 }
 
+function dataUrlToBlob(dataUrl: string): Blob {
+  const [meta, encoded] = dataUrl.split(",", 2);
+  if (!meta || !encoded) throw new Error("Beelddata is ongeldig.");
+  const mimeType = /data:([^;]+)/.exec(meta)?.[1] || "image/jpeg";
+  const bytes = atob(encoded);
+  const array = new Uint8Array(bytes.length);
+  for (let index = 0; index < bytes.length; index += 1) array[index] = bytes.charCodeAt(index);
+  return new Blob([array], { type: mimeType });
+}
+
 function canvasToJpeg(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
   return new Promise((resolve, reject) => {
     canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("Beeld kon niet worden gecomprimeerd.")), "image/jpeg", quality);
@@ -140,6 +152,25 @@ async function compressDataUrl(dataUrl: string, name: string, maxEdge: number, m
   };
 }
 
+async function storeForV0(asset: SelectedAttachment, slot: string): Promise<StoredAttachment> {
+  const pathname = `lumivey/v0/adrie/${Date.now()}-${slot}.jpg`;
+  const blob = dataUrlToBlob(asset.dataUrl);
+  const stored = await upload(pathname, blob, {
+    access: "public",
+    contentType: asset.mimeType,
+    handleUploadUrl: "/api/uploads/v0-assets",
+    clientPayload: JSON.stringify({ case: "adrie", slot }),
+  });
+
+  return {
+    id: asset.id,
+    name: asset.name,
+    mimeType: asset.mimeType,
+    url: stored.url,
+    size: asset.size,
+  };
+}
+
 export default function AdriePreviewOnlyPage() {
   const [checkpoint, setCheckpoint] = useState<Result | null>(null);
   const [result, setResult] = useState<Result | null>(null);
@@ -147,6 +178,7 @@ export default function AdriePreviewOnlyPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [buildLoading, setBuildLoading] = useState(false);
+  const [buildStage, setBuildStage] = useState("");
   const [buildError, setBuildError] = useState("");
   const [build, setBuild] = useState<BuildResult | null>(null);
 
@@ -192,9 +224,6 @@ export default function AdriePreviewOnlyPage() {
     setBuild(null);
     setBuildError("");
     try {
-      // Keep the request safely below Vercel's function body limit. The five
-      // selected originals remain in browser state; only compact visual copies
-      // are sent to the Preview route. This changes transport size, not source meaning.
       const previewPhotos = await Promise.all(
         photos.map((photo) => compressDataUrl(photo.dataUrl, photo.name, PREVIEW_PHOTO_EDGE, PREVIEW_PHOTO_BYTES))
       );
@@ -222,6 +251,7 @@ export default function AdriePreviewOnlyPage() {
   async function buildWebsite() {
     if (!result?.previewImpression?.imageDataUrl || result.evaluation.overall !== "PASS" || buildLoading) return;
     setBuildLoading(true);
+    setBuildStage("Beelden voorbereiden…");
     setBuildError("");
     setBuild(null);
     try {
@@ -229,15 +259,23 @@ export default function AdriePreviewOnlyPage() {
       const compactPhotos = await Promise.all(
         photos.map((photo) => compressDataUrl(photo.dataUrl, photo.name, BUILD_PHOTO_EDGE, BUILD_PHOTO_BYTES))
       );
+
+      setBuildStage("Preview en foto’s rechtstreeks opslaan…");
+      const [storedPreview, ...storedPhotos] = await Promise.all([
+        storeForV0(compactPreview, "approved-preview"),
+        ...compactPhotos.map((photo, index) => storeForV0(photo, `photo-${index + 1}`)),
+      ]);
+
+      setBuildStage("Compacte Website Brief naar v0 sturen…");
       const response = await fetch("/api/regression/adrie/build-v0", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           replay: result.replay,
-          attachments: compactPhotos,
+          attachments: storedPhotos,
           previewImpression: {
             id: result.previewImpression.id || "adrie-approved-preview",
-            imageDataUrl: compactPreview.dataUrl,
+            imageDataUrl: storedPreview.url,
             headline: result.previewImpression.headline || "AssetPouwer — goedgekeurde Adrie Preview",
             rationale: result.previewImpression.rationale || [],
             createdAt: result.previewImpression.createdAt || new Date().toISOString(),
@@ -249,8 +287,15 @@ export default function AdriePreviewOnlyPage() {
       const data = await readJsonResponse(response);
       if (!response.ok) throw new Error(errorMessage(data?.error || "Website Brief → v0 kon niet worden uitgevoerd."));
       setBuild(data.build as BuildResult);
+      setBuildStage("v0-build gestart.");
     } catch (e) {
-      setBuildError(errorMessage(e));
+      const message = errorMessage(e);
+      setBuildError(
+        /blob|token|upload/i.test(message)
+          ? `${message} Controleer of een Vercel Blob store aan het Lumivey-project is gekoppeld.`
+          : message
+      );
+      setBuildStage("");
     } finally {
       setBuildLoading(false);
     }
@@ -309,7 +354,8 @@ export default function AdriePreviewOnlyPage() {
             {canBuild && (
               <div style={{ margin: "32px 0", padding: 22, border: "1px solid #d8d8d2", borderRadius: 18 }}>
                 <p className="eyebrow">Volgende gate — Website Brief → v0</p>
-                <button onClick={buildWebsite} disabled={buildLoading}>{buildLoading ? "v0 bouwen…" : "Bouw website vanuit deze goedgekeurde Preview"}</button>
+                <button onClick={buildWebsite} disabled={buildLoading}>{buildLoading ? "v0-overdracht voorbereiden…" : "Bouw website vanuit deze goedgekeurde Preview"}</button>
+                {buildStage && <p className="quiet">{buildStage}</p>}
                 {buildError && <p className="quiet">{buildError}</p>}
                 {build?.previewUrl && <p><a href={build.previewUrl} target="_blank" rel="noreferrer">Open de technische preview</a></p>}
                 {build?.webUrl && <p><a href={build.webUrl} target="_blank" rel="noreferrer">Open de v0-build</a></p>}
