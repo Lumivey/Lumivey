@@ -1,0 +1,1 @@
+Applied rule: Website Brief → v0 handoff must normalize model-produced runtime values before string operations. This note accompanies the generic fix for contact/source-backed data normalization.
