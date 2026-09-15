@@ -24,6 +24,8 @@ type Result = {
 const MAX_PHOTOS = 5;
 const MAX_EDGE = 1400;
 const MAX_BYTES = 1_400_000;
+const PREVIEW_PHOTO_EDGE = 1000;
+const PREVIEW_PHOTO_BYTES = 420_000;
 const BUILD_PHOTO_EDGE = 1100;
 const BUILD_PHOTO_BYTES = 300_000;
 const BUILD_PREVIEW_EDGE = 1500;
@@ -190,6 +192,12 @@ export default function AdriePreviewOnlyPage() {
     setBuild(null);
     setBuildError("");
     try {
+      // Keep the request safely below Vercel's function body limit. The five
+      // selected originals remain in browser state; only compact visual copies
+      // are sent to the Preview route. This changes transport size, not source meaning.
+      const previewPhotos = await Promise.all(
+        photos.map((photo) => compressDataUrl(photo.dataUrl, photo.name, PREVIEW_PHOTO_EDGE, PREVIEW_PHOTO_BYTES))
+      );
       const response = await fetch("/api/regression/adrie/finalize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -197,7 +205,7 @@ export default function AdriePreviewOnlyPage() {
           replay: base.replay,
           sourceContexts: base.sourceContexts,
           understanding: base.understanding,
-          attachments: photos,
+          attachments: previewPhotos,
         }),
         cache: "no-store",
       });
