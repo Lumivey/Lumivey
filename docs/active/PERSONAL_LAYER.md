@@ -48,6 +48,21 @@ Kenmerken:
 
 Referentie: **De Hippe Knip**. De twee dames, hun voornamen, kleurrijke zaak en uitgesproken stijl dragen de persoonlijkheid al. Hobby’s zijn niet nodig om de homepage menselijk of onderscheidend te maken.
 
+## Kalibratie voor kennis- en vertrouwensdiensten
+
+Voor consultants, adviseurs, interimprofessionals, coaches, specialisten en vergelijkbare kennis- of vertrouwensdiensten geldt geen apart sjabloon, maar wel een nuttige standaardhypothese:
+
+- de homepage verkoopt primair **deskundigheid, relevantie, vertrouwen en de manier van werken**;
+- de persoon zelf hoeft daarom normaal niet meerdere keren prominent in beeld te komen;
+- **één sterke verschijning van de ondernemer op de homepage is meestal genoeg** wanneer die persoon niet zelf het visuele product of de dienst is;
+- verdere menselijkheid kan veel subtieler worden gedragen door taal, ritme, een korte anekdote, een betekenisvol detail, natuur/omgeving, een object, een klantmoment of een uitnodiging tot gesprek;
+- een hobbyfoto of privé-scène hoort pas prominent op de homepage wanneer die inhoudelijk de positionering draagt; anders is één kleine knipoog voldoende;
+- de **Over-pagina is de natuurlijke plek voor verdieping** in achtergrond, levensloop, hobby, motivatie en persoonlijk verhaal;
+- de homepage moet vooral duidelijk maken: *waarvoor moet ik deze professional hebben, waarom vertrouw ik hem/haar, en wat is hier anders dan bij een generieke adviseur?*
+- het persoonlijke detail op de homepage heeft vaak als functie om nieuwsgierigheid naar de mens achter de expertise te wekken, niet om diens biografie al volledig te vertellen.
+
+Dit is een default, geen beroepsregel. Discovery mag hem overrulen. Een uitgesproken consultant kan meer persoonlijkheid dragen; een zeer formele of privacybewuste professional juist minder.
+
 ## Beslisvragen voor Preview
 
 Voor elk persoonlijk signaal beoordeelt Lumivey:
@@ -67,12 +82,19 @@ Voor elk persoonlijk signaal beoordeelt Lumivey:
 5. **Kan één klein detail hetzelfde effect bereiken als meerdere beelden/teksten?**
    - Ja → kies het kleinste effectieve gebaar.
 
+6. **Is dit een kennis-/vertrouwensdienst waarbij de homepage vooral expertise en vertrouwen moet verkopen?**
+   - Ja → begin met één sterke persoonsverschijning en laat extra menselijkheid waar mogelijk door sfeer, copy en details dragen.
+
+7. **Hoort de diepere persoonlijke uitleg beter op een Over-pagina?**
+   - Ja → homepage nieuwsgierig laten maken, verdieping verplaatsen.
+
 ## Kwaliteitsregels
 
 - Persoonlijk is geen synoniem voor hobby.
 - Een hobby wordt nooit als dienst gepresenteerd tenzij dat werkelijk zo is.
 - Hetzelfde persoonlijke motief mag niet automatisch op meerdere plekken worden herhaald.
 - Eén betekenisvol detail is beter dan drie decoratieve verwijzingen.
+- Bij kennis- en vertrouwensdiensten is herhaling van hetzelfde gezicht zonder nieuwe verhaalfunctie meestal een kwaliteitsverlies, niet een versterking.
 - Een persoonlijke laag moet uit Discovery of bevestigde context voortkomen, niet uit AI-verzinsel.
 - Als de ondernemer expliciet geen persoonlijke laag wil, wordt dat gerespecteerd.
 - De Preview is een hypothese: de ondernemer mag de intensiteit na het zien verhogen, verlagen of afwijzen.

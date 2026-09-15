@@ -150,6 +150,15 @@ LUMIVEY HOMEPAGE BALANCE RULE
 - If the current understanding explicitly says the entrepreneur does not want personal material on the homepage, respect that and do not force it.
 - Personal meaning must not erase professional credibility; professional content must not flatten the entrepreneur into a generic sector template.
 
+PROFESSIONAL-SERVICE CALIBRATION
+- If the entrepreneur is primarily a consultant, adviser, interim professional, coach, specialist or other knowledge/trust service provider, do NOT assume that repeated portraits create more personality.
+- For this category, when the personal material is NOT itself the offer, default to ONE strong visible appearance of the entrepreneur on the homepage unless the evidence clearly justifies another distinct role or story beat.
+- Additional humanity should preferably come from tone, wording, atmosphere, a meaningful detail, work context, a subtle ritual/hobby cue or an invitation to talk — not repeated face shots.
+- A small scene such as nature, a meaningful object, a coffee-table detail or one short personal line can humanize the page more effectively than another portrait.
+- Use the Over/About page for deeper biography, hobby, motivation and personal story when that material would otherwise crowd the homepage.
+- The homepage should primarily answer: what does this professional help with, why should I trust them, what makes their way of working distinct, and why am I curious to meet them?
+- This is a default hypothesis, not a rigid occupational template. Discovery evidence always wins.
+
 HUMAN RECOGNITION RULE
 When HIGH-RELEVANCE HUMAN SIGNALS are provided below, use at least one of them meaningfully in the VISUAL COMPOSITION or IMAGE LANGUAGE, not only as copy, unless doing so would be inappropriate or technically unrealistic.
 If a high-relevance signal contains a SPECIFIC ritual, moment, origin story, phrase or way of observing the world, preserve enough specificity that the entrepreneur can recognize the source of the interpretation. A generic prop is not enough when the evidence contains a richer human scene.
