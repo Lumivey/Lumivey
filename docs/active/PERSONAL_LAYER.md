@@ -48,6 +48,19 @@ Kenmerken:
 
 Referentie: **De Hippe Knip**. De twee dames, hun voornamen, kleurrijke zaak en uitgesproken stijl dragen de persoonlijkheid al. Hobby’s zijn niet nodig om de homepage menselijk of onderscheidend te maken.
 
+## Geen sector-snelkoppelingen
+
+De referenties hierboven zijn **geen beroepssjablonen**.
+
+- Niet iedere kapsalon is De Hippe Knip.
+- Niet iedere consultant is Adrie.
+- Niet iedere jonge vakman heeft een Michael-achtig oorsprongsverhaal.
+- Lumivey mag dus nooit uit alleen het beroep afleiden hoeveel persoonlijkheid al zichtbaar of nodig is.
+
+Een rustige, standaard kapsalon kan juist méér Discovery nodig hebben om de mens achter het bedrijf te leren kennen. Een uitgesproken consultant kan al sterk karakter tonen zonder hobbylaag. De vraag is steeds: **wat is hier werkelijk onderscheidend aan deze ondernemer, deze mensen en deze zaak?**
+
+Wanneer bedrijf, beelden of eerste antwoorden nog weinig eigenheid laten zien, is dat geen reden voor een generieke Preview. Het is een signaal dat Lumivey verder moet ontdekken — bijvoorbeeld naar trots, oorsprong, voorkeuren, manier van werken, klantmomenten, rituelen, irritaties, keuzes of herkenbare details — totdat er voldoende echte identiteit is om creatief te vertalen.
+
 ## Kalibratie voor kennis- en vertrouwensdiensten
 
 Voor consultants, adviseurs, interimprofessionals, coaches, specialisten en vergelijkbare kennis- of vertrouwensdiensten geldt geen apart sjabloon, maar wel een nuttige standaardhypothese:
@@ -88,6 +101,9 @@ Voor elk persoonlijk signaal beoordeelt Lumivey:
 7. **Hoort de diepere persoonlijke uitleg beter op een Over-pagina?**
    - Ja → homepage nieuwsgierig laten maken, verdieping verplaatsen.
 
+8. **Komt de veronderstelde persoonlijkheid uit Discovery, of alleen uit het beroep/branchelabel?**
+   - Alleen uit beroep/branche → niet gebruiken; verder ontdekken.
+
 ## Kwaliteitsregels
 
 - Persoonlijk is geen synoniem voor hobby.
@@ -96,6 +112,7 @@ Voor elk persoonlijk signaal beoordeelt Lumivey:
 - Eén betekenisvol detail is beter dan drie decoratieve verwijzingen.
 - Bij kennis- en vertrouwensdiensten is herhaling van hetzelfde gezicht zonder nieuwe verhaalfunctie meestal een kwaliteitsverlies, niet een versterking.
 - Een persoonlijke laag moet uit Discovery of bevestigde context voortkomen, niet uit AI-verzinsel.
+- Een branche of beroep mag nooit als vervanging voor Discovery worden gebruikt.
 - Als de ondernemer expliciet geen persoonlijke laag wil, wordt dat gerespecteerd.
 - De Preview is een hypothese: de ondernemer mag de intensiteit na het zien verhogen, verlagen of afwijzen.
 - De homepage hoeft niet alle persoonlijke diepte te bevatten; een Over-pagina kan verdiepen.
