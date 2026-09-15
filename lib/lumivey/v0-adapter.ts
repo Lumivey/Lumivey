@@ -1,5 +1,4 @@
 import { WebsiteBrief, WebsiteAsset } from "@/lib/lumivey/primary-flow";
-import { createPreviewBlueprint } from "@/lib/lumivey/preview-blueprint";
 
 type V0BuildResult = {
   chatId: string;
@@ -40,7 +39,7 @@ function compactBriefForV0(brief: WebsiteBrief) {
       headline: brief.artistImpression.headline,
       rationale: brief.artistImpression.rationale,
       createdAt: brief.artistImpression.createdAt,
-      note: "The approved Preview has already been converted into a textual visual blueprint. The screenshot itself is deliberately NOT attached to prevent it from becoming a production asset.",
+      note: "The approved Preview screenshot is deliberately NOT attached. Use the approved rationale, Website Brief and asset roles as design guidance; never render a screenshot shortcut.",
     },
     facts: brief.facts,
     assets: brief.assets.map((asset) => {
@@ -69,12 +68,13 @@ function compactBriefForV0(brief: WebsiteBrief) {
   };
 }
 
-function buildV0Prompt(brief: WebsiteBrief, visualBlueprint: string): string {
+function buildV0Prompt(brief: WebsiteBrief): string {
   const compactBrief = compactBriefForV0(brief);
+  const approvedRationale = brief.artistImpression.rationale.join("\n- ");
 
   return `
 You are the technical production engine for Lumivey.
-Build a real responsive website from the approved Lumivey design blueprint and the supplied production assets.
+Build a real responsive website from the approved Lumivey direction and the supplied production assets.
 
 ABSOLUTE REFERENCE/PRODUCTION SEPARATION
 - The original approved Preview screenshot is NOT attached to this request on purpose.
@@ -83,31 +83,30 @@ ABSOLUTE REFERENCE/PRODUCTION SEPARATION
 - All attachments in this request are production assets only.
 - Never create a fake screenshot of the Preview and never use any full-page image as the website surface.
 
-APPROVED VISUAL BLUEPRINT
-${visualBlueprint}
+APPROVED PREVIEW RATIONALE
+- ${approvedRationale}
 
 DESIGN AUTHORITY
-- The visual blueprint is the design authority for composition, hierarchy, pacing, image count, person count, atmosphere, typography feeling, color rhythm and section relationships.
-- Recreate that blueprint as faithfully as technically practical.
-- Do not redesign it into a safer, flatter or more generic consultant website.
+- The approved rationale, Website Brief and asset roles are the design authority for hierarchy, pacing, image use, atmosphere, color rhythm and section relationships.
+- Do not redesign the work into a safer, flatter or more generic consultant website.
 - Preserve information density and rhythm. No giant empty areas, accidental whitespace or image/text scale mismatches.
-- Do not increase the number of appearances of a person, hobby, prop or image beyond what the blueprint describes.
-- If the blueprint says a person appears exactly once, that is a hard limit for the homepage.
-- If the blueprint describes a personal hobby or ritual as secondary, keep it secondary.
+- Do not increase the number of appearances of a person, hobby, prop or image beyond what the approved direction requires.
+- For a solo knowledge/trust professional, use one clear recognizable homepage appearance by default unless the brief explicitly requires more.
+- Keep personal hobbies or rituals secondary to the professional proposition unless the approved direction explicitly makes them central.
 
 PRODUCTION ASSET RULES
 - Respect each asset's compositionalRole, role, origin, validation status and production instruction.
 - HERO_PRIMARY: strong opening identity anchor.
 - SERVICE_PROCESS: services or working-method support.
-- STORY_ORIGIN: personal/origin context, always secondary to the current proposition unless the blueprint says otherwise.
+- STORY_ORIGIN: personal/origin context, always secondary to the current proposition unless the approved direction says otherwise.
 - DETAIL_TEXTURE: accent only; never dominate.
 - CTA_CLIMAX: closing conversion area.
 - SUPPORTING_VISUAL: pacing and continuity.
 - Uploaded photos are a SOURCE POOL, not a quota. Do not force all images into the homepage.
 - Prefer real customer assets over generated substitutes.
-- Keep real people recognizable. Never crop off faces or heads in prominent imagery unless the blueprint explicitly requires it.
+- Keep real people recognizable. Never crop off faces or heads in prominent imagery unless the approved direction explicitly requires it.
 - HUMAN IMAGE CREDIBILITY IS A HARD GATE: no floating hands, arms, heads, disconnected body fragments or implausible crops.
-- Do not repeatedly reuse or recrop the same person photo where the blueprint calls for other visual content.
+- Do not repeatedly reuse or recrop the same person photo where the approved direction calls for other visual content.
 - Do not infer a service from a hobby or recurring prop.
 
 TRUTH & FUNCTION GUARDRAILS
@@ -119,9 +118,9 @@ TRUTH & FUNCTION GUARDRAILS
 FINAL SELF-CHECK
 Before returning the build, verify:
 1. There is no full-page screenshot or Preview image rendered anywhere.
-2. The homepage person count matches the visual blueprint exactly.
-3. There are no oversized body crops or repeated person images that were not requested by the blueprint.
-4. The section order, density, hierarchy and emotional rhythm remain faithful to the blueprint.
+2. A solo knowledge/trust professional is not unnecessarily repeated across the homepage.
+3. There are no oversized body crops or repeated person images that were not requested.
+4. The section order, density, hierarchy and emotional rhythm remain faithful to the approved direction.
 5. Only supplied production assets are rendered as images.
 6. There are no giant blank regions or broken desktop proportions.
 If any check fails, fix it before returning the build.
@@ -134,9 +133,8 @@ ${JSON.stringify(compactBrief, null, 2)}
 function buildV0Attachments(brief: WebsiteBrief): V0Attachment[] {
   const attachments: V0Attachment[] = [];
 
-  // Deliberately DO NOT attach the approved Preview screenshot. v0 treats images
-  // as usable assets and can render a reference screenshot despite prompt rules.
-  // The screenshot is converted to a textual visual blueprint before this step.
+  // Never attach the approved Preview screenshot. v0 can treat any attached image
+  // as a production asset even when a prompt says reference-only.
   for (const asset of brief.assets) {
     if (!isAttachableImage(asset)) continue;
     const assetUrl = asset.dataUrl || asset.url;
@@ -151,8 +149,6 @@ export async function createV0Build(brief: WebsiteBrief): Promise<V0BuildResult>
   const apiKey = process.env.V0_API_KEY;
   if (!apiKey) throw new Error("V0_API_KEY ontbreekt.");
 
-  const visualBlueprint = await createPreviewBlueprint(brief);
-
   const response = await fetch("https://api.v0.dev/v1/chats", {
     method: "POST",
     headers: {
@@ -160,7 +156,7 @@ export async function createV0Build(brief: WebsiteBrief): Promise<V0BuildResult>
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      message: buildV0Prompt(brief, visualBlueprint),
+      message: buildV0Prompt(brief),
       attachments: buildV0Attachments(brief),
       responseMode: "async",
       chatPrivacy: "private",
