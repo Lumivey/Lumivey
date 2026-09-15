@@ -39,7 +39,7 @@ function compactBriefForV0(brief: WebsiteBrief) {
       headline: brief.artistImpression.headline,
       rationale: brief.artistImpression.rationale,
       createdAt: brief.artistImpression.createdAt,
-      note: "The approved Preview is supplied separately as an attachment and is the design authority.",
+      note: "The approved Preview is supplied separately as a REFERENCE-ONLY attachment. It is design authority but is never a production asset and must never be rendered in the website.",
     },
     facts: brief.facts,
     assets: brief.assets.map((asset, index) => ({
@@ -71,11 +71,21 @@ function buildV0Prompt(brief: WebsiteBrief): string {
 You are the technical production engine for Lumivey.
 Turn the approved Preview into a real responsive website using the supplied production assets.
 
+NON-NEGOTIABLE REFERENCE/PRODUCTION SEPARATION
+- Attachment 1 is the APPROVED PREVIEW and is REFERENCE ONLY.
+- Attachment 1 MUST NEVER be rendered, embedded, imported, copied into public assets, used as an <img>, background-image, CSS image, canvas, screenshot, iframe, poster, hero image, full-page image, or any other visible production element.
+- Do not create code that points to Attachment 1 or its URL/data URL.
+- Use Attachment 1 only to visually ANALYZE composition, spacing, hierarchy, pacing, typography feeling, color rhythm, section relationships and emotional direction.
+- REBUILD the Preview as real HTML/CSS/components. Never solve fidelity by placing the Preview screenshot inside the website.
+- Only attachments 2+ may be treated as production image assets.
+- If there is any ambiguity between matching the Preview and reusing the Preview image itself, rebuild the structure. The screenshot itself is forbidden as a production shortcut.
+
 DESIGN AUTHORITY
-- Attachment 1 is the APPROVED PREVIEW. The customer has already approved this direction.
-- Treat the Preview as the primary source of truth for composition, visual richness, hierarchy, pacing, imagery, atmosphere, typography feeling, color rhythm, overlaps, texture and emotional impact.
+- The approved Preview is the primary source of truth for composition, visual richness, hierarchy, pacing, imagery, atmosphere, typography feeling, color rhythm, overlaps, texture and emotional impact.
 - Recreate the Preview's intent as faithfully as technically practical. Do not redesign it into a safer, flatter or more generic website.
-- Use your own implementation creativity where exact reproduction is not practical, but preserve the same story, energy and recognition.
+- Preserve the Preview's information density and rhythm. Do not introduce giant empty areas, accidental whitespace, oversized blank sections, or image/text scale mismatches that are absent from the approved Preview.
+- Maintain coherent max-widths, section heights and responsive proportions. Images should support the same editorial rhythm as the Preview rather than becoming isolated oversized panels.
+- Use your own implementation creativity only where exact reproduction is not practical, while preserving the same story, energy and recognition.
 - The Website Brief is a guardrail for truth, required functionality and asset meaning. It is NOT a second design brief and must not override the approved Preview unless there is a factual/safety/technical conflict.
 
 ASSET MAP
@@ -108,6 +118,14 @@ TRUTH & FUNCTION GUARDRAILS
 - The result must work responsively on desktop and mobile.
 - Do not mention v0, Vercel, prompts, AI tooling or Lumivey's internal process in the public website.
 
+FINAL SELF-CHECK BEFORE YOU FINISH
+- Confirm Attachment 1 does not appear anywhere in rendered output or public source code as an image/background/reference URL.
+- Confirm the page is reconstructed with real components and attachments 2+ only.
+- Confirm there are no giant blank regions or broken desktop proportions compared with the approved Preview.
+- Confirm the section order, density, visual hierarchy and emotional rhythm remain recognizably faithful to the approved Preview.
+- Confirm real people remain anatomically believable and recognizable.
+- If any of these checks fail, fix them before returning the build.
+
 WEBSITE BRIEF / PRODUCTION GUARDRAILS
 ${JSON.stringify(compactBrief, null, 2)}
 `;
@@ -116,6 +134,9 @@ ${JSON.stringify(compactBrief, null, 2)}
 function buildV0Attachments(brief: WebsiteBrief): V0Attachment[] {
   const attachments: V0Attachment[] = [];
 
+  // The approved Preview is intentionally attached so v0 can visually inspect it,
+  // but the prompt classifies it as strict REFERENCE ONLY. It may never become a
+  // rendered production asset. Production imagery starts at attachment 2.
   if (brief.artistImpression?.imageDataUrl) {
     attachments.push({ url: brief.artistImpression.imageDataUrl });
   }
