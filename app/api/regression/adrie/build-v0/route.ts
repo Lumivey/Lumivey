@@ -133,20 +133,18 @@ export async function POST(request: Request) {
     const attachments: BuildAttachmentInput[] = Array.isArray(body?.attachments) ? body.attachments : [];
     const approvedPreview = body?.previewImpression as ArtistImpression | undefined;
     const evaluation = body?.evaluation;
+    const humanApproved = body?.humanApproved === true;
 
     if (!approvedPreview?.imageDataUrl || !/^https?:\/\//i.test(approvedPreview.imageDataUrl)) {
       return NextResponse.json({ error: "Geen geldige opgeslagen URL voor de goedgekeurde Adrie Preview ontvangen." }, { status: 400 });
     }
-    if (evaluation?.overall !== "PASS") {
-      return NextResponse.json({ error: "Adrie Preview is niet als PASS goedgekeurd." }, { status: 409 });
+    if (evaluation?.overall !== "PASS" && !(evaluation?.overall === "WARN" && humanApproved)) {
+      return NextResponse.json({ error: "Adrie Preview is niet als PASS beoordeeld en ook niet expliciet door de mens goedgekeurd." }, { status: 409 });
     }
     if (attachments.length === 0 || attachments.some((attachment) => !attachment.url || !/^https?:\/\//i.test(attachment.url))) {
       return NextResponse.json({ error: "De opgeslagen URL's van de echte aangeleverde Adrie-foto's ontbreken in de v0-overdracht." }, { status: 400 });
     }
 
-    // Discovery en brononderzoek zijn al afgerond. Gebruik exact dezelfde checkpoint-state
-    // als de goedgekeurde Preview. De zware beelddata staat al in Blob storage en komt hier
-    // alleen nog binnen als compacte URL-referentie.
     const understanding = ADRIE_CHECKPOINT_UNDERSTANDING;
     const photoSources = uploadedPhotoSources(attachments);
     const sources = [...ADRIE_REGRESSION_SOURCE_CONTEXTS, ...photoSources];
@@ -197,6 +195,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       build,
       brief,
+      approval: { evaluator: evaluation?.overall, humanApproved },
       sourceSummary: {
         crawlMode: "checkpoint-reuse",
         assetTransport: "blob-url",
