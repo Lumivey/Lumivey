@@ -15,8 +15,9 @@ Before changing product code, read:
 1. `docs/active/CURRENT_STATE.md`
 2. `docs/active/NON_NEGOTIABLES.md`
 3. `docs/active/BUILD_METHOD.md`
-4. `docs/active/RECOVERY_PLAN.md` while recovery is active
-5. the relevant reference/checkpoint for the task
+4. `docs/active/PREVIEW_WOW_RETENTION.md` for any Preview → Website Brief → v0 → QA work
+5. `docs/active/RECOVERY_PLAN.md` while recovery is active
+6. the relevant reference/checkpoint for the task
 
 Do not infer a new product direction from the latest chat or local code alone.
 
@@ -28,6 +29,8 @@ Before substantial technical work, check:
 - CORE vs commodity;
 - whether an existing tool already solves the commodity part better;
 - risk of losing facts, provenance, corrections, assets, meaning or preview fidelity.
+
+**Hard WoW preservation rule:** once an entrepreneur approves a Preview, lock the reason for recognition, the entrepreneur-specific creative mechanism, visual motifs and word-image links. The website must preserve them as real web components. A technically attractive website that loses this creative signature fails QA. Do not replace it with a generic site, attach a full-page Preview screenshot as an asset, or invent the same visual motifs for every entrepreneur. Read `docs/active/PREVIEW_WOW_RETENTION.md` before altering either side of this gate.
 
 Do not silently redesign the primary flow.
 Do not add new frameworks or services unless they demonstrably improve the current Lumivey core chain.
