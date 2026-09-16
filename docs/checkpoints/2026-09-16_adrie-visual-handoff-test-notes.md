@@ -1,0 +1,1 @@
+Test conditions: use exact SHA-256 verified reference JPG only as design evidence; separate compressed hero JPG is unvalidated test source. The existing business content remains the baseline. No second Adrie photograph, no head crop, no invented logo, no generic cards. Post-build screenshot comparison and source check required. No resend if submission is ambiguous.
