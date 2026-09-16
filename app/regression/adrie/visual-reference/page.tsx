@@ -8,6 +8,8 @@ const EXPECTED_VERSION = "b_0H3NhLl18e";
 const CONFIRM = "LUMIVEY-ADRIE-VISUAL-REFERENCE-ONE-SHOT";
 const LOCK = `lumivey-adrie-visual-attempt-${EXPECTED_VERSION}`;
 
+type Diagnostic = { verdict: string; expectedVersionId?: string; currentVersionId?: string; versionStatus?: string; visualMessageReceived?: boolean };
+
 function prepareHero(file: File): Promise<File> {
   return new Promise((resolve, reject) => {
     const image = new Image();
@@ -16,8 +18,8 @@ function prepareHero(file: File): Promise<File> {
       URL.revokeObjectURL(objectUrl);
       const scale = Math.min(1, 1750 / Math.max(image.naturalWidth, image.naturalHeight));
       const canvas = document.createElement("canvas");
-      canvas.width = Math.round(image.naturalWidth * scale);
-      canvas.height = Math.round(image.naturalHeight * scale);
+      canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
       const context = canvas.getContext("2d");
       if (!context) { reject(new Error("Bronfoto kon niet worden voorbereid.")); return; }
       context.drawImage(image, 0, 0, canvas.width, canvas.height);
@@ -40,22 +42,48 @@ export default function AdrieVisualReferencePage() {
   const [phase, setPhase] = useState("");
   const [result, setResult] = useState("");
   const [attempted, setAttempted] = useState(true);
+  const [checking, setChecking] = useState(false);
+  const [verifiedReady, setVerifiedReady] = useState(false);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => { setAttempted(Boolean(sessionStorage.getItem(LOCK))); }, []);
 
+  async function verifyBeforeRetry() {
+    if (checking || busy) return;
+    setChecking(true); setVerifiedReady(false); setResult("");
+    try {
+      const response = await fetch("/api/regression/adrie/visual-diagnostic", { cache: "no-store" });
+      const data: Diagnostic = await response.json();
+      const safe = response.ok && data.verdict === "not_received_version_ready"
+        && data.visualMessageReceived === false && data.currentVersionId === EXPECTED_VERSION
+        && data.expectedVersionId === EXPECTED_VERSION && data.versionStatus === "completed";
+      if (!safe) {
+        setAttempted(true);
+        setResult("Leescontrole geeft geen veilige vrijgave: bericht mogelijk ontvangen of v0-versie niet gereed. Er wordt niets verstuurd.");
+        return;
+      }
+      // Only remove a previous local lock AFTER proving the old request was rejected before POST.
+      sessionStorage.removeItem(LOCK);
+      setAttempted(false); setVerifiedReady(true);
+      setResult("Veilig bevestigd: visueel bericht ontbreekt en de oorspronkelijke versie is gereed. Selecteer beide bestanden en verstuur daarna eenmaal.");
+    } catch {
+      setAttempted(true);
+      setResult("Leescontrole mislukt. Geen verzending mogelijk.");
+    } finally { setChecking(false); }
+  }
+
   async function send() {
-    if (!reference || !hero || busy || attempted) return;
-    setBusy(true); setResult("");
+    if (!reference || !hero || busy || attempted || !verifiedReady) return;
+    setBusy(true); setResult(""); setVerifiedReady(false);
     let requestAttempted = false;
     try {
       if (reference.type !== "image/jpeg" || !/^image\/(?:jpeg|png)$/.test(hero.type)) {
         throw new Error("Kies de JPG-ontwerpreferentie en de losse PNG/JPG-bronfoto uit het overdrachtspakket.");
       }
       if (reference.size > 2_000_000 || hero.size > 6_000_000) throw new Error("Bestand is te groot voor deze test.");
-      setPhase("Losse hero-foto veilig verkleinen, ontwerpreferentie ongewijzigd laten…");
+      setPhase("Losse hero-foto verkleinen; exacte ontwerpreferentie ongewijzigd laten…");
       const compactHero = await prepareHero(hero);
-      setPhase("Ontwerpreferentie en losse bronfoto uploaden…");
+      setPhase("Beide bestanden uploaden…");
       const stamp = Date.now();
       const [design, production] = await Promise.all([
         upload(`lumivey/v0/adrie/visual-reference-${stamp}.jpg`, reference, {
@@ -65,7 +93,7 @@ export default function AdrieVisualReferencePage() {
           access: "public", handleUploadUrl: "/api/uploads/v0-assets", contentType: compactHero.type,
         }),
       ]);
-      setPhase("Exacte v0-versie controleren; daarna één correctie indienen…");
+      setPhase("v0-berichtgeschiedenis en actuele versie opnieuw controleren; dan één correctie indienen…");
       // A network timeout can happen after v0 accepted a correction. Never automatically retry.
       sessionStorage.setItem(LOCK, new Date().toISOString());
       setAttempted(true); requestAttempted = true;
@@ -77,7 +105,7 @@ export default function AdrieVisualReferencePage() {
       if (!response.ok || payload.submitted !== true) throw new Error(payload.error || `Verzending niet bevestigd (HTTP ${response.status}).`);
       setResult("v0 heeft de visuele correctie geaccepteerd. Nog geen kwaliteitsgoedkeuring. Controleer nu de nieuwe versie.");
     } catch (error) {
-      setResult(`${error instanceof Error ? error.message : "Onbekende fout."}${requestAttempted ? " Niet opnieuw verzenden; controleer eerst de chatstatus." : " Er is geen correctiebericht ingediend."}`);
+      setResult(`${error instanceof Error ? error.message : "Onbekende fout."}${requestAttempted ? " Niet opnieuw verzenden; voer eerst opnieuw de leescontrole uit." : " Er is geen correctiebericht ingediend."}`);
     } finally { setBusy(false); setPhase(""); }
   }
 
@@ -85,15 +113,21 @@ export default function AdrieVisualReferencePage() {
     <p className="eyebrow">AssetPouwer — visuele correctie</p>
     <h1>Laat v0 de echte Preview zien</h1>
     <p className="lead">Eén vervolgbericht aan dezelfde chat {CHAT_ID}. Geen nieuwe Lumivey-preview of chat. Selecteer de twee afzonderlijke bestanden uit het bestaande overdrachtspakket.</p>
+    <div style={{ padding: 18, border: "1px solid #d8d8d2", borderRadius: 12, marginBottom: 24 }}>
+      <p><strong>Verzendbeveiliging</strong></p>
+      <p>Een eerdere poging werd vóór de verzending geweigerd, maar blokkeerde ten onrechte de knop. Herstel is alleen mogelijk wanneer v0 zelf bevestigt dat het bericht ontbreekt en de verwachte versie gereed is.</p>
+      <button type="button" onClick={verifyBeforeRetry} disabled={checking || busy}>{checking ? "Veiligheid controleren…" : "Controleer v0 en geef verzenden veilig vrij"}</button>
+      {verifiedReady && <p role="status">Leescontrole geslaagd: één gerichte verzending is toegestaan.</p>}
+    </div>
     <p><strong>1. Goedgekeurde ontwerpreferentie — JPG, niet als productiebeeld</strong></p>
-    <input type="file" accept="image/jpeg" onChange={(event) => setReference(event.target.files?.[0] || null)} disabled={busy || attempted}/>
+    <input type="file" accept="image/jpeg" onChange={(event) => setReference(event.target.files?.[0] || null)} disabled={busy || attempted || !verifiedReady}/>
     <p><strong>2. Losse industriële hero-testfoto — PNG of JPG</strong></p>
-    <input type="file" accept="image/png,image/jpeg" onChange={(event) => setHero(event.target.files?.[0] || null)} disabled={busy || attempted}/>
-    <p className="quiet">De ontwerpreferentie blijft byte-voor-byte intact en wordt gecontroleerd op de exact goedgekeurde versie. De losse foto wordt voor de upload verkleind, zonder uitsnede. Beide bestanden gaan naar publiek toegankelijke Blob-URL's voor deze test. Gebruik geen vertrouwelijke beelden. Deze testfoto is geen geverifieerd portret van Adrie; niet publiceren zonder validatie.</p>
-    <button type="button" disabled={!reference || !hero || busy || attempted} onClick={send}>{busy ? "Bezig…" : attempted ? "Verzendpoging al geregistreerd — status controleren" : "Stuur één visuele correctie naar dezelfde v0-chat"}</button>
+    <input type="file" accept="image/png,image/jpeg" onChange={(event) => setHero(event.target.files?.[0] || null)} disabled={busy || attempted || !verifiedReady}/>
+    <p className="quiet">De ontwerpreferentie blijft byte-voor-byte intact en wordt gecontroleerd op de exact goedgekeurde versie. De losse foto wordt voor de upload verkleind zonder uitsnede. Beide bestanden gaan voor deze test naar publiek toegankelijke Blob-URL's. De testfoto is geen geverifieerd portret van Adrie: niet publiceren zonder validatie.</p>
+    <button type="button" disabled={!reference || !hero || busy || attempted || !verifiedReady} onClick={send}>{busy ? "Bezig…" : attempted ? "Verzendpoging geregistreerd — controleer v0" : "Stuur één visuele correctie naar dezelfde v0-chat"}</button>
     {phase && <p aria-live="polite">{phase}</p>}
     {result && <p role="status">{result}</p>}
     <p><a href={`/regression/adrie/build-status?chatId=${CHAT_ID}`}>Bekijk de bestaande chatstatus (alleen lezen)</a></p>
-    <p className="quiet">De verbeterde zakelijke inhoud blijft behouden. Nieuwe desktop- en mobiele website vereisen daarna nog onafhankelijke vergelijking met de Preview, feitencontrole en jouw goedkeuring.</p>
+    <p className="quiet">Geen automatische goedkeuring. De verbeterde zakelijke inhoud blijft behouden. Nieuwe desktop- en mobiele website vereisen vergelijking met de Preview, feitencontrole en jouw goedkeuring.</p>
   </section></main>;
 }
