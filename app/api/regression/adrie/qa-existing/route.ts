@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { GET as getStatus } from "@/app/api/regression/adrie/build-status/route";
 import { GET as getDesktop } from "@/app/api/regression/adrie/build-screenshot/route";
 import { GET as getMobile } from "@/app/api/regression/adrie/mobile-screenshot/route";
 import { POST as runIndependentQA } from "@/app/api/qa/preview-retention/route";
@@ -26,8 +27,20 @@ async function imageAsDataUrl(response: Response, label: string): Promise<string
   return `data:${type};base64,${Buffer.from(bytes).toString("base64")}`;
 }
 
+/** One QA pass must compare renders of ONE completed v0 version; never silently mix revisions. */
+async function completedVersion(requestUrl: string, chatId: string): Promise<string> {
+  const url = new URL(`/api/regression/adrie/build-status?chatId=${encodeURIComponent(chatId)}`, requestUrl);
+  const response = await getStatus(new Request(url));
+  if (!response.ok) throw new Error(`v0-versiecontrole is niet beschikbaar (HTTP ${response.status}). QA gestopt.`);
+  const result = await response.json();
+  if (result?.status !== "completed" || typeof result?.versionId !== "string" || !result.versionId.trim()) {
+    throw new Error("Er is geen aantoonbaar voltooide v0-versie met versie-ID. QA gestopt.");
+  }
+  return result.versionId;
+}
+
 /** Uses ONLY an approved Preview and locked signature provided by the calling build flow.
- *  Never regenerates Discovery, the Preview or a v0 chat. A missing input or render is a stop.
+ * Never regenerates Discovery, the Preview or a v0 chat. Missing inputs or changed versions stop QA.
  */
 export async function POST(request: Request) {
   try {
@@ -46,13 +59,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Het werkelijk goedgekeurde Preview-beeld ontbreekt; QA kan niet betrouwbaar worden uitgevoerd." }, { status: 400 });
     }
     const started = performance.now();
+    const versionId = await completedVersion(request.url, chatId);
+    // The caller may bind QA to the version returned by its own build-status poll.
+    if (body?.expectedVersionId !== undefined && body.expectedVersionId !== versionId) {
+      return NextResponse.json({ error: "De v0-versie wijkt af van de aangevraagde versie. QA geblokkeerd.", publishable: false }, { status: 409 });
+    }
     const base = new URL(request.url);
     const desktopRequest = new Request(new URL(`/api/regression/adrie/build-screenshot?chatId=${encodeURIComponent(chatId)}`, base));
     const mobileRequest = new Request(new URL(`/api/regression/adrie/mobile-screenshot?chatId=${encodeURIComponent(chatId)}`, base));
-    // Reuse the two server-side capture handlers directly: no self-fetch across deployment protection and no exposed v0 key.
+    // Reuse server-side capture handlers directly: no self-fetch across deployment protection or exposed keys.
     const [desktopResult, mobileResult] = await Promise.allSettled([getDesktop(desktopRequest), getMobile(mobileRequest)]);
     if (desktopResult.status !== "fulfilled" || mobileResult.status !== "fulfilled") {
-      return NextResponse.json({ error: "Desktop- of mobiele render is mislukt. Onafhankelijke QA is niet gestart en publicatie blijft geblokkeerd." }, { status: 424 });
+      return NextResponse.json({ error: "Desktop- of mobiele render is mislukt. Onafhankelijke QA is niet gestart en publicatie blijft geblokkeerd.", publishable: false }, { status: 424 });
     }
     let websiteDesktop: string;
     let websiteMobile: string;
@@ -63,6 +81,12 @@ export async function POST(request: Request) {
       ]);
     } catch (error) {
       return NextResponse.json({ error: error instanceof Error ? error.message : "Screenshot ontbreekt.", publishable: false }, { status: 424 });
+    }
+    // Both capture routes read latestVersion independently. A version that changed during capture
+    // cannot be compared against the old approved Preview or sent to the corrector as the old build.
+    const afterCaptureVersion = await completedVersion(request.url, chatId);
+    if (afterCaptureVersion !== versionId) {
+      return NextResponse.json({ error: "v0 heeft tijdens de screenshots een nieuwe versie opgeleverd. De renders kunnen verschillen: QA gestopt, geen nieuwe build gestart.", publishable: false }, { status: 409 });
     }
     const captureMs = Math.round(performance.now() - started);
     const qaRequest = new Request(new URL("/api/qa/preview-retention", base), {
@@ -82,10 +106,10 @@ export async function POST(request: Request) {
     }
     const report = await qaResponse.json();
     const qaMs = Math.round(performance.now() - started) - captureMs;
-    console.info("Lumivey existing Adrie screenshot + QA timings", JSON.stringify({ chatId, previewId: signature.previewId, captureMs, qaMs, overall: report?.overall }));
-    return NextResponse.json({ ...report, chatId, timing: { captureMs, qaMs, totalMs: Math.round(performance.now() - started), note: "Bestaande v0-versie gerenderd en beoordeeld; er is geen nieuwe v0-build gestart." } }, { headers: { "Cache-Control": "no-store" } });
+    console.info("Lumivey existing Adrie screenshot + QA timings", JSON.stringify({ chatId, versionId, previewId: signature.previewId, captureMs, qaMs, overall: report?.overall }));
+    return NextResponse.json({ ...report, chatId, versionId, timing: { captureMs, qaMs, totalMs: Math.round(performance.now() - started), note: "Dezelfde v0-versie gerenderd en beoordeeld; er is geen nieuwe v0-build gestart." } }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     console.error("Lumivey existing Adrie QA failed", error instanceof Error ? error.message : "unknown");
-    return NextResponse.json({ error: "Website-QA is mislukt; publicatie blijft geblokkeerd en er is geen nieuwe build gestart.", publishable: false }, { status: 502 });
+    return NextResponse.json({ error: "Website-QA is mislukt of de v0-versie is niet bereikbaar; publicatie blijft geblokkeerd en er is geen nieuwe build gestart.", publishable: false }, { status: 502 });
   }
 }
