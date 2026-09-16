@@ -1,11 +1,20 @@
 import { WebsiteBrief, WebsiteAsset } from "@/lib/lumivey/primary-flow";
 import { capturePreviewSignature } from "@/lib/lumivey/preview-signature";
 
+export type V0BuildTiming = {
+  signatureMs: number;
+  v0SubmissionMs: number;
+  handoffTotalMs: number;
+  signatureReused: boolean;
+  note: string;
+};
+
 type V0BuildResult = {
   chatId: string;
   webUrl?: string;
   previewUrl?: string;
   raw: unknown;
+  timing: V0BuildTiming;
 };
 
 type V0Attachment = { url: string } | { name?: string; content: string };
@@ -31,7 +40,6 @@ function isAttachableImage(asset: WebsiteAsset): boolean {
 function compactBriefForV0(brief: WebsiteBrief) {
   const { sources: _sources, ...understandingWithoutSources } = brief.understanding;
   let attachmentOrder = 1;
-
   return {
     version: brief.version,
     understanding: understandingWithoutSources,
@@ -161,7 +169,7 @@ ${JSON.stringify(compactBrief, null, 2)}
 
 function buildV0Attachments(brief: WebsiteBrief): V0Attachment[] {
   const attachments: V0Attachment[] = [];
-  // Never attach the approved Preview screenshot. v0 has previously mistaken it for production artwork.
+  // Never attach the approved Preview screenshot; v0 previously treated it as production artwork.
   for (const asset of brief.assets) {
     if (!isAttachableImage(asset)) continue;
     const assetUrl = asset.dataUrl || asset.url;
@@ -174,9 +182,11 @@ function buildV0Attachments(brief: WebsiteBrief): V0Attachment[] {
 export async function createV0Build(brief: WebsiteBrief): Promise<V0BuildResult> {
   const apiKey = process.env.V0_API_KEY;
   if (!apiKey) throw new Error("V0_API_KEY ontbreekt.");
+  const handoffStart = performance.now();
+  const signatureStart = performance.now();
+  const signatureReused = Boolean(brief.previewSignature);
 
-  // Analyze actual approved image once, then lock its signature in outgoing Brief.
-  // Missing/invalid analysis is a controlled stop, never permission for a generic site.
+  // Existing validated signature may be reused; never reinterpret it on retries.
   if (!brief.previewSignature) {
     brief.previewSignature = await capturePreviewSignature({
       id: brief.artistImpression.id,
@@ -191,10 +201,12 @@ export async function createV0Build(brief: WebsiteBrief): Promise<V0BuildResult>
       },
     });
   }
+  const signatureMs = Math.round(performance.now() - signatureStart);
   if (brief.previewSignature.previewId !== brief.artistImpression.id) {
     throw new Error("WoW-signatuur hoort bij een andere Preview; v0-overdracht is geblokkeerd.");
   }
 
+  const submissionStart = performance.now();
   const response = await fetch("https://api.v0.dev/v1/chats", {
     method: "POST",
     headers: {
@@ -208,8 +220,8 @@ export async function createV0Build(brief: WebsiteBrief): Promise<V0BuildResult>
       chatPrivacy: "private",
     }),
   });
-
   const data = await response.json();
+  const v0SubmissionMs = Math.round(performance.now() - submissionStart);
   if (!response.ok) {
     const message = data?.error?.message || data?.error || "v0-build kon niet worden gestart.";
     throw new Error(String(message));
@@ -219,15 +231,23 @@ export async function createV0Build(brief: WebsiteBrief): Promise<V0BuildResult>
   const previewUrl = data?.demo || data?.preview?.url || data?.data?.preview?.url;
   const returnedWebUrl = data?.url || data?.webUrl || data?.data?.chat?.webUrl;
   if (!chatId) throw new Error("v0 gaf geen chat-id terug.");
+  const timing: V0BuildTiming = {
+    signatureMs,
+    v0SubmissionMs,
+    handoffTotalMs: Math.round(performance.now() - handoffStart),
+    signatureReused,
+    note: "Alleen server-side signatuuranalyse en het indienen van de asynchrone build. v0-generatie tot gereed, upload, QA en correctie zijn hierin NIET gemeten.",
+  };
+  // Never log the Brief, customer photos or API response: timing and opaque IDs only.
+  console.info("Lumivey v0 handoff timing", JSON.stringify({ chatId, previewId: brief.artistImpression.id, ...timing }));
 
   const webUrl = returnedWebUrl || `https://v0.dev/chat/${chatId}`;
-  return { chatId, previewUrl, webUrl, raw: data };
+  return { chatId, previewUrl, webUrl, raw: data, timing };
 }
 
 export async function correctV0Build(chatId: string, instruction: string): Promise<unknown> {
   const apiKey = process.env.V0_API_KEY;
   if (!apiKey) throw new Error("V0_API_KEY ontbreekt.");
-
   const response = await fetch(`https://api.v0.dev/v1/chats/${chatId}/messages`, {
     method: "POST",
     headers: {
@@ -236,7 +256,6 @@ export async function correctV0Build(chatId: string, instruction: string): Promi
     },
     body: JSON.stringify({ message: instruction }),
   });
-
   const data = await response.json();
   if (!response.ok) {
     const message = data?.error?.message || data?.error || "v0-correctie kon niet worden verstuurd.";
