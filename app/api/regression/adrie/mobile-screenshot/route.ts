@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isAllowedV0PreviewUrl } from "@/lib/lumivey/allowed-v0-preview-host";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,9 +31,10 @@ export async function GET(request: Request) {
     if (version?.status !== "completed") return NextResponse.json({ error: "Deze v0-versie is niet gereed." }, { status: 409 });
     const preview = version?.demoUrl;
     if (typeof preview !== "string") return NextResponse.json({ error: "v0 heeft geen renderbare Preview-URL beschikbaar gesteld." }, { status: 424 });
-    const url = new URL(preview);
-    const host = url.hostname.toLowerCase();
-    if (url.protocol !== "https:" || url.username || url.password || !(host === "v0.app" || host.endsWith(".v0.app") || host === "v0.dev" || host.endsWith(".v0.dev") || host === "vercel.app" || host.endsWith(".vercel.app"))) {
+    // v0's authenticated API returns vusercontent.net sandbox previews as well as older v0/vercel URLs.
+    // Keep the host allowlist narrow; never allow arbitrary HTTPS or caller-supplied URLs.
+    if (!isAllowedV0PreviewUrl(preview)) {
+      console.warn("Lumivey v0 mobile preview host denied", JSON.stringify({ chatId, previewHost: (() => { try { return new URL(preview).hostname; } catch { return "invalid"; } })() }));
       return NextResponse.json({ error: "De v0-Preview heeft geen vertrouwde renderlocatie." }, { status: 502 });
     }
     // Firecrawl already belongs to Lumivey's stack. A mobile viewport is essential: resizing a desktop screenshot is not a mobile test.
@@ -40,7 +42,7 @@ export async function GET(request: Request) {
       method: "POST",
       headers: { Authorization: `Bearer ${firecrawlKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        url: url.toString(),
+        url: preview,
         mobile: true,
         formats: [{ type: "screenshot", fullPage: true, viewport: { width: 390, height: 844 }, quality: 85 }],
         onlyMainContent: false,
