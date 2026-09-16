@@ -105,6 +105,13 @@ MANDATORY CREATIVE TRANSFER
 - If an item is genuinely impossible responsively or violates truth/safety, preserve the closest faithful alternative and call out the exact deviation rather than silently dropping it.
 - Don't solve layout by reusing the same face/photo multiple times. Preserve the approved proportion between personal and professional content.
 
+TWO INDEPENDENT QUALITY QUESTIONS — BOTH MUST SURVIVE PREVIEW TO WEBSITE
+1. Can the entrepreneur recognize their identity, craftsmanship, character and specific creative signature? Never remove the reason for their WoW to make a generic professional site.
+2. Can a potential customer quickly understand the actual service/offer, relevant audience or problem, truthful reasons to trust the entrepreneur and how to make contact? Use the already supplied understanding.business.services/audience, verified facts, real case/experience and contact details where available. Show only evidence supported by the source/approval status. Never invent credentials, reviews, projects or contact data. Where no formal credential or testimonial exists, a credible, accurately described working method may establish trust.
+- These questions are separate acceptance gates: good copy cannot compensate for lost personality, and a creative design cannot compensate for incomprehensible services or misleading claims.
+- Do not turn the artist impression into a conventional marketing landing page, add repetitive proof cards, force personal disclosures or invent a new intake flow.
+- If essential offer/contact information is missing from the brief, do not fabricate it: flag the exact missing information for verification in the existing approval process.
+
 DESIGN AUTHORITY
 - The approved rationale, locked PreviewSignature, Website Brief and asset roles are design authority for hierarchy, pacing, image use, atmosphere, color rhythm and section relationships.
 - Do not redesign the work into a safer, flatter or more generic consultant website.
@@ -144,6 +151,7 @@ Before returning the build, verify:
 5. Section order, density, hierarchy, emotional rhythm and visual grammar remain faithful to the approved direction.
 6. Only supplied production assets are rendered as images.
 7. No giant blank regions or broken desktop/mobile proportions.
+8. A visitor understands the real offer, its audience/context, verified reasons for trust, and a clear truthful contact route without sacrificing entrepreneur recognition.
 Fix anything that fails; do not declare a final Lumivey QA PASS on your own.
 
 WEBSITE BRIEF / PRODUCTION GUARDRAILS
@@ -167,8 +175,8 @@ export async function createV0Build(brief: WebsiteBrief): Promise<V0BuildResult>
   const apiKey = process.env.V0_API_KEY;
   if (!apiKey) throw new Error("V0_API_KEY ontbreekt.");
 
-  // Analyze the actual approved image once, then lock its signature in the outgoing Brief.
-  // A missing/invalid analysis is a controlled stop, never permission for a generic site.
+  // Analyze actual approved image once, then lock its signature in outgoing Brief.
+  // Missing/invalid analysis is a controlled stop, never permission for a generic site.
   if (!brief.previewSignature) {
     brief.previewSignature = await capturePreviewSignature({
       id: brief.artistImpression.id,

@@ -56,6 +56,12 @@ Maak daar een eerste websitebeschrijving van die:
 
 Dit is een eerste preview, geen definitieve website.
 
+Twee afzonderlijke kwaliteitsvragen gelden voor Preview én uiteindelijke website:
+1. Herkent de ondernemer zichzelf? Bewaar zijn identiteit, vakmanschap, echte verhaal en creatieve karakter; forceer geen persoonlijke onthullingen of een hobby als dienst.
+2. Begrijpt en vertrouwt een potentiële klant hem? Maak waar de bronnen dat toelaten begrijpelijk wat hij aanbiedt, voor wie of welk vraagstuk, welk concreet bewijs zijn geloofwaardigheid ondersteunt en welke vervolgstap/contactroute mogelijk is. Gebruik de al bekende business.audience, services, evidence en contactgegevens; geen nieuwe intakevraag of traditioneel marketingtemplate.
+Een geloofwaardige werkwijze kan vertrouwen geven als diploma's, projecten of reviews ontbreken. Verzin nooit bewijs of contactgegevens. Maak bronvondsten niet stilzwijgend tot bevestigde claims. Laat onzekere details weg of markeer ze als nog te bevestigen.
+De lichte klanttoets mag geen persoonlijke WoW, speelse beeldtaal of artist impression wegoptimaliseren.
+
 De preview moet iets teruggeven van:
 - identiteit;
 - vakmanschap;
