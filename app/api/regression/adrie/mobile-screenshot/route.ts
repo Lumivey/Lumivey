@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { isAllowedV0PreviewUrl } from "@/lib/lumivey/allowed-v0-preview-host";
+import { validateAdrieMobileScrape } from "@/lib/lumivey/mobile-render-validation";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,16 +38,17 @@ export async function GET(request: Request) {
       console.warn("Lumivey v0 mobile preview host denied", JSON.stringify({ chatId, previewHost: (() => { try { return new URL(preview).hostname; } catch { return "invalid"; } })() }));
       return NextResponse.json({ error: "De v0-Preview heeft geen vertrouwde renderlocatie." }, { status: 502 });
     }
-    // Firecrawl already belongs to Lumivey's stack. A mobile viewport is essential: resizing a desktop screenshot is not a mobile test.
+    // Request page text alongside the screenshot to detect an inaccessible preview. Firecrawl's HTTP 200
+    // can contain a white screenshot; a successful fetch is NOT sufficient evidence of a website render.
     const scrape = await fetch(process.env.FIRECRAWL_API_URL || "https://api.firecrawl.dev/v2/scrape", {
       method: "POST",
       headers: { Authorization: `Bearer ${firecrawlKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         url: preview,
         mobile: true,
-        formats: [{ type: "screenshot", fullPage: true, viewport: { width: 390, height: 844 }, quality: 85 }],
+        formats: ["markdown", { type: "screenshot", fullPage: true, viewport: { width: 390, height: 844 }, quality: 85 }],
         onlyMainContent: false,
-        waitFor: 1200,
+        waitFor: 2500,
         maxAge: 0,
         timeout: 60000,
       }),
@@ -72,6 +74,11 @@ export async function GET(request: Request) {
     if (!["image/png", "image/jpeg", "image/webp"].includes(type)) return NextResponse.json({ error: "Geen geldig mobiel screenshotformaat." }, { status: 502 });
     const bytes = await render.arrayBuffer();
     if (!bytes.byteLength || bytes.byteLength > MAX_IMAGE_BYTES) return NextResponse.json({ error: "Mobiele screenshot is leeg of te groot." }, { status: 502 });
+    const invalidReason = validateAdrieMobileScrape(payload, bytes.byteLength);
+    if (invalidReason) {
+      console.warn("Lumivey mobile screenshot unverified", JSON.stringify({ chatId, screenshotBytes: bytes.byteLength, reason: invalidReason }));
+      return NextResponse.json({ error: invalidReason, publishable: false }, { status: 424 });
+    }
     console.info("Lumivey existing v0 mobile screenshot", JSON.stringify({ chatId, screenshotFetchMs: Math.round(performance.now() - started), bytes: bytes.byteLength }));
     return new Response(bytes, {
       headers: { "Content-Type": type, "Cache-Control": "private, no-store, max-age=0", "X-Content-Type-Options": "nosniff", "X-Lumivey-Image-Source": "firecrawl-mobile-390px" },
