@@ -41,7 +41,7 @@ export async function capturePreviewSignature(input: SignatureInput): Promise<Pr
     throw new Error("WoW-signatuur: goedgekeurde Preview-ID of afbeelding ontbreekt.");
   }
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  const response = await openai.responses.create({
+  const response: any = await openai.responses.create({
     model: "gpt-5.6-terra",
     instructions: `You are Lumivey's independent visual-to-production handoff analyst. Read the ACTUAL approved Preview image and provided rationale. Extract what causes entrepreneur recognition, especially meaningful playful details, visual grammar, editorial rhythm and relationships between image and words. This is not a new design proposal. Do not invent a motif you cannot point to in the image/rationale. The signature is specific to this entrepreneur: do not impose framing/viewfinders/photography or one visual style on everyone. Never interpret a hobby as a service. Preserve preexisting assets; screenshots are never production assets. Record uncertainty if text is unreadable. Give only a JSON object with keys recognition (string), creativeMechanism (string), visualMotifs (array of objects motif,evidence,webTranslation), wordImageLinks (array of objects words,visual,relationship), nonNegotiables (string array), prohibitedLosses (string array), uncertainties (string array). webTranslation must describe a feasible real HTML/CSS treatment rather than embedding screenshot pixels. The approved rationale and identity context are evidence, not a substitute for the image.`,
     input: [{
@@ -51,9 +51,9 @@ export async function capturePreviewSignature(input: SignatureInput): Promise<Pr
         { type: "input_image", image_url: input.imageDataUrl, detail: "high" },
       ],
     }],
-  } as Parameters<typeof openai.responses.create>[0]);
+  } as any);
 
-  const text = response.output_text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
+  const text = String(response.output_text || "").trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
   let data: Record<string, unknown>;
   try {
     data = JSON.parse(text) as Record<string, unknown>;
