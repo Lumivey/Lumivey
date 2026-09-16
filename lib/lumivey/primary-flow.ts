@@ -1,4 +1,5 @@
 import { LumiveyUnderstanding } from "@/lib/lumivey/understanding";
+import type { PreviewSignature } from "@/lib/lumivey/preview-signature";
 
 export type ArtistImpression = {
   id: string;
@@ -35,6 +36,8 @@ export type WebsiteBrief = {
   version: 1;
   understanding: LumiveyUnderstanding;
   artistImpression: ArtistImpression;
+  /** Captured from the approved image, bound to artistImpression.id before v0 receives the brief. */
+  previewSignature?: PreviewSignature;
   facts: WebsiteFact[];
   assets: WebsiteAsset[];
   pages: Array<{
@@ -57,6 +60,10 @@ export function checkBuildReadiness(brief: WebsiteBrief): BuildReadinessResult {
 
   if (!brief.artistImpression?.imageDataUrl) {
     blockers.push("Geen goedgekeurde artist impression beschikbaar.");
+  }
+
+  if (brief.previewSignature && brief.previewSignature.previewId !== brief.artistImpression.id) {
+    blockers.push("WoW-signatuur verwijst niet naar de goedgekeurde Preview.");
   }
 
   if (brief.pages.length === 0) {
