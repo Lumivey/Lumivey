@@ -12,6 +12,7 @@ const REQUIRED = [
   "preview-fidelity",
   "human-image-integrity",
   "brand-assets-and-facts",
+  "visitor-clarity-and-trust",
   "responsive-layout",
 ] as const;
 
@@ -55,9 +56,9 @@ export async function POST(request: Request) {
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     const response: any = await openai.responses.create({
       model: "gpt-5.6-terra",
-      instructions: `You are an INDEPENDENT Lumivey website quality reviewer, not the website builder. Compare approved Preview against ACTUAL rendered website screenshots for desktop AND mobile, using a LOCKED signature. Explicitly test visual motif translation as real rendered design, not merely textual mention; word-image relationships; entrepreneur recognition; section rhythm; factual/brand discrepancies visible in evidence; recognizable uncut real faces and coherent anatomy; mobile layout. An approved Preview screenshot embedded as a large image inside the website is an absolute failure, not fidelity. Do not demand identical pixels; demand preservation of creative mechanism and non-negotiables in technically feasible web components. Do not infer missing detail as present. If something is offscreen/too small or unavailable, WARN or FAIL with uncertainty, never invent PASS. If a locked nonNegotiable or reason-for-WoW is lost, signature-preservation MUST be FAIL even if content is correct. Return ONLY JSON {checks:[{name,status,evidence,correction}]} containing exactly these check names: ${REQUIRED.join(", ")}. Status PASS/WARN/FAIL. Evidence must cite visible portions of the screenshots; correction says how to correct the EXISTING v0 build without rerunning Discovery/Firecrawl/Preview. No scores or false claims of entrepreneur approval.`,
+      instructions: `You are an INDEPENDENT Lumivey website quality reviewer, not the website builder. Apply TWO separate quality questions to BOTH approved Preview and actual website: (1) Does the entrepreneur recognize their genuine identity, craftsmanship and specific creative signature? (2) Can a potential visitor promptly understand the real offer, relevant audience or use case, the factual grounds for trust and the next contact step? Never trade away criterion 1 to satisfy criterion 2; a conventional sales template is not required. Compare approved Preview against ACTUAL rendered website screenshots for desktop AND mobile, using a LOCKED signature. Explicitly test visual motif translation as real rendered design, not merely textual mention; word-image relationships; entrepreneur recognition; section rhythm; factual/brand discrepancies visible in evidence; recognizable uncut real faces and coherent anatomy; mobile layout. For visitor-clarity-and-trust, check visible offer and audience/use case, factual evidence supporting material credibility claims if available, clear contact path and whether contact details are verified against provided facts. Do not demand invented diplomas, case studies or testimonials: a truthful, concrete working method can support trust when evidence is unavailable. Never infer a visible contact button is functional from a screenshot alone; mark its functionality unverified unless independent evidence is supplied. If the Preview itself lacks visitor clarity, report that separately in evidence: do not silently redesign or flatten its approved WoW. An approved Preview screenshot embedded as a large image inside the website is an absolute failure, not fidelity. Do not demand identical pixels; demand preservation of creative mechanism and non-negotiables in technically feasible web components. Do not infer missing detail as present. If something is offscreen/too small or unavailable, WARN or FAIL with uncertainty, never invent PASS. If a locked nonNegotiable or reason-for-WoW is lost, signature-preservation MUST be FAIL even if content is correct. Return ONLY JSON {checks:[{name,status,evidence,correction}]} containing exactly these check names: ${REQUIRED.join(", ")}. Status PASS/WARN/FAIL. Evidence must cite visible portions of screenshots and distinguish verified facts from interpretation; correction says how to correct EXISTING v0 build without rerunning Discovery/Firecrawl/Preview. No scores or false claims of entrepreneur approval.`,
       input: [{ role: "user", content: [
-        { type: "input_text", text: JSON.stringify({ signature, factsAndAssetsToVerify: body?.factsAndAssetsToVerify || [], note: "Next images in order: approved Preview, actual DESKTOP site, actual MOBILE site" }).slice(0, 25000) },
+        { type: "input_text", text: JSON.stringify({ signature, factsAndAssetsToVerify: body?.factsAndAssetsToVerify || [], note: "Next images in order: approved Preview, actual DESKTOP site, actual MOBILE site. Determine whether both entrepreneur recognition and visitor understanding/trust are preserved; do not invent missing factual evidence." }).slice(0, 25000) },
         { type: "input_image", image_url: approvedPreview, detail: "high" },
         { type: "input_image", image_url: desktop, detail: "high" },
         { type: "input_image", image_url: mobile, detail: "high" },
@@ -78,8 +79,8 @@ export async function POST(request: Request) {
         correction: typeof item.correction === "string" ? item.correction : "Gericht herstellen en opnieuw renderen.",
       };
     });
-    // A lost creative signature, invalid human image or missing required brand/facts is not averaged away.
-    const critical = new Set(["signature-preservation", "human-image-integrity", "brand-assets-and-facts"]);
+    // Lost WoW, invalid human image, missing brand/facts or failed visitor trust never average away.
+    const critical = new Set(["signature-preservation", "human-image-integrity", "brand-assets-and-facts", "visitor-clarity-and-trust"]);
     const overall: Status = verifiedChecks.some((check) => check.status === "FAIL" || (critical.has(check.name) && check.status !== "PASS"))
       ? "FAIL"
       : verifiedChecks.some((check) => check.status === "WARN") ? "WARN" : "PASS";
@@ -87,10 +88,10 @@ export async function POST(request: Request) {
     return NextResponse.json({
       previewId: signature.previewId,
       overall,
-      publishable: false, // Owner's separate final publication approval is mandatory, even after QA PASS.
+      publishable: false, // Separate owner approval is mandatory even after QA PASS.
       checks: verifiedChecks,
       correctionPrompt: corrections.length
-        ? `Correct ONLY the existing build; keep the approved Preview and locked signature authoritative.\n${corrections.map((check) => `- ${check.name}: ${check.correction}`).join("\n")}\nRender desktop and mobile again for independent QA.`
+        ? `Correct ONLY the existing build; keep the approved Preview and locked signature authoritative. Preserve BOTH entrepreneur recognition and factual visitor understanding/trust; never solve one by sacrificing the other.\n${corrections.map((check) => `- ${check.name}: ${check.correction}`).join("\n")}\nRender desktop and mobile again for independent QA.`
         : "No corrections identified by this QA pass. Obtain entrepreneur approval before publication.",
     });
   } catch (error) {
