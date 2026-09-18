@@ -1,0 +1,46 @@
+-- INTERNAL / CORE — REVIEW-ONLY migration. NEVER apply before vetted LOGIN role,
+-- independent two-connection A/B tests, real runtime identity and approved retention.
+-- Applies ONLY to a separately verified Neon Preview database, never default branch.
+-- No generic SELECT/INSERT grants, no PUBLIC access, no user-settable GUC tenant IDs.
+-- The current database owner has BYPASSRLS: NEVER put its URL in a web runtime.
+-- Neon create_postgres_role API previously ignored no_login; do not use it for this.
+--
+-- Design decision: server authenticates a guest's 256-bit resume token by checking
+-- an HMAC keyed with a secret stored OUTSIDE Postgres. The raw token and HMAC key
+-- are never sent to or persisted in SQL; only the keyed digest may be supplied
+-- over a server-only TLS connection. This digest is itself a bearer credential:
+-- do not log it, expose it to the browser, put it in analytics or send it to an LLM.
+-- Verify status='active' AND expires_at>clock_timestamp() on each operation;
+-- claimed/expired dossiers reject old guest credentials. Return a generic denial
+-- for wrong dossier and wrong digest to avoid enumeration. Rotate credential after
+-- successful recovery in one transaction; concurrent requests use row lock/CAS.
+--
+-- NOTE: Ordinary RLS policies comparing dossier_id to current_setting('app.dossier_id')
+-- are insufficient: a compromised app SQL connection can SET that string itself.
+-- Instead restrict LOGIN role to EXECUTE on narrowly scoped, audited routines
+-- that internally validate the credential, perform SELECT/INSERT and use explicit
+-- dossier_id filters. The EXECUTE-only functions may be SECURITY DEFINER only after
+-- reviewer signs off on exact SQL, schema qualification, fixed search_path,
+-- revocation from PUBLIC, no dynamic SQL, bounded payload and isolation tests.
+-- The role must have NO direct table/sequence privileges, BYPASSRLS, CREATEDB,
+-- CREATEROLE, SUPERUSER, role-inheritance or schema CREATE privileges.
+--
+-- Proposed routines (SIGNATURES ONLY; deliberately no executable definitions):
+-- create_guest_dossier(initial_validated_state, digest, expires_at) -> dossier id
+-- resume_guest_dossier(dossier_id, digest) -> limited state + rotate digest/expiry
+-- record_guest_correction(dossier_id, digest, expected_version, exact_utterance,
+--                         claim_key, event_kind, value) -> new state version
+-- get_guest_corrections(dossier_id, digest) -> scoped ordered events
+-- claim_guest_dossier(dossier_id, digest, verified_subject, verified_session)
+--   -> verified account binding after independently validated session/membership
+--
+-- Record correction and update state_version in ONE DB transaction; reject stale
+-- expected_version without inserting orphan events. Server alone assigns sequence,
+-- and must capture entrepreneur's actual message, not generated interpretation.
+-- Never infer preview readiness from dossier size, account status or upload count.
+--
+-- Before application: verify Vercel Preview's actual endpoint/role without revealing
+-- secrets; decide server-only driver and identity, vetted login provisioning via
+-- safe secret-manager handoff, narrow routine grant, expiry/deletion including
+-- correction FK and private object bytes; test A/B with independent connections,
+-- wrong token, expired token, claim transitions, CAS race and cleanup. KEEP CLOSED.
