@@ -1,0 +1,93 @@
+-- INTERNAL / CORE — REVIEW-ONLY PROTOTYPE. ALL SQL BELOW IS COMMENTED.
+-- Do not execute or grant access until independent security review, restricted
+-- runtime credential handoff, actual owner/RLS audit and two-connection tests.
+-- Preview ONLY: project odd-term-62838732, branch br-green-lake-b2xh1tni, neondb.
+-- No application route, policy, role membership, credential or production change.
+--
+-- This is an atomic guest correction, NOT owner verification by an LLM.
+-- The server must establish the guest cookie/session and HMAC a 256-bit token
+-- using an independent server-only secret. Only the keyed 64-character digest
+-- travels in a bound SQL parameter. Digest is itself a bearer credential;
+-- never log it, expose it, or accept an arbitrary digest from request JSON.
+-- Preserve exact entrepreneur utterance, not generated quotations. The server
+-- must separately validate that this utterance originates in an authorized
+-- chat turn; an authenticated guest is not proof of business/legal ownership.
+-- A correction is a discovery event, never automatic publication approval.
+--
+-- Proposed function signature and body for independent SQL review:
+-- CREATE FUNCTION lumivey_discovery_api.record_guest_correction(
+--     p_dossier_id uuid, p_digest text, p_expected_version bigint,
+--     p_claim_key text, p_kind text, p_value text, p_utterance text)
+-- RETURNS bigint
+-- LANGUAGE plpgsql SECURITY DEFINER
+-- SET search_path = pg_catalog, pg_temp
+-- AS $function$
+-- DECLARE
+--   v_now timestamptz := clock_timestamp();
+--   v_event_sequence bigint;
+-- BEGIN
+--   IF p_dossier_id IS NULL OR p_digest IS NULL
+--      OR p_digest !~ '^[0-9a-f]{64}$'
+--      OR p_expected_version IS NULL OR p_expected_version < 0
+--      OR p_claim_key IS NULL OR p_claim_key !~ '^[a-z][a-z0-9_.:-]{0,127}$'
+--      OR p_kind IS NULL OR p_kind NOT IN ('confirmation','correction','rejection')
+--      OR p_value IS NULL
+--      OR (p_kind = 'rejection' AND p_value <> '')
+--      OR (p_kind <> 'rejection' AND (length(btrim(p_value)) < 1 OR length(p_value) > 4000))
+--      OR p_utterance IS NULL OR length(btrim(p_utterance)) < 1
+--      OR length(p_utterance) > 20000 THEN
+--     RETURN NULL;
+--   END IF;
+--
+--   WITH guarded AS (
+--     UPDATE public.lumivey_guest_discovery_dossiers AS d
+--        SET state_version = d.state_version + 1,
+--            last_activity_at = v_now,
+--            expires_at = v_now + interval '30 days'
+--      WHERE d.id = p_dossier_id
+--        AND d.resume_token_digest = p_digest
+--        AND d.status = 'active'
+--        AND d.expires_at > v_now
+--        AND d.state_version = p_expected_version
+--      RETURNING d.id
+--   )
+--   INSERT INTO public.lumivey_discovery_correction_events
+--       (dossier_id, claim_key, kind, value, utterance, access_kind, subject_id)
+--   SELECT guarded.id, p_claim_key, p_kind, p_value, p_utterance,
+--          'verified-guest', NULL FROM guarded
+--   RETURNING sequence INTO v_event_sequence;
+--   RETURN v_event_sequence;
+-- END
+-- $function$;
+--
+-- REVIEW REQUIREMENTS before ANY execution:
+-- 1. Function must ultimately be owned by restricted NOLOGIN
+--    lumivey_discovery_function_owner, NEVER neondb_owner/BYPASSRLS.
+--    Resolve ownership transfer without persistent admin/worker membership.
+-- 2. Table RLS ENABLE + FORCE. Policy only for non-login function owner; exact
+--    grants: dossier SELECT(id,resume_token_digest,status,expires_at,state_version),
+--    UPDATE(state_version,last_activity_at,expires_at); event INSERT listed
+--    columns and SELECT(sequence) for RETURNING. Confirm actual PostgreSQL
+--    privilege semantics, FK and IDENTITY sequence behavior in Preview.
+-- 3. Fixed search_path; schema-qualified tables; no dynamic SQL; REVOKE ALL
+--    FUNCTION FROM PUBLIC and app inside same deployment transaction. App gets
+--    only schema USAGE + signature-specific EXECUTE AFTER audit and live tests.
+--    No app direct table/sequence rights, no schema CREATE or role membership.
+-- 4. Confirm the UPDATE and INSERT are one atomic SQL statement/transaction.
+--    If event INSERT fails, version change MUST roll back; do not catch/ignore.
+--    A second correction with the same expected version must produce no event.
+-- 5. Reject mismatched dossier/digest, inactive/claimed/expired guest, invalid
+--    input and stale version identically, without disclosing row existence.
+--    Generic SQL errors must be mapped to safe server responses; never log
+--    statement parameters or utterance in routine logs.
+-- 6. Sequence is DB-assigned global append order; gaps are allowed. No UPDATE
+--    or DELETE granted on correction events. Deletion/retention needs separate
+--    audited workflow including private blob bytes and backups.
+-- 7. Test independent connections and two dossiers A/B: A->A allowed, A->B
+--    denied, B->A denied, wrong/expired digest denied, concurrent CAS exactly
+--    one event, failure rollback, correction replay after resume, rejected
+--    source claim never reappears. Unit mocks are NOT this evidence.
+-- 8. Resume token rotation and lost HTTP-response recovery remain independent
+--    blockers; recording a correction MUST NOT accept a rotated-out digest.
+-- 9. This routine changes neither Preview readiness nor v0 build authorization.
+-- There is deliberately no executable migration or GRANT in this file.
