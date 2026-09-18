@@ -83,3 +83,23 @@ test('unverified owner and invalid fingerprint fail before reservation', async (
   await assert.rejects(submitV0Once({ ledger: db, key: { ...key, briefSha256: 'invalid' }, create: async () => ({ chatId: 'x' }) }), /buildidentiteit/);
   assert.equal(db.job, undefined);
 });
+
+test('failed database reservation prevents any upstream call', async () => {
+  const db = ledger();
+  db.reserve = async () => { throw new Error('database unavailable'); };
+  let calls = 0;
+  await assert.rejects(submitV0Once({ ledger: db, key, create: async () => { calls++; return { chatId: 'x' }; } }), /database unavailable/);
+  assert.equal(calls, 0);
+});
+
+test('missing chat ID leaves uncertain job and cannot be retried', async () => {
+  const db = ledger();
+  let calls = 0;
+  const create = async () => { calls++; return { chatId: '' }; };
+  const first = await submitV0Once({ ledger: db, key, create });
+  const second = await submitV0Once({ ledger: db, key, create });
+  assert.equal(first.kind, 'uncertain');
+  assert.equal(second.kind, 'existing');
+  assert.equal(db.job.status, 'uncertain');
+  assert.equal(calls, 1);
+});
