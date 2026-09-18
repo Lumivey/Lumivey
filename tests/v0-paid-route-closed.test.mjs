@@ -4,11 +4,12 @@ import { readFileSync } from 'node:fs';
 
 const paidRoutes = [
   { path: '../app/api/build/v0/route.ts', method: 'POST' },
+  { path: '../app/api/build/v0/correct/route.ts', method: 'POST' },
   { path: '../app/api/regression/adrie/build-v0/route.ts', method: 'POST' },
+  { path: '../app/api/regression/adrie/correct-existing/route.ts', method: 'POST' },
+  { path: '../app/api/regression/adrie/visual-reference/route.ts', method: 'POST' },
   { path: '../app/api/regression/michael/build-clean/route.ts', method: 'POST' },
   { path: '../app/api/regression/michael/correct-latest-v0/route.ts', method: 'GET' },
-  { path: '../app/api/regression/adrie/visual-reference/route.ts', method: 'POST' },
-  { path: '../app/api/regression/adrie/correct-existing/route.ts', method: 'POST' },
 ];
 
 for (const { path, method } of paidRoutes) {
@@ -27,7 +28,7 @@ for (const { path, method } of paidRoutes) {
 }
 
 test('GET correction must not expose a paid mutation or a POST alias', () => {
-  const route = readFileSync(new URL(paidRoutes[3].path, import.meta.url), 'utf8');
+  const route = readFileSync(new URL(paidRoutes[6].path, import.meta.url), 'utf8');
   assert.doesNotMatch(route, /export\s+(?:async\s+)?function\s+POST\(/);
   assert.doesNotMatch(route, /\bfetch\s*\(/);
 });
