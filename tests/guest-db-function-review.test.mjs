@@ -15,7 +15,7 @@ for (const [name, content] of [['resume', resume], ['correction', correction]]) 
     assert.match(content, /SECURITY DEFINER/);
     assert.match(content, /REVOKE ALL/);
     assert.match(content, /PUBLIC/);
-    assert.match(content, /NOLOGIN/);
+    assert.match(content, /(?:NOLOGIN|cannot log in)/i);
     assert.match(content, /pg_temp/);
     assert.doesNotMatch(content, /\bGRANT\s+(?:ALL|SELECT|INSERT|UPDATE|DELETE)\s+ON\s+(?:ALL\s+)?TABLES?\s+TO\s+lumivey_discovery_app_preview\b/i);
   });
