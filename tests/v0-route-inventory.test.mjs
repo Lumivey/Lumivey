@@ -15,17 +15,15 @@ function routes(dir) {
 
 /**
  * Source-level tripwire, not a security proof or a substitute for runtime auth.
- * v0 GET status/screenshot endpoints are not paid generation and must not be
- * mistaken for direct mutation. Inspect literal v0 fetch call options separately;
- * the actual mutation endpoints and adapters are forbidden while the gate is shut.
+ * Detect known direct and adapter-based mutation paths. v0 GET status/screenshot
+ * requests remain read-only and are not mistaken for paid generation.
  */
 function directV0Mutation(source) {
-  if (/\bcreateV0Build\b|\bsubmitV0Once\b|\bv0Fetch\s*\(/.test(source)) return true;
+  if (/\b(?:createV0Build|correctV0Build|submitV0Once)\b|\bv0Fetch\s*\(/.test(source)) return true;
   const lines = source.split('\n');
   for (let i = 0; i < lines.length; i++) {
     if (!/\bfetch\s*\(\s*[`"']https:\/\/api\.v0\.dev\/v[12]\//.test(lines[i])) continue;
     const call = lines.slice(i, i + 15).join('\n');
-    // Stop at the closing fetch options: a later Firecrawl POST is unrelated.
     const end = call.search(/\}\s*\);/);
     const options = end >= 0 ? call.slice(0, end) : call;
     if (/\bmethod\s*:\s*["'](?:POST|PUT|PATCH|DELETE)["']/i.test(options)) return true;
@@ -33,11 +31,11 @@ function directV0Mutation(source) {
   return false;
 }
 
-test('no API route can bypass the temporary v0 mutation shutdown', () => {
+test('no API route can bypass temporary v0 mutation shutdown, including adapter helpers', () => {
   const inspected = routes(apiRoot.pathname);
   assert.ok(inspected.length > 0, 'API-route scan unexpectedly empty');
   const violations = inspected
     .filter((filename) => directV0Mutation(readFileSync(filename, 'utf8')))
     .map((filename) => relative(apiRoot.pathname, filename));
-  assert.deepEqual(violations, [], `Direct v0 mutation path found: ${violations.join(', ')}`);
+  assert.deepEqual(violations, [], `v0 mutation path found outside approved gate: ${violations.join(', ')}`);
 });
