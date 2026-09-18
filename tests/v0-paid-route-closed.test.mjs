@@ -7,6 +7,7 @@ const paidRoutes = [
   { path: '../app/api/regression/adrie/build-v0/route.ts', method: 'POST' },
   { path: '../app/api/regression/michael/build-clean/route.ts', method: 'POST' },
   { path: '../app/api/regression/michael/correct-latest-v0/route.ts', method: 'GET' },
+  { path: '../app/api/regression/adrie/visual-reference/route.ts', method: 'POST' },
 ];
 
 for (const { path, method } of paidRoutes) {
@@ -18,8 +19,8 @@ for (const { path, method } of paidRoutes) {
     assert.match(route, /Cache-Control["']?:\s*["']no-store/);
     assert.doesNotMatch(route, /^import.*createV0Build/m);
     assert.doesNotMatch(route, /^import.*OpenAI/m);
-    assert.doesNotMatch(route, /^\s*(?:const|let|var)\s+\w+\s*=\s*await\s+(?:createV0Build|v0Fetch|fetch)\s*\(/m);
-    assert.doesNotMatch(route, /^\s*(?:const|let|var)\s+\w+\s*=\s*await\s+openai\./m);
+    assert.doesNotMatch(route, /\bfetch\s*\(/, 'Disabled route must not send HTTP traffic');
+    assert.doesNotMatch(route, /\bcreateV0Build\s*\(/);
     assert.doesNotMatch(route, /process\.env\.|request\.headers|get\s*\(\s*['"]authorization/, 'No ad-hoc flag or bearer bypass');
   });
 }
