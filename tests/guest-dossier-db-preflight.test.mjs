@@ -3,15 +3,25 @@ import assert from 'node:assert/strict';
 import { checkGuestDossierDbPreflight } from '../lib/lumivey/guest-dossier-db-preflight.ts';
 
 const host = 'ep-example.c-6.eu-central-1.aws.neon.tech';
-const url = `postgresql://limited:placeholder@${host}/neondb?sslmode=verify-full`;
+const url = `postgresql://lumivey_discovery_app_preview:placeholder@${host}/neondb?sslmode=verify-full`;
 const tables = ['lumivey_discovery_correction_events', 'lumivey_guest_discovery_assets', 'lumivey_guest_discovery_dossiers'];
-const ready = () => tables.map(table_name => ({ table_name, table_exists:true, rls_enabled:true, rls_forced:true, policy_count:1, can_select:true, can_insert:true, db_role_bypasses_rls:false, db_role_is_superuser:false, db_role_can_login:true }));
+const ready = () => tables.map(table_name => ({
+  table_name, table_exists:true, rls_enabled:true, rls_forced:true,
+  can_select:false, can_insert:false, can_update:false, can_delete:false,
+  db_role_bypasses_rls:false, db_role_is_superuser:false, db_role_can_login:true,
+  api_schema_usage:true, api_schema_create:false, resume_function_exists:true,
+  correction_function_exists:true, resume_execute:true, correction_execute:true,
+  resume_owner:'lumivey_discovery_function_owner', correction_owner:'lumivey_discovery_function_owner',
+  resume_definer:true, correction_definer:true,
+  resume_search_path:['search_path=pg_catalog, pg_temp'],
+  correction_search_path:['search_path=pg_catalog, pg_temp'],
+}));
 const config = extra => ({ deployment:'preview', connectionUrl:url, expectedHostname:host, query:async () => ready(), ...extra });
 
-test('only guarded nonprivileged Preview database receives preliminary result, never isolation PASS', async () => {
+test('only an execute-only nonprivileged Preview configuration receives a preliminary result', async () => {
   assert.equal(await checkGuestDossierDbPreflight(config()), 'PASS_PRELIMINARY');
 });
-test('wrong deployment, hostname, database and config refuse before querying', async () => {
+test('wrong deployment, hostname, database, role, TLS and config refuse before querying', async () => {
   let calls=0;
   const query=async () => { calls++; return ready(); };
   for (const [extra, expected] of [
@@ -19,33 +29,54 @@ test('wrong deployment, hostname, database and config refuse before querying', a
     [{expectedHostname:undefined}, 'BLOCKED_CONFIGURATION'],
     [{connectionUrl:'not-a-url'}, 'BLOCKED_ENDPOINT'],
     [{connectionUrl:url.replace('/neondb','/otherdb')}, 'BLOCKED_ENDPOINT'],
+    [{connectionUrl:url.replace('lumivey_discovery_app_preview','neondb_owner')}, 'BLOCKED_ENDPOINT'],
+    [{connectionUrl:url.replace('verify-full','require')}, 'BLOCKED_ENDPOINT'],
     [{expectedHostname:'another.example.neon.tech'}, 'BLOCKED_ENDPOINT'],
   ]) assert.equal(await checkGuestDossierDbPreflight(config({...extra,query})), expected);
   assert.equal(calls,0);
 });
-test('missing, duplicate and cross-schema-mismatched table audit fails closed', async () => {
-  for (const rows of [[], ready().slice(0,2), [ready()[0],ready()[0],ready()[2]], ready().map((row,index) => index ? row : {...row,table_name:'another_table'})]) {
+test('missing, duplicate and mismatched table audit fails closed', async () => {
+  for (const rows of [[], ready().slice(0,2), [ready()[0],ready()[0],ready()[2]], ready().map((row,index) => index ? row : {...row,table_name:'another_table'})])
     assert.equal(await checkGuestDossierDbPreflight(config({query:async () => rows})), 'BLOCKED_SCHEMA');
-  }
 });
-test('RLS and database role independently block unsafe access', async () => {
+test('RLS, privileged role, missing routines and direct table permissions independently block', async () => {
   for (const [field, value, code] of [
     ['rls_forced',false,'BLOCKED_RLS'], ['rls_enabled',null,'BLOCKED_RLS'],
     ['db_role_bypasses_rls',true,'BLOCKED_PRIVILEGED_ROLE'],
     ['db_role_is_superuser',true,'BLOCKED_PRIVILEGED_ROLE'],
     ['db_role_can_login',false,'BLOCKED_ROLE_CANNOT_LOGIN'],
-    ['policy_count',0,'BLOCKED_NO_POLICIES'],
-    ['can_select',false,'BLOCKED_NO_PRIVILEGES'], ['can_insert',null,'BLOCKED_NO_PRIVILEGES'],
+    ['can_select',true,'BLOCKED_DIRECT_TABLE_ACCESS'],
+    ['can_insert',true,'BLOCKED_DIRECT_TABLE_ACCESS'],
+    ['can_update',true,'BLOCKED_DIRECT_TABLE_ACCESS'],
+    ['can_delete',true,'BLOCKED_DIRECT_TABLE_ACCESS'],
+    ['api_schema_create',true,'BLOCKED_DIRECT_TABLE_ACCESS'],
+    ['api_schema_usage',false,'BLOCKED_FUNCTIONS'],
+    ['resume_function_exists',false,'BLOCKED_FUNCTIONS'],
+    ['correction_function_exists',false,'BLOCKED_FUNCTIONS'],
+    ['resume_execute',false,'BLOCKED_FUNCTIONS'],
+    ['correction_execute',null,'BLOCKED_FUNCTIONS'],
+    ['resume_owner','neondb_owner','BLOCKED_UNSAFE_FUNCTIONS'],
+    ['correction_owner','neondb_owner','BLOCKED_UNSAFE_FUNCTIONS'],
+    ['resume_definer',false,'BLOCKED_UNSAFE_FUNCTIONS'],
+    ['correction_definer',false,'BLOCKED_UNSAFE_FUNCTIONS'],
+    ['resume_search_path',null,'BLOCKED_UNSAFE_FUNCTIONS'],
+    ['correction_search_path',['search_path=public'],'BLOCKED_UNSAFE_FUNCTIONS'],
   ]) {
     const rows=ready(); rows[0][field]=value;
     assert.equal(await checkGuestDossierDbPreflight(config({query:async () => rows})), code, field);
   }
 });
-test('masked query failure, a single read-only statement and no leaked credentials', async () => {
+test('masked query failure, one read-only SQL statement, no secrets or writes', async () => {
   const failure=await checkGuestDossierDbPreflight(config({query:async () => {throw new Error('private password');}}));
   assert.equal(failure,'BLOCKED_QUERY_FAILED');
   assert.ok(!failure.includes('password'));
   let count=0;
-  await checkGuestDossierDbPreflight(config({query:async (sql) => { count++; assert.match(sql,/^SELECT\b/); assert.doesNotMatch(sql,/\b(?:INSERT|UPDATE|DELETE|ALTER|DROP|GRANT)\b/i); return ready();}}));
+  await checkGuestDossierDbPreflight(config({query:async sql => {
+    count++; assert.match(sql,/^SELECT\b/);
+    assert.doesNotMatch(sql,/\b(?:INSERT|UPDATE|DELETE|ALTER|DROP|GRANT)\s+(?:ON|TABLE|INTO|public\.)/i);
+    assert.match(sql,/has_function_privilege/);
+    assert.match(sql,/has_table_privilege/);
+    return ready();
+  }}));
   assert.equal(count,1);
 });
