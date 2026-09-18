@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - '.github/workflows/v0-build-safety.yml'
+      - 'app/api/build/v0/route.ts'
       - 'app/api/regression/adrie/build-v0/route.ts'
       - 'lib/lumivey/v0-build-identity.ts'
       - 'lib/lumivey/v0-build-gate.ts'
@@ -24,5 +25,5 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22.18.0'
-      - name: One-shot fingerprint and paid-route safety tests (no secrets, DB or v0 API)
+      - name: One-shot fingerprint and both paid-route safety tests (no secrets, DB or v0 API)
         run: node --experimental-strip-types --test tests/v0-build-identity.test.mjs tests/v0-build-gate.test.mjs tests/v0-paid-route-closed.test.mjs
