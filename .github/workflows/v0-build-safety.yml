@@ -7,10 +7,12 @@ on:
       - 'app/api/**'
       - 'lib/lumivey/v0-build-identity.ts'
       - 'lib/lumivey/v0-build-gate.ts'
+      - 'lib/lumivey/v0-build-authorization.ts'
       - 'lib/lumivey/neon-preview-identity.ts'
       - 'lib/lumivey/neon-preview-identity-core.ts'
       - 'tests/v0-build-identity.test.mjs'
       - 'tests/v0-build-gate.test.mjs'
+      - 'tests/v0-build-authorization.test.mjs'
       - 'tests/v0-paid-route-closed.test.mjs'
       - 'tests/v0-route-inventory.test.mjs'
       - 'tests/neon-preview-identity.test.mjs'
@@ -28,5 +30,5 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22.18.0'
-      - name: Fingerprint, one-shot, route shutdown and Neon preview preflight unit tests (no secrets, DB or v0 API)
-        run: node --experimental-strip-types --test tests/v0-build-identity.test.mjs tests/v0-build-gate.test.mjs tests/v0-paid-route-closed.test.mjs tests/v0-route-inventory.test.mjs tests/neon-preview-identity.test.mjs
+      - name: Fingerprint, authorization, one-shot, route shutdown and Neon preview preflight unit tests (no secrets, DB or v0 API)
+        run: node --experimental-strip-types --test tests/v0-build-identity.test.mjs tests/v0-build-authorization.test.mjs tests/v0-build-gate.test.mjs tests/v0-paid-route-closed.test.mjs tests/v0-route-inventory.test.mjs tests/neon-preview-identity.test.mjs
