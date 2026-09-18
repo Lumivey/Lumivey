@@ -20,7 +20,7 @@ Alle vijf handlers antwoorden op de **PR-branch** HTTP 503, `V0_BUILD_SAFETY_GAT
 - `tests/v0-paid-route-closed.test.mjs` controleert nu alle vijf expliciete handlers.
 - `tests/v0-route-inventory.test.mjs` scant recursief alle `app/api/**/route.*` op directe v0-adaptercalls of v0-HTTP-mutaties. Read-only v0-status/screenshot-GETs worden niet geblokkeerd; Firecrawl-POST in de mobiele screenshotroute is géén v0-mutatie.
 - De eerste bredere scan faalde terecht: zes v0-API-gebruikende routes kwamen aan het licht. Audit onderscheidde read-only diagnostiek van `visual-reference`, die daadwerkelijk een betaalde v0-POST uitvoerde. Die vijfde route is afgesloten; scanregel aangepast om read-only HTTP GET niet als mutatie te classificeren.
-- GitHub Actions run `35328809479`, unit-job `105548099513`: **success** na deze aanpassing. Source-level scan heeft beperkingen (dynamische dispatch, indirecte helpers); geen bewezen volledige security-audit of live-integratietest.
+- GitHub Actions run `35328809479`, unit-job `105548099513`: **success** op commit `d0db1030235295fa3f02de5153e15e3a1fb456ec`, vóór deze documentatieaanpassing. Source-level scan heeft beperkingen (dynamische dispatch, indirecte helpers); geen bewezen volledige security-audit of live-integratietest.
 
 ## Kritieke risico's en nog open
 - PR is draft/niet gemerged. Bestaande `main` en reeds uitgebrachte deployments zijn niet aangepast en kunnen nog onbeveiligde betaalde routes bevatten. Een gecontroleerde remediatie-/deploybeslissing is nodig; blind mergen zou de huidige regressiebuilds stoppen.
