@@ -1,39 +1,34 @@
 # v0 API-lus — feitelijke reconciliatie (18 september 2026)
 
-Status: read-only code-audit, concept-PR #49. Aanvulling op Plan v0.4, niet de projectwaarheid van `main`. Geen nieuwe v0-generatie en geen live API-test verricht.
+Status: audit en kleine diagnosereparatie in concept-PR #49. Geen nieuwe v0-generatie of live API-proef uitgevoerd. Plan v0.4 blijft leidend.
 
-## Wat al bestaat op `main` (niet opnieuw bouwen)
+## Al bestaand op main (niet opnieuw bouwen)
 
-| Stap | Bestaande implementatie | Grenzen |
-| --- | --- | --- |
-| Start | `lib/lumivey/v0-adapter.ts`: `POST /v1/chats`, async, private. `app/api/regression/adrie/build-v0/route.ts` gebruikt de adapter. | `handoffTotalMs` telt signatuurbereiding en indienen, NIET volledige generatietijd. POST heeft geen aantoonbaar duurzaam idempotency-slot. |
-| Status | `app/api/regression/adrie/build-status/route.ts`: `GET /v1/chats/{chatId}`, status, versie, server-versie-tijd, lookup-tijd, preview-URL. | Versie-tijd `updatedAt - createdAt` is een indicatie, niet totaal van intake tot QA; geen persistente per-run-tijdlijn. |
-| Polling-UI | `app/regression/adrie/build-status/page.tsx`: bestaande chat-ID, 5s-polling zolang pending/unknown, versie-ID en timing zichtbaar. | Bij fout wordt niet opnieuw gepolld; pagina heeft chat-ID handmatig nodig; geen universele run-UI. |
-| Desktop | `app/api/regression/adrie/build-screenshot/route.ts`: officiële screenshot via v0 version endpoint, type/grootte/host gecontroleerd. | Een extra API- en image-fetch; alleen voltooid chat; bewijs van visuele retentie is dit niet. |
-| Mobiel | `app/api/regression/adrie/mobile-screenshot/route.ts`: echte 390px Firecrawl-render met inhoudsvalidatie. | Kost Firecrawl-credits en extra tijd. UI vraagt screenshot automatisch via image-src en QA vraagt opnieuw, zonder bewezen gedeelde cache. Geen blanco afbeelding als PASS toelaten. |
-| Onafhankelijke QA | `app/api/regression/adrie/qa-existing/route.ts`: desktop+mobiel, version check vóór/na capture, gelockte PreviewSignature, onafhankelijke QA. `app/regression/adrie/build-status/page.tsx` kan QA starten. | QA blijft correct geblokkeerd zonder goedkeuringsdossier; is nog Adrie-specifiek, niet generiek. Screenshots worden opnieuw opgehaald bij QA. |
-| Bewijsopslag | `lib/lumivey/build-snapshot.ts`: browser-lokale IndexedDB per chatId met goedgekeurde Preview, signatuur, brief en QA. | Geen serverdurable opslag; niet overdraagbaar naar andere browser/medewerker; geen idempotency-lock. |
+- `lib/lumivey/v0-adapter.ts`: async `POST /v1/chats`; handoff-tijd meet niet v0-generatie/QA.
+- `app/api/regression/adrie/build-status/route.ts` + `app/regression/adrie/build-status/page.tsx`: bestaande v1-status, versie, tijden en polling om de vijf seconden.
+- `app/api/regression/adrie/build-screenshot/route.ts`: officiële desktop-screenshot, gecontroleerd via v0-versie.
+- `app/api/regression/adrie/mobile-screenshot/route.ts`: echte 390px Firecrawl-render, met inhoudscheck; kost extra tijd en credits.
+- `app/api/regression/adrie/qa-existing/route.ts`: bestaande onafhankelijke QA met goedgekeurde Preview/signatuur en version check vóór/na capture. Niet generiek productiebewezen.
+- `lib/lumivey/build-snapshot.ts`: goedkeuringsdossier alleen in browser-IndexedDB, niet als duurzaam accountdossier.
 
-## Nieuwe waarneming van Ruud: Vercel Logs van 16 september
+## Wat logscherm van Ruud liet zien
 
-De screenshot laat herhaalde `GET /api/regression/adrie/build-status` zien, een `completed`-melding met `generationMs` rond 62,5 seconden, een desktop screenshot-fetch rond 16,3 seconden en een mobiele rond 6,9 seconden. Ook staat er afzonderlijk een `502` bij `POST /api/regression/adrie/visual-reference` met timeout. Dit is een handmatige lezing uit een aangeleverde screenshot, GEEN complete verifieerbare trace en geen bewijs dat de timeout de volledige tien minuten verklaart. De statuslog met `completed` en beide screenshots bewijzen dat status/screenshotroutes in die run daadwerkelijk gebruikt zijn; er is geen nieuwe statusfunctie nodig. De 502 hoort bij een andere voorbereidingsroute en moet afzonderlijk onderzocht worden.
+16 september: Adrie-build pending → completed, gerapporteerde v0-versietijd circa 62,5 s, desktop-ophalen circa 16,3 s, mobiel-ophalen circa 6,9 s. Apart: 502/timeout bij `POST /api/regression/adrie/visual-reference`. Dit is screenshotbewijs van deelstappen, geen end-to-end-trace; tien minuten zijn nog niet verklaard.
 
-## Reconciliatie met PR #49
+## Concrete codewijziging in deze PR
 
-De PR bevat optionele CLI-inspectors voor bestaande v1- en nieuwe v2-chats. De v1-CLI is een veilig read-only diagnosehulpmiddel, NIET een nieuw product-onderdeel of vervanging voor de reeds werkende v1-route en UI. De v2-CLI mag niet worden gebruikt voor oude v1-chat-ID's. Geen v2-migratie op basis van deze audit.
+`app/api/regression/adrie/visual-reference/route.ts` is in de PR beperkt instrumenteerd. De route gebruikt nu fasegerichte, inhoudsvrije logregels voor beeldverificatie, bestaande chat ophalen en correctiebericht indienen. Bij een onbevestigde verzendpoging blijft de uitkomst expliciet onzeker; nooit blind opnieuw versturen. De upstream-timeouts konden in het oude maximale scenario circa 15 + 20 + 90 = 125 seconden innemen, langer dan de ingestelde function maxDuration van 120 seconden. De functiegrens is in de PR naar 180 seconden gebracht, uitsluitend om fouten binnen de route te kunnen afhandelen, niet als snelheidswinst. Verifieer Vercel-plan/runtime-ondersteuning en echte resultaten via preview-CI en een afzonderlijk toegestane test voordat merge of productiegebruik volgt.
 
-## Exacte volgende uitvoeringsopgave, in deze volgorde
+De PR bevat daarnaast optionele read-only v1/v2-CLI-inspectors. Deze vervangen de al bestaande statusroute niet. Geen v2-migratie.
 
-1. **Meet- en hergebruikaudit zonder betaalde build**: herleid in bestaande run waar `t0` (start), signatuur, assetcompressie, `/api/uploads/v0-assets`, visuele referentie, create-response, eerste pending, completed, desktop, mobiel, QA vallen. Leg alleen metadata en fase-tijden vast; geen tokens, URLs met geheimen, persoonsgegevens of beelden. Bij ontbrekende timestamps noteer `onbekend`; niet reconstrueren uit aannames.
-2. **Geen dubbele betaalde creatie**: idempotente start per goedgekeurde Preview-ID + brief/assetversie vóór een nieuwe betaalde E2E-run, duurzame opslag en veilige eigenaarsbinding. Een browserrefresh of retry mag geen tweede `POST /v1/chats` triggeren. Eerst testbaar maken.
-3. **Render éénmaal per versie**: bewijs gecontroleerde (toegangsgebonden) reuse van desktop/mobiele captures voor UI en QA, zodat de huidige afzonderlijke UI- en QA-aanroepen niet telkens Firecrawl en download opnieuw doen. Verifieer privacy, freshness en versie-binding; gebruik niet onveilig publieke screenshot-URL's.
-4. **Status/QA generiek**: verplaats de gevalideerde Adrie-specifieke workflow pas ná regressie naar een case-onafhankelijke Lumivey-testlus. Behoud approval/PreviewSignature/version guards; geen QA-PASS zonder renders.
-5. **Eén gemeten gecontroleerde API-proef**, pas na punten 1–3: totaaltijd, fase-tijden, Firecrawl/v0/OpenAI-kosten, foutlocaties, menselijke minuten en Preview-WoW-retentie. Daarna andere ondernemers en Michael regressie.
+## Openstaande gaten en volgorde
 
-## Open veiligheidscontrole vóór klantdata
+1. Uit bestaande logdata totale fasetijd reconstrueren: start, signatuur, upload, create, pending, completed, desktop, mobiel, QA. Ontbrekende tijden blijven `onbekend`.
+2. Duurzame idempotency en eigenaarstoets vóór volgende betaalde E2E-run. Browser-refresh/retry mag niet dubbel `POST /v1/chats` veroorzaken.
+3. Desktop/mobiel capturen per versie en toegangsgebonden hergebruiken; UI en QA vragen momenteel afzonderlijke beelden op.
+4. Adrie-specifieke QA generaliseren met Preview/signatuur/version-gates intact.
+5. Eén gecontroleerde totale proef, daarna verschillende ondernemers en Michael-regressie.
 
-In de gelezen regression-GET-handlers is geen expliciete sessie-/eigenaarstoets zichtbaar; toegang berust zichtbaar op een chat-ID en server-API-key. Vóór generieke klantinzet auth en owner-binding controleren, niet aannemen dat een onraadbaar chat-ID voldoende toegangscontrole is. De huidige browser-IndexedDB is alleen testbewijs, geen accountdossier. Geen live-publicatie vóór toestemming en aparte eindgate.
+## Veiligheidsgrenzen
 
-## Correcte voortgangstaal
-
-Reeds aanwezig en op 16 september zichtbaar gebruikt: v1-status, polling, desktop, mobiel. Aanwezig in code maar niet als algemeen productieproces bewezen: Adrie-variant onafhankelijke QA. Nog open: totale trace, hergebruik van captures, duurzame opslag, anti-dubbele-build, generieke beveiligde workflow, reproduceerbare WoW. Vercel-geslaagde build of mocktests zijn geen bewijs van een volledig geslaagde end-to-end klantreis.
+In de gelezen regression-GET-handlers geen expliciete auth-/owner-check aangetroffen. Browser-IndexedDB is geen account-dossier. Geen klantdata via onbeveiligde generieke routes, geen publieke site zonder eigenaarsgoedkeuring. De nieuwe fase-logs bevatten geen beeld-URL's, prompts, persoonsgegevens of API-secrets. Diagnostische code op PR-branch is geen bewijs dat de oude timeout is opgelost. PR #49 blijft draft totdat tests/CI en inhoudelijke review zijn afgerond.
