@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/v0-build-safety.yml'
       - 'app/api/**'
+      - 'lib/lumivey/source-trust.ts'
       - 'lib/lumivey/guest-discovery-core.ts'
       - 'lib/lumivey/v0-build-identity.ts'
       - 'lib/lumivey/v0-build-gate.ts'
@@ -13,6 +14,7 @@ on:
       - 'lib/lumivey/v0-preview-approval.ts'
       - 'lib/lumivey/neon-preview-identity.ts'
       - 'lib/lumivey/neon-preview-identity-core.ts'
+      - 'tests/source-trust.test.mjs'
       - 'tests/guest-discovery-core.test.mjs'
       - 'tests/v0-build-identity.test.mjs'
       - 'tests/v0-build-gate.test.mjs'
@@ -36,5 +38,5 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22.18.0'
-      - name: Guest resume, fingerprint, session membership, approval, one-shot and safety unit tests (no secrets, DB or v0 API)
-        run: node --experimental-strip-types --test tests/guest-discovery-core.test.mjs tests/v0-build-identity.test.mjs tests/v0-session-membership.test.mjs tests/v0-preview-approval.test.mjs tests/v0-build-authorization.test.mjs tests/v0-build-gate.test.mjs tests/v0-paid-route-closed.test.mjs tests/v0-route-inventory.test.mjs tests/neon-preview-identity.test.mjs
+      - name: Source trust, guest resume, fingerprint, session membership, approval, one-shot and safety tests (no secrets, DB or v0 API)
+        run: node --experimental-strip-types --test tests/source-trust.test.mjs tests/guest-discovery-core.test.mjs tests/v0-build-identity.test.mjs tests/v0-session-membership.test.mjs tests/v0-preview-approval.test.mjs tests/v0-build-authorization.test.mjs tests/v0-build-gate.test.mjs tests/v0-paid-route-closed.test.mjs tests/v0-route-inventory.test.mjs tests/neon-preview-identity.test.mjs
