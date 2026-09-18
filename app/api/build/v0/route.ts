@@ -1,34 +1,22 @@
 import { NextResponse } from "next/server";
-import { checkBuildReadiness, WebsiteBrief } from "@/lib/lumivey/primary-flow";
-import { createV0Build } from "@/lib/lumivey/v0-adapter";
 
-export async function POST(request: Request) {
-  try {
-    const body = await request.json();
-    const brief = body?.brief as WebsiteBrief | undefined;
-
-    if (!brief) {
-      return NextResponse.json({ error: "Geen Website Brief ontvangen." }, { status: 400 });
-    }
-
-    const readiness = checkBuildReadiness(brief);
-
-    if (!readiness.ready) {
-      return NextResponse.json(
-        { error: "Website Brief is nog niet build-ready.", blockers: readiness.blockers },
-        { status: 409 }
-      );
-    }
-
-    const build = await createV0Build(brief);
-
-    return NextResponse.json({ build });
-  } catch (error) {
-    console.error("v0 build error:", error);
-
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "v0-build kon niet worden gestart." },
-      { status: 500 }
-    );
-  }
+/**
+ * Temporary fail-closed safety gate on the draft branch.
+ * The previous general build route accepted a client-provided Website Brief and
+ * called the paid v0 API without verified owner authorization, durable Preview
+ * approval, an exact-branch database check, or a transactionally claimed job.
+ *
+ * Do not introduce a fallback, environment flag, or alternate paid endpoint.
+ * Restore generation only after server-side authorization + immutable approval,
+ * verified Neon branch/RLS, and an integrated one-shot ledger pass real tests.
+ * Previous implementation is recoverable from Git history.
+ */
+export async function POST(_request: Request) {
+  return NextResponse.json(
+    {
+      error: "v0-generatie is tijdelijk uitgeschakeld totdat autorisatie en eenmalige database-reservering zijn getest.",
+      code: "V0_BUILD_SAFETY_GATE_CLOSED",
+    },
+    { status: 503, headers: { "Cache-Control": "no-store" } },
+  );
 }
