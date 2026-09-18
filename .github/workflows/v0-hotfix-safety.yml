@@ -1,0 +1,25 @@
+name: v0 emergency shutdown safety
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/v0-hotfix-safety.yml'
+      - 'app/api/**'
+      - 'tests/v0-paid-route-closed.test.mjs'
+      - 'tests/v0-route-inventory.test.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  shutdown:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.18.0'
+      - name: Verify seven routes are closed and inventory finds no bypass
+        run: node --test tests/v0-paid-route-closed.test.mjs tests/v0-route-inventory.test.mjs
