@@ -9,6 +9,7 @@ on:
       - 'lib/lumivey/discovery-correction-journal.ts'
       - 'lib/lumivey/discovery-claim-projection.ts'
       - 'lib/lumivey/guest-discovery-core.ts'
+      - 'lib/lumivey/guest-dossier-access.ts'
       - 'lib/lumivey/guest-dossier-db-preflight.ts'
       - 'lib/lumivey/v0-build-identity.ts'
       - 'lib/lumivey/v0-build-gate.ts'
@@ -21,6 +22,7 @@ on:
       - 'tests/discovery-correction-journal.test.mjs'
       - 'tests/discovery-claim-projection.test.mjs'
       - 'tests/guest-discovery-core.test.mjs'
+      - 'tests/guest-dossier-access.test.mjs'
       - 'tests/guest-dossier-db-preflight.test.mjs'
       - 'tests/v0-build-identity.test.mjs'
       - 'tests/v0-build-gate.test.mjs'
@@ -44,5 +46,5 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22.18.0'
-      - name: Guest DB preflight, correction replay and v0 shutdown unit tests (no DB, secrets or paid APIs)
-        run: node --experimental-strip-types --test tests/guest-dossier-db-preflight.test.mjs tests/source-trust.test.mjs tests/discovery-correction-journal.test.mjs tests/discovery-claim-projection.test.mjs tests/guest-discovery-core.test.mjs tests/v0-build-identity.test.mjs tests/v0-session-membership.test.mjs tests/v0-preview-approval.test.mjs tests/v0-build-authorization.test.mjs tests/v0-build-gate.test.mjs tests/v0-paid-route-closed.test.mjs tests/v0-route-inventory.test.mjs tests/neon-preview-identity.test.mjs
+      - name: Guest resume access, DB preflight, correction replay and v0 shutdown unit tests (no DB, secrets or paid APIs)
+        run: node --experimental-strip-types --test tests/guest-dossier-access.test.mjs tests/guest-dossier-db-preflight.test.mjs tests/source-trust.test.mjs tests/discovery-correction-journal.test.mjs tests/discovery-claim-projection.test.mjs tests/guest-discovery-core.test.mjs tests/v0-build-identity.test.mjs tests/v0-session-membership.test.mjs tests/v0-preview-approval.test.mjs tests/v0-build-authorization.test.mjs tests/v0-build-gate.test.mjs tests/v0-paid-route-closed.test.mjs tests/v0-route-inventory.test.mjs tests/neon-preview-identity.test.mjs
