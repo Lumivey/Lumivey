@@ -1,37 +1,32 @@
-# Checkpoint — v0 one-shot veiligheid en volledige route-inventaris
+# Checkpoint — v0 one-shot veiligheid en route-inventaris
 
-Datum: 18 september 2026. Alleen draft PR #49; niet gemerged, geen nieuwe v0-call, geen productie-uitrol.
+Datum: 18 september 2026. Alleen draft PR #49, niet gemerged, geen nieuwe v0-call en geen productie-uitrol.
 
 ## Norm en bewezen voorbereiding
-- Plan v0.4 en de bestaande Golden Path blijven leidend. Dit werk beveiligt betaalde websitegeneratie, niet de creatieve Preview-kwaliteit.
-- `lib/lumivey/v0-build-identity.ts` en `v0-build-gate.ts` bevatten een stabiele revisie-identiteit en een eenmalige-submit-orkestratie achter een nog te implementeren duurzaam databasecontract. GitHub-unit-tests met mock-ledger zijn geslaagd; dit is géén werkende databasebescherming.
-- Ruud voerde `docs/architecture/sql/001_v0_build_jobs.sql` uit op Neon SQL Editor branch `lumivey-preview`; `to_regclass` bevestigde de tabel. De Vercel Preview `DATABASE_URL`-branch is NIET geverifieerd. FORCE RLS zonder passende policy kan schrijven blokkeren; geen RLS uitschakelen om tests groen te maken.
+- Plan v0.4 en Michael Golden Path blijven leidend. Dit werk beveiligt betaalde websitegeneratie, niet de creatieve Preview-kwaliteit.
+- `lib/lumivey/v0-build-identity.ts` en `v0-build-gate.ts`: stabiele revisie-identiteit en one-shot orchestratie achter een toekomstig transactioneel databasecontract. Unit-tests gebruiken mock-ledger; geen operationele databasebescherming.
+- Ruud voerde `docs/architecture/sql/001_v0_build_jobs.sql` uit op Neon SQL Editor branch `lumivey-preview`; `to_regclass` bevestigde de tabel. Vercel Preview `DATABASE_URL`-branch is niet geverifieerd. FORCE RLS zonder passende policy kan normale rollen blokkeren. Geen RLS uitschakelen om een test groen te krijgen.
 
-## Veiligheidsaudit — vijf muterende v0-routes op de draft branch afgesloten
-1. `app/api/build/v0/route.ts`: algemene POST -> betaalde `createV0Build`.
-2. `app/api/regression/adrie/build-v0/route.ts`: clientdata/approval -> betaalde `createV0Build`.
-3. `app/api/regression/michael/build-clean/route.ts`: betaalde OpenAI-beeldcalls + v0-build.
-4. `app/api/regression/michael/correct-latest-v0/route.ts`: GET met side effect; zocht recente chat en deed POST van betaalde correctie.
-5. `app/api/regression/adrie/visual-reference/route.ts`: POST van betaalde v0-correctie, slechts same-origin/message-checks; geen geverifieerde owner of transactionele claim. De eerdere 'one-shot' marker is niet concurrerend veilig.
+## Veiligheidsaudit — zeven v0-mutatie-ingangen op draft branch afgesloten
+1. `app/api/build/v0/route.ts`: algemene POST → betaalde create.
+2. `app/api/build/v0/correct/route.ts`: algemene POST accepteerde caller-chat-ID en vrije correctietekst → betaalde correctie via adapter.
+3. `app/api/regression/adrie/build-v0/route.ts`: clientdata/approval → betaalde create.
+4. `app/api/regression/adrie/correct-existing/route.ts`: same-origin + client-versie → betaalde correctie via adapter, geen eigenaar of concurrency-claim.
+5. `app/api/regression/adrie/visual-reference/route.ts`: POST van betaalde correctie; same-origin/message-checks zijn geen owner-auth of transactionele claim.
+6. `app/api/regression/michael/build-clean/route.ts`: betaalde OpenAI-imagecalls en v0-create.
+7. `app/api/regression/michael/correct-latest-v0/route.ts`: GET met betaalde mutatie en recent-chat-tekstsearch.
 
-Alle vijf handlers antwoorden op de **PR-branch** HTTP 503, `V0_BUILD_SAFETY_GATE_CLOSED`, no-store; geen fetch, betaalde v0-call of ad-hoc bypass. Oude handlers blijven in Git-historie en mogen niet ongewijzigd worden teruggezet.
+Alle zeven handlers antwoorden op de PR-branch HTTP 503 met `V0_BUILD_SAFETY_GATE_CLOSED` en `Cache-Control: no-store`. Oude implementaties zijn via Git-historie herstelbaar maar mogen niet zonder herontwerp terug.
 
-## Regressiecontrole
-- `tests/v0-paid-route-closed.test.mjs` controleert nu alle vijf expliciete handlers.
-- `tests/v0-route-inventory.test.mjs` scant recursief alle `app/api/**/route.*` op directe v0-adaptercalls of v0-HTTP-mutaties. Read-only v0-status/screenshot-GETs worden niet geblokkeerd; Firecrawl-POST in de mobiele screenshotroute is géén v0-mutatie.
-- De eerste bredere scan faalde terecht: zes v0-API-gebruikende routes kwamen aan het licht. Audit onderscheidde read-only diagnostiek van `visual-reference`, die daadwerkelijk een betaalde v0-POST uitvoerde. Die vijfde route is afgesloten; scanregel aangepast om read-only HTTP GET niet als mutatie te classificeren.
-- GitHub Actions run `35328809479`, unit-job `105548099513`: **success** op commit `d0db1030235295fa3f02de5153e15e3a1fb456ec`, vóór documentatieaanpassingen. De source-level scan heeft beperkingen (dynamische dispatch, indirecte helpers); geen bewezen volledige security-audit of live-integratietest.
+## Regressiecontrole en bewijslast
+- `tests/v0-paid-route-closed.test.mjs` controleert alle zeven handlers; `tests/v0-route-inventory.test.mjs` scant recursief `app/api` op directe betaalde v0-mutaties én bekende adapterhelpers, maar is nadrukkelijk een source-level tripwire, geen volledige security-audit.
+- De uitbreiding van de scan ontdekte `correct-existing` en daarna `build/v0/correct` die beide buiten de eerdere vijf vielen. Het CI-resultaat was eerst rood en is na beide route-afsluitingen groen: GitHub Actions run `35329971535`, job `105551817837`, success op commit `947281c7b0b01fec8b90d4603fd8cb63ed321d4b` vóór deze documentatiecommit.
+- V0 GET/status/screenshot-routes worden niet als betaalde v0-mutaties gezien; Firecrawl/beeld- en andere AI-kostenroutes vallen buiten deze specifieke v0-test en blijven een afzonderlijke kosten-/toegangscontrole.
 
-## Kritieke risico's en nog open
-- PR is draft/niet gemerged. Bestaande `main` en reeds uitgebrachte deployments zijn niet aangepast en kunnen nog onbeveiligde betaalde routes bevatten. Een gecontroleerde remediatie-/deploybeslissing is nodig; blind mergen zou de huidige regressiebuilds stoppen.
-- Andere AI-/beeld-/Firecrawl-kostenroutes vallen niet automatisch onder deze v0-mutatiescan en verdienen afzonderlijke toegangs-/budgetcontrole.
-- Geen geverifieerde operator/account-auth, duurzame goedkeuring van Preview/Brief/assets, runtime Neon-branchbewijs, veilige database service-rol/RLS-policy, PostgreSQL-driver/ledgeradapter, echte multi-connection concurrency of SQL-smoke. Vercel connector gaf 403; niet vragen om credentials/connection strings.
-- Geen nieuwe v0-generaties, geen merge/productiedeploy, geen bewezen bescherming op live omgeving, geen volledige E2E-meting of generieke Preview→site-QA.
+## Kritieke risico's en exact vervolg
+- Draft PR is niet gemerged: bestaande `main`/deployments kunnen alle oude onbeschermde betaalde endpoints nog bevatten. Alleen repo-wijzigingen zijn geen live remediatie. Een merge zou regressie-generaties stoppen; deployment-impact en toestemming/rollout moeten eerst worden vastgesteld.
+- Vercel-connector leverde 403; `list_teams` leverde geen teams op. Geen actieve deployment- of exacte runtime DB-branchverificatie mogelijk vanuit deze connector. Niet naar geheimen of connection strings vragen.
+- Geen bewezen server-side operator-/owner-auth, persistente goedkeuring van exacte Preview/Brief/assetrevisie, juiste runtime Neon-branch en veilige rol/RLS, PostgreSQL-driver/adapter, SQL-smoke of echte twee-connecties-concurrencytest. Geen volledige E2E of generieke Preview→site-QA.
+- Eerst deployment-/remediatie-impact bepalen, dan auth + durable approval en branch/RLS vaststellen, daarna één transactionele geautoriseerde build-POST en version-bound correcties veilig testen. Geen muterende GET of laatstgevonden chat.
 
-## Exact vervolg
-1. Controleren welke deployment publiek actief is; gecontroleerde live-remediatie afstemmen zonder ongewenste onderbreking van testflows.
-2. Server-side operator-auth en persistente owner/approval-state vaststellen; nooit owner of `humanApproved` uit JSON als bewijs gebruiken.
-3. Privé runtime branch-identiteit en DB rol/RLS veilig verifiëren. Vervolgens server-only databaseclient, transactionele ledgeradapter en echte twee-verbindingen-test.
-4. Alleen één geautoriseerde v0-build-POST na duurzame committed claim openen; correcties via expliciete owner/chat/version-bound POST, nooit muterende GET of latest-chat-tekstsearch.
-
-`docs/active/CURRENT_STATE.md` is ongewijzigd bewaard; dit bestand is het actuele delta-checkpoint.
+Historisch `docs/active/CURRENT_STATE.md` volledig behouden; dit bestand is de actuele delta.
