@@ -10,12 +10,12 @@ test('public-facing import boundary is server-only', () => {
 
 const connectionUrl = 'postgresql://user:secret@ep-example.eu-central-1.aws.neon.tech/neondb?sslmode=require';
 const expectedHostname = 'ep-example.eu-central-1.aws.neon.tech';
-const okRow = [{ ledger_exists: true, rls_enabled: true, rls_forced: true }];
+const okRow = [{ ledger_exists: true, rls_enabled: true, rls_forced: true, db_role_bypasses_rls: false, db_role_is_superuser: false, policy_count: 1 }];
 function input(extra = {}) {
   return { deploymentEnvironment: 'preview', connectionUrl, expectedHostname, query: async () => okRow, ...extra };
 }
 
-test('matching independently supplied endpoint and enforced RLS yield preliminary PASS only', async () => {
+test('nonprivileged role, at least one policy and enforced RLS yield preliminary PASS only', async () => {
   assert.equal(await verifyNeonPreviewReadOnly(input()), 'PASS_PRELIMINARY');
 });
 
@@ -31,10 +31,26 @@ test('production, missing settings, malformed URL and endpoint drift block befor
 
 test('missing ledger, disabled RLS and DB errors fail closed with safe code', async () => {
   assert.equal(await verifyNeonPreviewReadOnly(input({ query: async () => [{ ledger_exists: false, rls_enabled: null, rls_forced: null }] })), 'BLOCKED_LEDGER_MISSING');
-  assert.equal(await verifyNeonPreviewReadOnly(input({ query: async () => [{ ledger_exists: true, rls_enabled: true, rls_forced: false }] })), 'BLOCKED_RLS_NOT_ENFORCED');
+  assert.equal(await verifyNeonPreviewReadOnly(input({ query: async () => [{ ...okRow[0], rls_forced: false }] })), 'BLOCKED_RLS_NOT_ENFORCED');
   const result = await verifyNeonPreviewReadOnly(input({ query: async () => { throw new Error('user:secret@ep-example private'); } }));
   assert.equal(result, 'BLOCKED_DB_QUERY_FAILED');
   assert.ok(!result.includes('secret'));
+});
+
+test('BYPASSRLS, superuser and unknown role attributes block even with FORCE RLS', async () => {
+  for (const row of [
+    { ...okRow[0], db_role_bypasses_rls: true },
+    { ...okRow[0], db_role_is_superuser: true },
+    { ...okRow[0], db_role_bypasses_rls: null },
+  ]) {
+    assert.equal(await verifyNeonPreviewReadOnly(input({ query: async () => [row] })), 'BLOCKED_PRIVILEGED_DB_ROLE');
+  }
+});
+
+test('zero or unverified policy count blocks; policy existence alone is not owner isolation proof', async () => {
+  for (const policy_count of [0, null, '1']) {
+    assert.equal(await verifyNeonPreviewReadOnly(input({ query: async () => [{ ...okRow[0], policy_count }] })), 'BLOCKED_NO_RLS_POLICY');
+  }
 });
 
 test('query is strictly read-only and executed once only after endpoint match', async () => {
