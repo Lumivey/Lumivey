@@ -1,0 +1,26 @@
+name: v0 build safety
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/v0-build-safety.yml'
+      - 'lib/lumivey/v0-build-identity.ts'
+      - 'lib/lumivey/v0-build-gate.ts'
+      - 'tests/v0-build-identity.test.mjs'
+      - 'tests/v0-build-gate.test.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.18.0'
+      - name: One-shot and fingerprint unit tests (no secrets, DB or v0 API)
+        run: node --experimental-strip-types --test tests/v0-build-identity.test.mjs tests/v0-build-gate.test.mjs
