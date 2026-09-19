@@ -38,9 +38,14 @@ export async function checkGuestDossierDbPreflight(input: {
     return 'BLOCKED_CONFIGURATION';
   try {
     const url = new URL(input.connectionUrl);
+    // Explicitly reject ambiguous SSL parameters, nonstandard ports, fragments and
+    // passwordless URLs. A parser/driver may resolve duplicate sslmode values
+    // differently; the operator must independently establish expectedHostname.
     if (!['postgres:', 'postgresql:'].includes(url.protocol) ||
         url.hostname.toLowerCase() !== input.expectedHostname.toLowerCase() ||
-        url.pathname !== '/neondb' || url.username !== APP_ROLE ||
+        (url.port !== '' && url.port !== '5432') || url.hash !== '' ||
+        url.pathname !== '/neondb' || url.username !== APP_ROLE || !url.password ||
+        url.searchParams.getAll('sslmode').length !== 1 ||
         url.searchParams.get('sslmode') !== 'verify-full') return 'BLOCKED_ENDPOINT';
   } catch { return 'BLOCKED_ENDPOINT'; }
   try {
