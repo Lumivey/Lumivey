@@ -24,7 +24,7 @@ const config = extra => ({ deployment:'preview', connectionUrl:url, expectedHost
 test('only execute-only nonprivileged Preview configuration receives preliminary result', async () => {
   assert.equal(await checkGuestDossierDbPreflight(config()), 'PASS_PRELIMINARY');
 });
-test('wrong deployment, hostname, database, role, TLS and config refuse before querying', async () => {
+test('wrong deployment, hostname, database, role, TLS and ambiguous URLs refuse before querying', async () => {
   let calls=0;
   const query=async () => { calls++; return ready(); };
   for (const [extra, expected] of [
@@ -34,6 +34,11 @@ test('wrong deployment, hostname, database, role, TLS and config refuse before q
     [{connectionUrl:url.replace('/neondb','/otherdb')}, 'BLOCKED_ENDPOINT'],
     [{connectionUrl:url.replace('lumivey_discovery_app_preview','neondb_owner')}, 'BLOCKED_ENDPOINT'],
     [{connectionUrl:url.replace('verify-full','require')}, 'BLOCKED_ENDPOINT'],
+    [{connectionUrl:url+'&sslmode=disable'}, 'BLOCKED_ENDPOINT'],
+    [{connectionUrl:url+'&sslmode=verify-full'}, 'BLOCKED_ENDPOINT'],
+    [{connectionUrl:url.replace(`@${host}`,`@${host}:5433`)}, 'BLOCKED_ENDPOINT'],
+    [{connectionUrl:url.replace(':placeholder@','@')}, 'BLOCKED_ENDPOINT'],
+    [{connectionUrl:url+'#fragment'}, 'BLOCKED_ENDPOINT'],
     [{expectedHostname:'another.example.neon.tech'}, 'BLOCKED_ENDPOINT'],
   ]) assert.equal(await checkGuestDossierDbPreflight(config({...extra,query})), expected);
   assert.equal(calls,0);
