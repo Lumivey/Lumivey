@@ -4,6 +4,7 @@
  * The hostname below was independently read from Neon Preview compute metadata;
  * reverify that branch/host association in Neon before every operator run.
  * Authentication is supplied solely via an operator-managed PGPASSFILE outside repo.
+ * Native Windows ACLs cannot be verified by the POSIX mode check: use Linux/WSL.
  */
 import { spawn } from 'node:child_process';
 import { stat, realpath } from 'node:fs/promises';
@@ -24,14 +25,14 @@ function refuse(code) {
 }
 
 async function checkPassfile(path) {
-  if (!path || !isAbsolute(path)) return false;
+  // fs.stat().mode is not a native Windows ACL audit. Never silently accept it.
+  if (process.platform === 'win32' || !path || !isAbsolute(path)) return false;
   const file = await realpath(path).catch(() => null);
   if (!file) return false;
   const rel = relative(resolve('.'), file);
   if (rel === '' || (rel !== '..' && !rel.startsWith(`..${sep}`) && !isAbsolute(rel))) return false;
   const info = await stat(file).catch(() => null);
-  return !!info?.isFile() && info.size > 0 &&
-    (process.platform === 'win32' || (info.mode & 0o077) === 0);
+  return !!info?.isFile() && info.size > 0 && (info.mode & 0o077) === 0;
 }
 
 function oneConnection(env) {
