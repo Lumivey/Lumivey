@@ -1,0 +1,85 @@
+-- INTERNAL / CORE — REVIEW-ONLY. Not yet applied to Neon. Preview branch ONLY.
+-- Requires independent SQL security review and integration test with nonprivileged LOGIN
+-- role BEFORE the final GRANT EXECUTE. The application must NEVER use neondb_owner.
+-- Scope: LUMIVEY_DB odd-term-62838732, br-green-lake-b2xh1tni, neondb.
+--
+-- Server produces two independent 256-bit random resume tokens, HMAC-SHA256s each
+-- with a dedicated key held only server-side and supplies only their 64-char hex
+-- digests as bound parameters over TLS. NEVER send a raw token or key to Postgres.
+-- The old digest is a bearer credential: never log/return it. Confirm that the
+-- presented token belongs to the request's cookie/session server-side; a browser
+-- supplied digest, user id or dossier id alone is NEVER authentication.
+--
+-- DEPLOYMENT TRANSACTION — NOT FOR AUTOMATIC EXECUTION:
+-- BEGIN;
+-- CREATE SCHEMA IF NOT EXISTS lumivey_discovery_api;
+-- REVOKE ALL ON SCHEMA lumivey_discovery_api FROM PUBLIC;
+-- REVOKE ALL ON SCHEMA lumivey_discovery_api FROM lumivey_discovery_app_preview;
+-- GRANT USAGE ON SCHEMA lumivey_discovery_api TO lumivey_discovery_function_owner;
+-- GRANT SELECT (id, resume_token_digest, status, expires_at, state_version, discovery_state)
+--   ON public.lumivey_guest_discovery_dossiers TO lumivey_discovery_function_owner;
+-- GRANT UPDATE (resume_token_digest, last_activity_at, expires_at)
+--   ON public.lumivey_guest_discovery_dossiers TO lumivey_discovery_function_owner;
+-- CREATE POLICY lumivey_guest_resume_function_owner_policy
+--   ON public.lumivey_guest_discovery_dossiers FOR ALL
+--   TO lumivey_discovery_function_owner USING (true) WITH CHECK (true);
+-- IMPORTANT: the function owner cannot log in and has no role memberships; the
+-- broad RLS policy is ONLY defensible together with audited narrow functions,
+-- no direct app table grants and verified ownership/EXECUTE ACL. Review first.
+-- The role must own the function, not neondb_owner. The owner-changing procedure
+-- must be reviewed and audited, with no persistent owner/worker role membership.
+--
+-- Proposed function body (review with pg_get_functiondef before any EXECUTE grant):
+-- CREATE FUNCTION lumivey_discovery_api.rotate_guest_resume(
+--     p_dossier_id uuid, p_old_digest text, p_new_digest text)
+-- RETURNS TABLE (state_version bigint, discovery_state jsonb)
+-- LANGUAGE plpgsql SECURITY DEFINER
+-- SET search_path = pg_catalog, pg_temp
+-- AS $function$
+-- BEGIN
+--   IF p_dossier_id IS NULL OR p_old_digest IS NULL OR p_new_digest IS NULL
+--      OR p_old_digest !~ '^[0-9a-f]{64}$'
+--      OR p_new_digest !~ '^[0-9a-f]{64}$'
+--      OR p_old_digest = p_new_digest THEN
+--     RETURN;
+--   END IF;
+--   RETURN QUERY
+--     UPDATE public.lumivey_guest_discovery_dossiers AS d
+--        SET resume_token_digest = p_new_digest,
+--            last_activity_at = clock_timestamp(),
+--            expires_at = clock_timestamp() + interval '30 days'
+--      WHERE d.id = p_dossier_id
+--        AND d.resume_token_digest = p_old_digest
+--        AND d.status = 'active'
+--        AND d.expires_at > clock_timestamp()
+--     RETURNING d.state_version, d.discovery_state;
+-- END
+-- $function$;
+-- REVOKE ALL ON FUNCTION lumivey_discovery_api.rotate_guest_resume(uuid,text,text) FROM PUBLIC;
+-- REVOKE ALL ON FUNCTION lumivey_discovery_api.rotate_guest_resume(uuid,text,text)
+--   FROM lumivey_discovery_app_preview;
+-- -- AFTER verified owner, RLS, code review, A/B and expiry/concurrent tests ONLY:
+-- -- GRANT USAGE ON SCHEMA lumivey_discovery_api TO lumivey_discovery_app_preview;
+-- -- GRANT EXECUTE ON FUNCTION lumivey_discovery_api.rotate_guest_resume(uuid,text,text)
+-- --   TO lumivey_discovery_app_preview;
+-- COMMIT;
+--
+-- SAFETY REVIEW BEFORE USE:
+-- 1. PostgreSQL UPDATE RETURNING SELECT privilege, check constraint and RLS
+--    semantics must be verified on actual Preview Postgres, not assumed.
+-- 2. Ensure update sets last_activity_at <= expires_at even across timestamps;
+--    consider one captured timestamp with a vetted SQL expression if needed.
+-- 3. On denied access return zero rows, no indication whether ID or digest failed.
+--    UNIQUE digest collision and transient DB failure must not invalidate old code.
+-- 4. A successful resume MUST atomically issue/return the new raw token to its
+--    verified browser via Secure HttpOnly SameSite cookie; never return raw token
+--    to SQL or put it in a redirect URL. If response delivery fails, recovery
+--    requires an explicit safe protocol (do not silently reuse old digest).
+-- 5. Concurrent resume with the same old digest: exactly one succeeds; a second
+--    request must not rotate or overwrite the first response. Test 2 connections.
+-- 6. Verify active/nonexpired/claimed/invalid/wrong A/B tokens, SELECT grants,
+--    UPDATE grants, SQL permissions, function owner and ACLs on live Preview.
+-- 7. This function only resumes; it neither records corrections nor decides
+--    Preview readiness. Correction writes need separate CAS transaction/review.
+-- 8. No secrets, real customer data, PUBLIC grants, production mutations or
+--    paid v0 API calls in this migration design.
