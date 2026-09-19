@@ -8,6 +8,7 @@ const tables = ['lumivey_discovery_correction_events', 'lumivey_guest_discovery_
 const ready = () => tables.map(table_name => ({
   table_name, table_exists:true, rls_enabled:true, rls_forced:true,
   can_select:false, can_insert:false, can_update:false, can_delete:false,
+  can_references:false, can_truncate:false, can_trigger:false,
   db_role_bypasses_rls:false, db_role_is_superuser:false, db_role_can_login:true,
   session_is_app_role:true, database_is_preview:true,
   api_schema_usage:true, api_schema_create:false, resume_function_exists:true,
@@ -41,7 +42,7 @@ test('missing, duplicate and mismatched table audit fails closed', async () => {
   for (const rows of [[], ready().slice(0,2), [ready()[0],ready()[0],ready()[2]], ready().map((row,index) => index ? row : {...row,table_name:'another_table'})])
     assert.equal(await checkGuestDossierDbPreflight(config({query:async () => rows})), 'BLOCKED_SCHEMA');
 });
-test('RLS, switched sessions, missing routines and direct table permissions independently block', async () => {
+test('RLS, switched sessions, missing routines and all direct table or column privileges independently block', async () => {
   for (const [field, value, code] of [
     ['rls_forced',false,'BLOCKED_RLS'], ['rls_enabled',null,'BLOCKED_RLS'],
     ['db_role_bypasses_rls',true,'BLOCKED_PRIVILEGED_ROLE'],
@@ -53,6 +54,10 @@ test('RLS, switched sessions, missing routines and direct table permissions inde
     ['can_insert',true,'BLOCKED_DIRECT_TABLE_ACCESS'],
     ['can_update',true,'BLOCKED_DIRECT_TABLE_ACCESS'],
     ['can_delete',true,'BLOCKED_DIRECT_TABLE_ACCESS'],
+    ['can_references',true,'BLOCKED_DIRECT_TABLE_ACCESS'],
+    ['can_truncate',true,'BLOCKED_DIRECT_TABLE_ACCESS'],
+    ['can_trigger',true,'BLOCKED_DIRECT_TABLE_ACCESS'],
+    ['can_select',null,'BLOCKED_DIRECT_TABLE_ACCESS'],
     ['api_schema_create',true,'BLOCKED_DIRECT_TABLE_ACCESS'],
     ['api_schema_usage',false,'BLOCKED_FUNCTIONS'],
     ['resume_function_exists',false,'BLOCKED_FUNCTIONS'],
@@ -74,6 +79,20 @@ test('RLS, switched sessions, missing routines and direct table permissions inde
     assert.equal(await checkGuestDossierDbPreflight(config({query:async () => rows})), code, field);
   }
 });
+test('read-only SQL explicitly audits column grants, rejects a misleading table-only check', async () => {
+  let count=0;
+  assert.equal(await checkGuestDossierDbPreflight(config({query:async sql => {
+    count++;
+    assert.match(sql,/has_any_column_privilege\(current_user,[^\n]+\s*'SELECT'\)/);
+    assert.match(sql,/has_any_column_privilege\(current_user,[^\n]+\s*'INSERT'\)/);
+    assert.match(sql,/has_any_column_privilege\(current_user,[^\n]+\s*'UPDATE'\)/);
+    assert.match(sql,/has_any_column_privilege\(current_user,[^\n]+\s*'REFERENCES'\)/);
+    assert.match(sql,/has_table_privilege\(current_user,[^\n]+\s*'TRUNCATE'\)/);
+    assert.match(sql,/has_table_privilege\(current_user,[^\n]+\s*'TRIGGER'\)/);
+    return ready();
+  }})), 'PASS_PRELIMINARY');
+  assert.equal(count,1);
+});
 test('masked query failure, one read-only SQL statement, no secrets or writes', async () => {
   const failure=await checkGuestDossierDbPreflight(config({query:async () => {throw new Error('private password');}}));
   assert.equal(failure,'BLOCKED_QUERY_FAILED');
@@ -83,7 +102,7 @@ test('masked query failure, one read-only SQL statement, no secrets or writes', 
     count++; assert.match(sql,/^SELECT\b/);
     assert.doesNotMatch(sql,/\b(?:INSERT|UPDATE|DELETE|ALTER|DROP|GRANT)\s+(?:ON|TABLE|INTO|public\.)/i);
     assert.match(sql,/has_function_privilege/);
-    assert.match(sql,/has_table_privilege/);
+    assert.match(sql,/has_any_column_privilege/);
     assert.match(sql,/session_user = current_user/);
     assert.match(sql,/aclexplode/);
     assert.match(sql,/acl\.grantee = 0/);
