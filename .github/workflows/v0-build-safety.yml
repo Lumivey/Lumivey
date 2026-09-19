@@ -7,6 +7,7 @@ on:
       - 'app/api/**'
       - 'docs/architecture/sql/007_guest_resume_function_review.sql'
       - 'docs/architecture/sql/008_guest_correction_function_review.sql'
+      - 'scripts/guest-preview-two-session-smoke.mjs'
       - 'lib/lumivey/source-trust.ts'
       - 'lib/lumivey/discovery-correction-journal.ts'
       - 'lib/lumivey/discovery-claim-projection.ts'
@@ -20,6 +21,7 @@ on:
       - 'lib/lumivey/v0-preview-approval.ts'
       - 'lib/lumivey/neon-preview-identity.ts'
       - 'lib/lumivey/neon-preview-identity-core.ts'
+      - 'tests/guest-preview-two-session-smoke.test.mjs'
       - 'tests/guest-db-function-review.test.mjs'
       - 'tests/source-trust.test.mjs'
       - 'tests/discovery-correction-journal.test.mjs'
@@ -49,5 +51,5 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22.18.0'
-      - name: Review-only SQL, guest access, correction replay and v0 shutdown tests (no DB, secrets or paid APIs)
-        run: node --experimental-strip-types --test tests/guest-db-function-review.test.mjs tests/guest-dossier-access.test.mjs tests/guest-dossier-db-preflight.test.mjs tests/source-trust.test.mjs tests/discovery-correction-journal.test.mjs tests/discovery-claim-projection.test.mjs tests/guest-discovery-core.test.mjs tests/v0-build-identity.test.mjs tests/v0-session-membership.test.mjs tests/v0-preview-approval.test.mjs tests/v0-build-authorization.test.mjs tests/v0-build-gate.test.mjs tests/v0-paid-route-closed.test.mjs tests/v0-route-inventory.test.mjs tests/neon-preview-identity.test.mjs
+      - name: Review-only SQL, guest access, connection smoke refusal, correction replay and v0 shutdown tests (no DB, secrets or paid APIs)
+        run: node --experimental-strip-types --test tests/guest-preview-two-session-smoke.test.mjs tests/guest-db-function-review.test.mjs tests/guest-dossier-access.test.mjs tests/guest-dossier-db-preflight.test.mjs tests/source-trust.test.mjs tests/discovery-correction-journal.test.mjs tests/discovery-claim-projection.test.mjs tests/guest-discovery-core.test.mjs tests/v0-build-identity.test.mjs tests/v0-session-membership.test.mjs tests/v0-preview-approval.test.mjs tests/v0-build-authorization.test.mjs tests/v0-build-gate.test.mjs tests/v0-paid-route-closed.test.mjs tests/v0-route-inventory.test.mjs tests/neon-preview-identity.test.mjs
