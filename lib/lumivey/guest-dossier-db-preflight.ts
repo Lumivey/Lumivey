@@ -1,6 +1,6 @@
 /* INTERNAL / CORE. Read-only operator preflight; NOT proof of authorization/isolation.
- * Preview endpoint independently verified by operator. App role has no table grants.
- * A passing catalog audit never replaces real two-connection A/B tests.
+ * Preview endpoint independently verified by operator. App role has no table OR
+ * column grants. A passing catalog audit never replaces real two-connection A/B tests.
  */
 export type GuestDbPreflightResult = 'BLOCKED_NOT_PREVIEW' | 'BLOCKED_CONFIGURATION' |
   'BLOCKED_ENDPOINT' | 'BLOCKED_SCHEMA' | 'BLOCKED_RLS' | 'BLOCKED_PRIVILEGED_ROLE' |
@@ -10,7 +10,9 @@ export type GuestDbPreflightResult = 'BLOCKED_NOT_PREVIEW' | 'BLOCKED_CONFIGURAT
 type AuditRow = Readonly<{
   table_name: string; table_exists: boolean; rls_enabled: boolean | null; rls_forced: boolean | null;
   can_select: boolean | null; can_insert: boolean | null; can_update: boolean | null;
-  can_delete: boolean | null; db_role_bypasses_rls: boolean | null;
+  can_delete: boolean | null; can_references: boolean | null;
+  can_truncate: boolean | null; can_trigger: boolean | null;
+  db_role_bypasses_rls: boolean | null;
   db_role_is_superuser: boolean | null; db_role_can_login: boolean | null;
   session_is_app_role: boolean | null; database_is_preview: boolean | null;
   api_schema_usage: boolean | null; api_schema_create: boolean | null;
@@ -45,10 +47,15 @@ export async function checkGuestDossierDbPreflight(input: {
     const rows = await input.query(`SELECT expected.table_name,
   to_regclass('public.' || expected.table_name) IS NOT NULL AS table_exists,
   c.relrowsecurity AS rls_enabled, c.relforcerowsecurity AS rls_forced,
-  has_table_privilege(current_user, to_regclass('public.' || expected.table_name), 'SELECT') AS can_select,
-  has_table_privilege(current_user, to_regclass('public.' || expected.table_name), 'INSERT') AS can_insert,
-  has_table_privilege(current_user, to_regclass('public.' || expected.table_name), 'UPDATE') AS can_update,
+  -- has_table_privilege alone misses grants on individual columns. Neon Preview
+  -- demonstrated table SELECT=false while any-column SELECT=true for function owner.
+  has_any_column_privilege(current_user, to_regclass('public.' || expected.table_name), 'SELECT') AS can_select,
+  has_any_column_privilege(current_user, to_regclass('public.' || expected.table_name), 'INSERT') AS can_insert,
+  has_any_column_privilege(current_user, to_regclass('public.' || expected.table_name), 'UPDATE') AS can_update,
   has_table_privilege(current_user, to_regclass('public.' || expected.table_name), 'DELETE') AS can_delete,
+  has_any_column_privilege(current_user, to_regclass('public.' || expected.table_name), 'REFERENCES') AS can_references,
+  has_table_privilege(current_user, to_regclass('public.' || expected.table_name), 'TRUNCATE') AS can_truncate,
+  has_table_privilege(current_user, to_regclass('public.' || expected.table_name), 'TRIGGER') AS can_trigger,
   (SELECT rolbypassrls FROM pg_roles WHERE rolname=current_user) AS db_role_bypasses_rls,
   (SELECT rolsuper FROM pg_roles WHERE rolname=current_user) AS db_role_is_superuser,
   (SELECT rolcanlogin FROM pg_roles WHERE rolname=current_user) AS db_role_can_login,
@@ -84,7 +91,8 @@ ORDER BY expected.table_name`);
       return 'BLOCKED_PRIVILEGED_ROLE';
     if (rows.some(r => r.db_role_can_login !== true)) return 'BLOCKED_ROLE_CANNOT_LOGIN';
     if (rows.some(r => r.can_select !== false || r.can_insert !== false ||
-        r.can_update !== false || r.can_delete !== false || r.api_schema_create !== false))
+        r.can_update !== false || r.can_delete !== false || r.can_references !== false ||
+        r.can_truncate !== false || r.can_trigger !== false || r.api_schema_create !== false))
       return 'BLOCKED_DIRECT_TABLE_ACCESS';
     if (rows.some(r => r.api_schema_usage !== true || r.resume_function_exists !== true ||
         r.correction_function_exists !== true || r.resume_execute !== true || r.correction_execute !== true))
